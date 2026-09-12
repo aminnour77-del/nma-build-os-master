@@ -364,7 +364,10 @@ app.get('/ufficio', (req, res) => {
             });
         </script>
     
-<div style="text-align:center; margin-top:20px;"><a href="/sal" style="background:#FF9800; color:white; padding:20px 40px; display:inline-block; text-decoration:none; font-size:24px; border-radius:10px; width: 300px; text-align: center; font-weight: bold; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">📄 Documento SAL (PDF)</a></div>
+
+<!-- TASTO SAL IN SOVRIMPRESSIONE -->
+<div style="position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 999999;"><a href="/sal" style="background:#FF9800; color:white; padding:15px 30px; display:inline-block; text-decoration:none; font-size:22px; border-radius:12px; font-weight: bold; box-shadow: 0px 10px 20px rgba(0,0,0,0.6); border: 2px solid white;">📄 Genera Documento SAL</a></div>
+
 </body>
     </html>
   `);
