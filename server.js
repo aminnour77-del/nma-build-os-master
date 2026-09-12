@@ -558,6 +558,30 @@ app.get('/cantiere', (req, res) => {
             });
             // --- FINE: MODULO AUTO-SYNC ---
 
+
+            // --- INIZIO: AUTO-REGISTRAZIONE IDENTITÀ SQUADRA ---
+            window.addEventListener('DOMContentLoaded', () => {
+                setTimeout(async () => {
+                    // Cerca di estrarre i dati compilati nel terminale (Codice Cantiere e Operatore)
+                    const inputs = document.querySelectorAll('input');
+                    const cantiereVal = inputs[0] ? inputs[0].value : 'ERG-CANTIERE-01';
+                    const operatoreVal = inputs[1] ? inputs[1].value : 'Squadra Campo';
+                    
+                    try {
+                        await fetch('/api/registra-squadra', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                cantiere: cantiereVal,
+                                operatore: operatoreVal,
+                                hardwareId: 'Sensore-BLE-' + Math.floor(Math.random() * 1000) // Simula ID hardware
+                            })
+                        });
+                    } catch(e) { console.error('Errore registrazione identità squadra:', e); }
+                }, 3000);
+            });
+            // --- FINE: AUTO-REGISTRAZIONE ---
+
 updateNetworkStatus();
         </script>
     </body>
@@ -580,6 +604,30 @@ app.post('/api/sync-offline', express.json(), (req, res) => {
     res.status(200).json({ success: true });
 });
 // --- FINE: ENDPOINT RECUPERO ---
+
+
+// --- INIZIO: MODULO TRACCIAMENTO SQUADRE E FLOTTA ---
+const registroSquadre = new Map();
+
+app.post('/api/registra-squadra', express.json(), (req, res) => {
+    const { operatore, cantiere, hardwareId } = req.body;
+    registroSquadre.set(operatore, { 
+        cantiere, 
+        hardwareId: hardwareId || 'BLE-Non-Rilevato', 
+        ultimo_contatto: new Date().toISOString() 
+    });
+    
+    // Emette l'aggiornamento in tempo reale alla Control Room
+    if (typeof io !== 'undefined') {
+        io.emit('aggiornamento_flotta', Array.from(registroSquadre.entries()));
+    }
+    res.status(200).json({ success: true, attivi: registroSquadre.size });
+});
+
+app.get('/api/squadre-attive', (req, res) => {
+    res.json(Array.from(registroSquadre.entries()));
+});
+// --- FINE: MODULO TRACCIAMENTO SQUADRE ---
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROL ROOM SATELLITARE 3D ONLINE'); });
