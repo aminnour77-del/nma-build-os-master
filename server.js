@@ -1,12 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
-const http = require('http');
-const { Server } = require('socket.io');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
 app.use(express.json({ limit: '10mb' }));
 
 const pool = new Pool({
@@ -14,7 +9,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Registrazione collaudo con WebSockets Live Broadcast e Magazzino
+// Registrazione collaudo con Alert Monitor integrato
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, ruolo, metriTubo, raccordi, fotoData } = req.body;
@@ -46,9 +41,6 @@ app.post('/api/collaudo', async (req, res) => {
       })
     ]);
     
-    // Notifica istantanea via WebSocket a tutti i client collegati (Torre di Controllo)
-    io.emit('nuovo_collaudo', { cantiere: cantiere || 'APPALTO-TO-001', metri: metriTubo || 30 });
-
     res.json({ success: true, alert: pressioneVal < 15.0 });
   } catch (err) {
     console.error('Errore POST:', err);
@@ -56,45 +48,7 @@ app.post('/api/collaudo', async (req, res) => {
   }
 });
 
-// Endpoint KPI Economici e Magazzino
-app.get('/api/kpi/:cantiere', async (req, res) => {
-  try {
-    const { cantiere } = req.params;
-    let query = 'SELECT log_pressione FROM reti_gas_ombra';
-    let params = [];
-    if (cantiere && cantiere !== 'TUTTI') {
-      query += ' WHERE codice_cantiere = $1';
-      params.push(cantiere);
-    }
-    const result = await pool.query(query, params);
-    
-    let totalMetri = 0;
-    let totalRaccordi = 0;
-    result.rows.forEach(r => {
-      const log = r.log_pressione || {};
-      totalMetri += Number(log.metri_tubo || 30);
-      totalRaccordi += Number(log.raccordi_salvati || 2);
-    });
-
-    // Simulazione KPI finanziari (Costo posa stimato: 45€/m, Raccordi: 35€ cad)
-    const costoPosa = totalMetri * 45;
-    const costoRaccordi = totalRaccordi * 35;
-    const valoreTotaleAppalto = costoPosa + costoRaccordi;
-
-    res.json({
-      cantiere: cantiere || 'Tutti',
-      tratti_eseguiti: result.rows.length,
-      metri_posati: totalMetri,
-      raccordi_utilizzati: totalRaccordi,
-      rimanenza_magazzino_tubi_m: Math.max(0, 5000 - totalMetri), // Stock iniziale stimato 5000m
-      valore_produzione_eur: valoreTotaleAppalto
-    });
-  } catch (err) {
-    res.status(500).send('Errore calcolo KPI');
-  }
-});
-
-// Endpoint per integrazione ERP Aziendale
+// Endpoint per integrazione ERP Aziendale (Esportazione JSON contabilità)
 app.get('/api/erp/sincronizza', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM reti_gas_ombra');
@@ -175,7 +129,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Contabilità e KPI
+// Report As-Built con Esportazione Server-Side e Contabilità
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -196,33 +150,33 @@ app.get('/api/report/:cantiere', async (req, res) => {
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Report As-Built & KPI - ${cantiere}</title>
+          <title>Report As-Built Ufficiale - ${cantiere}</title>
           <style>
               body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; background: #fff; }
               h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
               .meta { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
-              .counters { display: flex; gap: 15px; margin-bottom: 20px; }
+              .counters { display: flex; gap: 20px; margin-bottom: 20px; }
               .counter-box { background: #222; color: #fff; padding: 15px; border-radius: 8px; flex: 1; text-align: center; }
-              .counter-box h3 { margin: 0; color: #4CAF50; font-size: 18px; }
+              .counter-box h3 { margin: 0; color: #4CAF50; font-size: 20px; }
               table { width: 100%; border-collapse: collapse; margin-top: 20px; }
               th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
               th { background-color: #333; color: white; }
               .badge { background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+              .badge-alert { background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
           </style>
       </head>
       <body>
-          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & KPI DIREZIONALI</h1>
+          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & CONTABILITÀ CLOUD</h1>
           <div class="meta">
               <p><strong>Cantiere:</strong> ${cantiere}</p>
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
               <p><strong>Totale Rilevazioni:</strong> ${collaudi.length}</p>
           </div>
           <div class="counters">
-              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:11px;">Tubi Posati</p></div>
-              <div class="counter-box"><h3>${totaleRaccordi}</h3><p style="margin:5px 0 0 0;font-size:11px;">Raccordi</p></div>
-              <div class="counter-box"><h3>€ ${(totaleMetri * 45 + totaleRaccordi * 35).toLocaleString()}</h3><p style="margin:5px 0 0 0;font-size:11px;">Valore Produzione</p></div>
+              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:12px;">Tubi Posati Certificati</p></div>
+              <div class="counter-box"><h3>${totaleRaccordi}</h3><p style="margin:5px 0 0 0;font-size:12px;">Raccordi / Manicotti</p></div>
           </div>
-          <h3>Dettaglio Tratti & Compliance</h3>
+          <h3>Dettaglio Rilevazioni, Materiali & Allerte</h3>
           <table>
               <tr>
                   <th>ID</th>
@@ -230,48 +184,50 @@ app.get('/api/report/:cantiere', async (req, res) => {
                   <th>Tubi (m)</th>
                   <th>Raccordi</th>
                   <th>Pressione</th>
-                  <th>Esito</th>
+                  <th>Foto GPS</th>
+                  <th>Esito / Alert</th>
               </tr>`;
 
     collaudi.forEach(row => {
       const log = row.log_pressione || {};
+      const isAlert = log.esito && log.esito.includes('ATTENZIONE');
       html += `<tr>
           <td>#${row.id}</td>
           <td><strong>${row.operatore || 'Noureddine M.'}</strong></td>
           <td>${log.metri_tubo || 30} m</td>
           <td>${log.raccordi_salvati || 2}</td>
           <td>${log.pressione_mbar || 'N/D'} mbar</td>
-          <td><span class="badge">${log.esito || 'SUPERATO'}</span></td>
+          <td>${log.foto_presente ? '✓ Allegata' : 'N/D'}</td>
+          <td><span class="${isAlert ? 'badge-alert' : 'badge'}">${log.esito || 'SUPERATO'}</span></td>
       </tr>`;
     });
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Report Direzionale Cloud - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Certificato nativo Cloud generato da NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.status(500).send('Errore report KPI');
+    res.status(500).send('Errore generazione report server-side');
   }
 });
 
-// Torre di Controllo (Ufficio) con WebSockets Live e Dashboard KPI
+// Torre di Controllo (Ufficio) con link ERP e Metriche Avanzate
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo Live</title>
+        <title>NMA BUILD OS - Torre di Controllo</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
-        <script src="/socket.io/socket.io.js"></script>
         <style>
             body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; }
             #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.95); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.9); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             .glow { color: #4CAF50; font-weight: bold; }
             .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #282828; }
             .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
@@ -288,23 +244,21 @@ app.get('/ufficio', (req, res) => {
         <div id="panel">
             <h2>CATASTO OMBRA 3D</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">WEBSOCKETS LIVE</span></p>
+            <p>Stato: <span class="glow">LIVE SYNC + ERP 110%</span></p>
             
             <div class="metric">
                 <h4>Seleziona Appalto</h4>
-                <select id="selettore-cantiere" onchange="aggiornaDatiAppalto()">
+                <select id="selettore-cantiere" onchange="cambiaCantiere()">
                     <option value="TUTTI">Tutti i Cantieri (Panoramica)</option>
                 </select>
             </div>
 
             <div class="metric">
-                <h4>KPI & Produzione</h4>
-                <p id="stats-metri">Caricamento...</p>
-                <p id="stats-valore" style="font-size:13px; color:#4CAF50; margin-top:5px;"></p>
-                <p id="stats-magazzino" style="font-size:12px; color:#888; margin-top:3px;"></p>
+                <h4>Contabilità & Metri Posati</h4>
+                <p id="stats-metri">Calcolo in corso...</p>
             </div>
             
-            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT DIREZIONALE KPI</a>
+            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT AS-BUILT UFFICIALE</a>
             <a href="/api/erp/sincronizza" target="_blank" class="btn-erp">🔄 ESPORTA JSON PER ERP ESTERNO</a>
         </div>
         <script>
@@ -313,29 +267,27 @@ app.get('/ufficio', (req, res) => {
                 center: [7.68625, 45.07035], zoom: 17.5, pitch: 60, bearing: -25
             });
 
-            let socket = io();
             let cantiereAttivo = 'TUTTI';
 
-            function caricaMappaEKPI() {
-                const urlGeo = cantiereAttivo === 'TUTTI' ? '/api/tubi' : '/api/tubi?cantiere=' + cantiereAttivo;
-                fetch(urlGeo).then(res => res.json()).then(data => {
+            function aggiornaMappa() {
+                const url = cantiereAttivo === 'TUTTI' ? '/api/tubi' : '/api/tubi?cantiere=' + cantiereAttivo;
+                fetch(url).then(res => res.json()).then(data => {
                     if(map.getSource('tubi-gas')) {
                         map.getSource('tubi-gas').setData(data);
+                        const count = data.features ? data.features.length : 0;
+                        let metriTot = 0;
+                        data.features.forEach(f => {
+                            metriTot += Number(f.properties.pressione.metri_tubo || 30);
+                        });
+                        document.getElementById('stats-metri').innerText = metriTot + " Metri Lineari posati (" + count + " tratti)";
                     }
-                });
-
-                const urlKpi = '/api/kpi/' + cantiereAttivo;
-                fetch(urlKpi).then(res => res.json()).then(kpi => {
-                    document.getElementById('stats-metri').innerText = kpi.metri_posati + " Metri posati (" + kpi.tratti_eseguiti + " tratti)";
-                    document.getElementById('stats-valore').innerText = "Valore Produzione: € " + kpi.valore_produzione_eur.toLocaleString();
-                    document.getElementById('stats-magazzino').innerText = "Magazzino Tubi Disponibile: " + kpi.rimanenza_magazzino_tubi_m + " m";
                 });
             }
 
-            function aggiornaDatiAppalto() {
+            function cambiaCantiere() {
                 cantiereAttivo = document.getElementById('selettore-cantiere').value;
                 document.getElementById('link-report').href = '/api/report/' + (cantiereAttivo === 'TUTTI' ? 'APPALTO-TO-001' : cantiereAttivo);
-                caricaMappaEKPI();
+                aggiornaMappa();
             }
 
             function caricaCantieri() {
@@ -362,13 +314,10 @@ app.get('/ufficio', (req, res) => {
                 });
                 
                 caricaCantieri();
-                caricaMappaEKPI();
-
-                // Aggiornamento in tempo reale via WebSocket
-                socket.on('nuovo_collaudo', (msg) => {
-                    caricaMappaEKPI();
+                setInterval(() => {
+                    aggiornaMappa();
                     caricaCantieri();
-                });
+                }, 3000);
             });
         </script>
     </body>
@@ -376,7 +325,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere con WebSockets
+// Terminale Cantiere con Alert Monitor e Campi ERP
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -400,7 +349,7 @@ app.get('/cantiere', (req, res) => {
     <body>
         <div class="header">
             <h1>NMA BUILD OS <span id="net-status" class="offline-badge" style="background:#4CAF50; color:#fff;">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo - WebSockets Active</p>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo - Versione 110%</p>
         </div>
         
         <div class="status-box">
@@ -563,4 +512,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - VERSIONE FINALE CONCERTATA AL 120%'); });
+app.listen(PORT, () => { console.log('✅ NMA BUILD OS - SISTEMA COMPLETO 110% ONLINE'); });
