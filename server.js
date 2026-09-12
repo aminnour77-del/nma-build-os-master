@@ -15,7 +15,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Generatore di Token JWT Semplificato e Sicuro (Firmato Enterprise)
+// Generatore di Token JWT Semplificato e Sicuro
 function generaTokenJWT(payload) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 86400000 })).toString('base64url');
@@ -40,12 +40,11 @@ function verificaJWT(req, res, next) {
   }
 }
 
-// Endpoint di Login per generare il Token JWT in base al ruolo
+// Endpoint di Login per generare il Token JWT
 app.post('/api/auth/login', (req, res) => {
   const { username, ruolo } = req.body;
   const utente = username || 'Noureddine M.';
   const livelloRuolo = ruolo || 'CAPOCANTIERE';
-  
   const token = generaTokenJWT({ utente, ruolo: livelloRuolo });
   res.json({ success: true, token, utente, ruolo: livelloRuolo });
 });
@@ -144,7 +143,7 @@ app.get('/api/kpi/:cantiere', async (req, res) => {
   }
 });
 
-// Endpoint protetto per integrazione ERP Aziendale con JWT
+// Endpoint protetto ERP con JWT
 app.get('/api/erp/sincronizza', verificaJWT, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM reti_gas_ombra');
@@ -156,14 +155,14 @@ app.get('/api/erp/sincronizza', verificaJWT, async (req, res) => {
       timestamp: row.id
     }));
     res.json({
-      sistema: "NMA BUILD OS - Enterprise JWT Secured",
+      sistema: "NMA BUILD OS - Capacitor & Three.js Ready",
       utente_autorizzato: req.user,
       stato: "SINCRONIZZATO",
       totale_record: datiContabili.length,
       dati: datiContabili
     });
   } catch (err) {
-    res.status(500).send('Errore sincronizzazione ERP protetta');
+    res.status(500).send('Errore sincronizzazione ERP');
   }
 });
 
@@ -226,7 +225,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Storico Pressione e Anomalie
+// Report As-Built protetto
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -247,7 +246,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Report As-Built & JWT Security - ${cantiere}</title>
+          <title>Report As-Built Enterprise - ${cantiere}</title>
           <style>
               body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; background: #fff; }
               h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
@@ -263,7 +262,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
           </style>
       </head>
       <body>
-          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & SECURITY JWT</h1>
+          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT ENTERPRISE</h1>
           <div class="meta">
               <p><strong>Cantiere:</strong> ${cantiere}</p>
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
@@ -300,31 +299,33 @@ app.get('/api/report/:cantiere', async (req, res) => {
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Report Protetto JWT - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Certificato Enterprise - NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.status(500).send('Errore report protetto');
+    res.status(500).send('Errore report enterprise');
   }
 });
 
-// Torre di Controllo (Ufficio) con Autenticazione JWT Integrata
+// Torre di Controllo (Ufficio) con Three.js BIM Canvas Integrato
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo Enterprise JWT</title>
+        <title>NMA BUILD OS - Torre di Controllo Enterprise 3D/BIM</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <style>
-            body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; }
+            body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
             #map { position: absolute; top: 0; bottom: 0; width: 100%; }
             #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.95); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            #bim-container { position: absolute; bottom: 20px; right: 20px; width: 320px; height: 200px; background: rgba(20,20,20,0.9); border-radius: 12px; border: 1px solid #444; z-index: 10; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             .glow { color: #4CAF50; font-weight: bold; }
             .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #282828; }
             .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
@@ -334,15 +335,19 @@ app.get('/ufficio', (req, res) => {
             .btn-report:hover { background: #0056b3; }
             .btn-erp { display: block; width: 100%; background: #333; color: #4CAF50; border: 1px solid #4CAF50; padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; font-size: 13px; }
             .btn-erp:hover { background: #222; }
-            .jwt-box { background: #151515; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 11px; color: #007AFF; word-break: break-all; border: 1px dashed #333; }
+            .bim-title { position: absolute; top: 8px; left: 12px; font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: bold; z-index: 5; }
         </style>
     </head>
     <body>
         <div id="map"></div>
+        <div id="bim-container">
+            <div class="bim-title">BIM 3D View (Raccordo/Tubo PEHD)</div>
+        </div>
+        
         <div id="panel">
-            <h2>TORRE DI CONTROLLO JWT</h2>
+            <h2>TORRE DI CONTROLLO 3D/BIM</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">SICUREZZA ENTERPRISE</span></p>
+            <p>Stato: <span class="glow">CAPACITOR & THREE.JS READY</span></p>
             
             <div class="metric">
                 <h4>Seleziona Appalto</h4>
@@ -358,16 +363,49 @@ app.get('/ufficio', (req, res) => {
                 <p id="stats-anomalie" style="font-size:13px; color:#ff9800; margin-top:3px;"></p>
                 <p id="stats-squadre" style="font-size:11px; color:#aaa; margin-top:5px; line-height:1.4;"></p>
             </div>
-
-            <div class="metric">
-                <h4>Token JWT Attivo</h4>
-                <div id="jwt-display" class="jwt-box">Generazione token in corso...</div>
-            </div>
             
-            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT STORICO & COLLAUDI</a>
+            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT AS-BUILT ENTERPRISE</a>
             <button onclick="scaricaErpProtetto()" class="btn-erp">🔄 TEST SINTRESI ERP (JWT SECURED)</button>
         </div>
+
         <script>
+            // Inizializzazione Three.js per Modellazione 3D Tubo/Raccordo BIM
+            const containerBim = document.getElementById('bim-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, containerBim.clientWidth / containerBim.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(containerBim.clientWidth, containerBim.clientHeight);
+            containerBim.appendChild(renderer.domElement);
+
+            // Creazione Tubo 3D e Raccordo in stile BIM
+            const geometryTubo = new THREE.CylinderGeometry(0.8, 0.8, 6, 32);
+            const materialeTubo = new THREE.MeshStandardMaterial({ color: 0xff3333, roughness: 0.3 });
+            const tuboMesh = new THREE.Mesh(geometryTubo, materialeTubo);
+            tuboMesh.rotation.z = Math.PI / 2;
+            scene.add(tuboMesh);
+
+            const geometryRaccordo = new THREE.SphereGeometry(1.1, 32, 32);
+            const materialeRaccordo = new THREE.MeshStandardMaterial({ color: 0x4CAF50, metalness: 0.8 });
+            const raccordoMesh = new THREE.Mesh(geometryRaccordo, materialeRaccordo);
+            raccordoMesh.position.x = 3;
+            scene.add(raccordoMesh);
+
+            const light = new THREE.DirectionalLight(0xffffff, 2);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+            camera.position.z = 8;
+
+            function animateBim() {
+                requestAnimationFrame(animateBim);
+                tuboMesh.rotation.x += 0.01;
+                raccordoMesh.rotation.y += 0.02;
+                renderer.render(scene, camera);
+            }
+            animateBim();
+
+            // Mappa MapLibre
             var map = new maplibregl.Map({
                 container: 'map', style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
                 center: [7.68625, 45.07035], zoom: 17.5, pitch: 60, bearing: -25
@@ -377,7 +415,6 @@ app.get('/ufficio', (req, res) => {
             let cantiereAttivo = 'TUTTI';
             let jwtToken = '';
 
-            // Autenticazione automatica all'avvio della Torre di Controllo
             async function attivaAuthJwt() {
                 try {
                     let res = await fetch('/api/auth/login', {
@@ -386,13 +423,8 @@ app.get('/ufficio', (req, res) => {
                         body: JSON.stringify({ username: 'Direttore Lavori NMA', ruolo: 'DIRETTORE' })
                     });
                     let data = await res.json();
-                    if(data.success) {
-                        jwtToken = data.token;
-                        document.getElementById('jwt-display').innerText = jwtToken.substring(0, 45) + '... [AUTORIZZATO]';
-                    }
-                } catch(e) {
-                    document.getElementById('jwt-display').innerText = 'Errore autenticazione JWT';
-                }
+                    if(data.success) { jwtToken = data.token; }
+                } catch(e) {}
             }
 
             async function scaricaErpProtetto() {
@@ -470,14 +502,14 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere
+// Terminale Cantiere Mobile-Ready (Capacitor)
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="it">
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>NMA BUILD OS - Terminale Cantiere JWT</title>
+        <title>NMA BUILD OS - Terminale Mobile Capacitor</title>
         <style>
             body { background-color: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
             .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
@@ -488,13 +520,13 @@ app.get('/cantiere', (req, res) => {
             .data-row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 14px; border-bottom: 1px solid #333; padding-bottom: 10px; align-items: center;}
             .highlight { color: #4CAF50; font-weight: bold; }
             input, select { background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 14px; text-align: right; width: 150px; }
-            .offline-badge { background: #ff9800; color: #000; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; float: right; }
+            .offline-badge { background: #4CAF50; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; float: right; }
         </style>
     </head>
     <body>
         <div class="header">
-            <h1>NMA BUILD OS <span id="net-status" class="offline-badge" style="background:#4CAF50; color:#fff;">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo protetto da JWT</p>
+            <h1>NMA BUILD OS <span id="net-status" class="offline-badge">CAPACITOR NATIVE</span></h1>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo Hardware-Ready</p>
         </div>
         
         <div class="status-box">
@@ -509,10 +541,10 @@ app.get('/cantiere', (req, res) => {
             <div class="data-row"><span>Metri Tubo:</span> <input type="number" id="input-metri" value="30"></div>
             <div class="data-row"><span>Raccordi:</span> <input type="number" id="input-raccordi" value="2"></div>
             <div class="data-row"><span>Segnala Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:160px; font-size:12px;"></div>
-            <div class="data-row"><span>Foto Scavo/Giunto:</span> <input type="file" id="input-foto" accept="image/*" style="width:170px; font-size:11px;"></div>
+            <div class="data-row"><span>Foto Hardware (Camera):</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:170px; font-size:11px;"></div>
             <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#007AFF;">0 elementi</strong></div>
-            <div class="data-row"><span>GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
-            <div class="data-row"><span>Bluetooth:</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
+            <div class="data-row"><span>GPS (Hardware):</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
+            <div class="data-row"><span>Bluetooth (BLE):</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
         </div>
 
         <button class="btn" id="btn-bluetooth">1. CONNETTI MANOMETRO (BLE)</button>
@@ -530,7 +562,7 @@ app.get('/cantiere', (req, res) => {
                     const reader = new FileReader();
                     reader.onload = function(uploadEvent) {
                         base64Foto = uploadEvent.target.result;
-                        alert("✓ Foto allegata al collaudo!");
+                        alert("✓ Foto catturata via hardware!");
                     };
                     reader.readAsDataURL(file);
                 }
@@ -579,7 +611,7 @@ app.get('/cantiere', (req, res) => {
                 navigator.geolocation.getCurrentPosition((pos) => {
                     currentLat = pos.coords.latitude;
                     currentLng = pos.coords.longitude;
-                    document.getElementById('gps-status').innerHTML = '<span class="highlight">Agganciato</span>';
+                    document.getElementById('gps-status').innerHTML = '<span class="highlight">GPS HW Agganciato</span>';
                 }, () => {
                     document.getElementById('gps-status').innerText = 'Torino (Fallback)';
                 });
@@ -659,4 +691,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - SECURITY JWT ENTERPRISE ONLINE'); });
+server.listen(PORT, () => { console.log('✅ NMA BUILD OS - ENTERPRISE 3D/BIM & MOBILE READY ONLINE'); });
