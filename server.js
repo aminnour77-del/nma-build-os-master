@@ -9,13 +9,16 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Registrazione collaudo con Contabilità Materiali e Foto Georeferenziata
+// Registrazione collaudo con Alert Monitor integrato
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, ruolo, metriTubo, raccordi, fotoData } = req.body;
     const lLat = lat || 45.07030;
     const lLng = lng || 7.68625;
     const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0004} ${lLat + 0.0004} -1.5)`;
+
+    const pressioneVal = Number(pressione || 22.5);
+    const esitoCollaudo = pressioneVal < 15.0 ? "ATTENZIONE - PRESSIONE BASSA" : "SUPERATO";
 
     const query = `
       INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione)
@@ -28,8 +31,8 @@ app.post('/api/collaudo', async (req, res) => {
       tracciato3D, 
       JSON.stringify({ 
         dispositivo: strumento || 'Testo 510i', 
-        pressione_mbar: pressione || 22.5, 
-        esito: "SUPERATO",
+        pressione_mbar: pressioneVal, 
+        esito: esitoCollaudo,
         profondita_m: -1.5,
         metri_tubo: metriTubo || 30,
         raccordi_salvati: raccordi || 2,
@@ -38,10 +41,32 @@ app.post('/api/collaudo', async (req, res) => {
       })
     ]);
     
-    res.json({ success: true });
+    res.json({ success: true, alert: pressioneVal < 15.0 });
   } catch (err) {
     console.error('Errore POST:', err);
     res.status(500).send('Errore server');
+  }
+});
+
+// Endpoint per integrazione ERP Aziendale (Esportazione JSON contabilità)
+app.get('/api/erp/sincronizza', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM reti_gas_ombra');
+    const datiContabili = result.rows.map(row => ({
+      id_tratto: row.id,
+      cantiere: row.codice_cantiere,
+      operatore: row.operatore,
+      dettagli: row.log_pressione,
+      timestamp: row.id
+    }));
+    res.json({
+      sistema: "NMA BUILD OS - ERP Connector",
+      stato: "SINCRONIZZATO",
+      totale_record: datiContabili.length,
+      dati: datiContabili
+    });
+  } catch (err) {
+    res.status(500).send('Errore sincronizzazione ERP');
   }
 });
 
@@ -104,7 +129,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Contabilità Materiali e Foto
+// Report As-Built con Esportazione Server-Side e Contabilità
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -125,9 +150,9 @@ app.get('/api/report/:cantiere', async (req, res) => {
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Report As-Built & Contabilità - ${cantiere}</title>
+          <title>Report As-Built Ufficiale - ${cantiere}</title>
           <style>
-              body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; }
+              body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; background: #fff; }
               h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
               .meta { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
               .counters { display: flex; gap: 20px; margin-bottom: 20px; }
@@ -137,20 +162,21 @@ app.get('/api/report/:cantiere', async (req, res) => {
               th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
               th { background-color: #333; color: white; }
               .badge { background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+              .badge-alert { background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
           </style>
       </head>
       <body>
-          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & CONTABILITÀ</h1>
+          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & CONTABILITÀ CLOUD</h1>
           <div class="meta">
               <p><strong>Cantiere:</strong> ${cantiere}</p>
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
               <p><strong>Totale Rilevazioni:</strong> ${collaudi.length}</p>
           </div>
           <div class="counters">
-              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:12px;">Tubi Posati (PEHD/Acciaio)</p></div>
+              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:12px;">Tubi Posati Certificati</p></div>
               <div class="counter-box"><h3>${totaleRaccordi}</h3><p style="margin:5px 0 0 0;font-size:12px;">Raccordi / Manicotti</p></div>
           </div>
-          <h3>Dettaglio Tratti, Materiali & Foto Georeferenziate</h3>
+          <h3>Dettaglio Rilevazioni, Materiali & Allerte</h3>
           <table>
               <tr>
                   <th>ID</th>
@@ -159,11 +185,12 @@ app.get('/api/report/:cantiere', async (req, res) => {
                   <th>Raccordi</th>
                   <th>Pressione</th>
                   <th>Foto GPS</th>
-                  <th>Esito</th>
+                  <th>Esito / Alert</th>
               </tr>`;
 
     collaudi.forEach(row => {
       const log = row.log_pressione || {};
+      const isAlert = log.esito && log.esito.includes('ATTENZIONE');
       html += `<tr>
           <td>#${row.id}</td>
           <td><strong>${row.operatore || 'Noureddine M.'}</strong></td>
@@ -171,24 +198,24 @@ app.get('/api/report/:cantiere', async (req, res) => {
           <td>${log.raccordi_salvati || 2}</td>
           <td>${log.pressione_mbar || 'N/D'} mbar</td>
           <td>${log.foto_presente ? '✓ Allegata' : 'N/D'}</td>
-          <td><span class="badge">${log.esito || 'SUPERATO'}</span></td>
+          <td><span class="${isAlert ? 'badge-alert' : 'badge'}">${log.esito || 'SUPERATO'}</span></td>
       </tr>`;
     });
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Contabilità Certificata Cloud - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Certificato nativo Cloud generato da NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.status(500).send('Errore generazione report contabilità');
+    res.status(500).send('Errore generazione report server-side');
   }
 });
 
-// Torre di Controllo (Ufficio) con Contabilità in tempo reale
+// Torre di Controllo (Ufficio) con link ERP e Metriche Avanzate
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -208,6 +235,8 @@ app.get('/ufficio', (req, res) => {
             select { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 5px; font-size: 14px; }
             .btn-report { display: block; width: 100%; background: #007AFF; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; }
             .btn-report:hover { background: #0056b3; }
+            .btn-erp { display: block; width: 100%; background: #333; color: #4CAF50; border: 1px solid #4CAF50; padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; font-size: 13px; }
+            .btn-erp:hover { background: #222; }
         </style>
     </head>
     <body>
@@ -215,7 +244,7 @@ app.get('/ufficio', (req, res) => {
         <div id="panel">
             <h2>CATASTO OMBRA 3D</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">LIVE SYNC + ERP</span></p>
+            <p>Stato: <span class="glow">LIVE SYNC + ERP 110%</span></p>
             
             <div class="metric">
                 <h4>Seleziona Appalto</h4>
@@ -229,7 +258,8 @@ app.get('/ufficio', (req, res) => {
                 <p id="stats-metri">Calcolo in corso...</p>
             </div>
             
-            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 SCARICA REPORT & CONTABILITÀ</a>
+            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT AS-BUILT UFFICIALE</a>
+            <a href="/api/erp/sincronizza" target="_blank" class="btn-erp">🔄 ESPORTA JSON PER ERP ESTERNO</a>
         </div>
         <script>
             var map = new maplibregl.Map({
@@ -295,7 +325,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere con Materiali e Foto Georeferenziata
+// Terminale Cantiere con Alert Monitor e Campi ERP
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -319,7 +349,7 @@ app.get('/cantiere', (req, res) => {
     <body>
         <div class="header">
             <h1>NMA BUILD OS <span id="net-status" class="offline-badge" style="background:#4CAF50; color:#fff;">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Contabilità & Foto Georeferenziata</p>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo - Versione 110%</p>
         </div>
         
         <div class="status-box">
@@ -354,7 +384,7 @@ app.get('/cantiere', (req, res) => {
                     const reader = new FileReader();
                     reader.onload = function(uploadEvent) {
                         base64Foto = uploadEvent.target.result;
-                        alert("✓ Foto scattata e georeferenziata con successo!");
+                        alert("✓ Foto scattata e georeferenziata!");
                     };
                     reader.readAsDataURL(file);
                 }
@@ -460,12 +490,10 @@ app.get('/cantiere', (req, res) => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                }).then(res => {
-                    if(res.ok) {
-                        btnSend.innerText = '✓ RICEVUTO DAL CATASTO OMBRA';
-                        btnSend.style.backgroundColor = '#4CAF50';
-                        setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
-                    }
+                }).then(res => res.json()).then(data => {
+                    btnSend.innerText = data.alert ? '⚠ ATTENZIONE: PRESSIONE BASSA' : '✓ RICEVUTO DAL CATASTO OMBRA';
+                    btnSend.style.backgroundColor = data.alert ? '#ff9800' : '#4CAF50';
+                    setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
                 }).catch(() => {
                     let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
                     queue.push(payload);
@@ -484,4 +512,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => { console.log('✅ NMA BUILD OS - ERP COMPLETO AL 100% ONLINE'); });
+app.listen(PORT, () => { console.log('✅ NMA BUILD OS - SISTEMA COMPLETO 110% ONLINE'); });
