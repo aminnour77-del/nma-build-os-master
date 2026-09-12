@@ -68,6 +68,20 @@ app.post('/api/collaudo', async (req, res) => {
     const valoreProduzioneEur = (metriVal * 45) + (raccordiVal * 35);
     const co2RisparmiataKg = Math.round(metriVal * 1.2 * 10) / 10;
 
+    
+    // --- INIZIO: SALVATAGGIO PERMANENTE SU MONGODB ATLAS ---
+    let conteggioAnomalia = (segnalazioneAnomalia !== "Nessuna anomalia") ? 1 : 0;
+    await Cantiere.findOneAndUpdate(
+        { id_cantiere: cantiere || 'ERG-CANTIERE-01' },
+        { 
+            $inc: { metri_posati: metriVal, raccordi: raccordiVal, anomalie: conteggioAnomalia },
+            $set: { ultimo_aggiornamento: new Date() }
+        },
+        { upsert: true, new: true }
+    );
+    console.log(`✅ [MONGODB] Salvati ${metriVal}m e ${raccordiVal} raccordi nel caveau cloud!`);
+    // --- FINE: SALVATAGGIO MONGODB ---
+
     const query = `
       INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione)
       VALUES ($1, $2, ST_GeomFromText($3, 4326), $4)
