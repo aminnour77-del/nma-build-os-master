@@ -5,6 +5,27 @@ const { Server } = require('socket.io');
 const crypto = require('crypto');
 
 const app = express();
+
+// --- BLOCCO 1: DATABASE INDUSTRIALE MONGODB (NMA BUILD OS) ---
+const mongoose = require('mongoose');
+
+// Connessione al cluster cloud (AWS)
+mongoose.connect('mongodb+srv://aminnour77_db_user:uqAx4jZg9PeiRENX@amin93.twub44j.mongodb.net/nma_build_os?retryWrites=true&w=majority&appName=Amin93')
+  .then(() => console.log('✅ [SISTEMA] Connesso al Database Industriale MongoDB Atlas'))
+  .catch(err => console.error('❌ [ERRORE] Connessione DB fallita:', err));
+
+// Schema Dati: Struttura del Caveau Digitale per i Cantieri
+const CantiereSchema = new mongoose.Schema({
+    id_cantiere: { type: String, default: 'ERG-CANTIERE-01' },
+    metri_posati: { type: Number, default: 0 },
+    raccordi: { type: Number, default: 0 },
+    anomalie: { type: Number, default: 0 },
+    ultimo_aggiornamento: { type: Date, default: Date.now }
+});
+
+const Cantiere = mongoose.model('Cantiere', CantiereSchema);
+// -------------------------------------------------------------
+
 const server = http.createServer(app);
 const io = new Server(server);
 
