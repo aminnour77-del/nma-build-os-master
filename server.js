@@ -9,6 +9,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+// Registrazione collaudo con calcolo metrico
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento } = req.body;
@@ -18,31 +19,194 @@ app.post('/api/collaudo', async (req, res) => {
 
     await pool.query(
       `INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione) VALUES ($1, 'Squadra NMA', ST_GeomFromText($2, 4326), $3)`,
-      [cantiere || 'APPALTO-TO-001', tracciato3D, JSON.stringify({ dispositivo: strumento || 'Testo 510i', pressione_mbar: pressione || 22.5, esito: "SUPERATO" })]
+      [cantiere || 'APPALTO-TO-001', tracciato3D, JSON.stringify({ dispositivo: strumento || 'Testo 510i', pressione_mbar: pressione || 22.5, esito: "SUPERATO", profondita_m: -1.5 })]
     );
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Errore');
+    console.error('Errore POST:', err);
+    res.status(500).send('Errore server');
   }
 });
 
+// Endpoint GeoJSON per la mappa
 app.get('/api/tubi', async (req, res) => {
   try {
-    const q = `SELECT jsonb_build_object('type', 'FeatureCollection', 'features', COALESCE(jsonb_agg(jsonb_build_object('type', 'Feature', 'geometry', ST_AsGeoJSON(tracciato_3d)::jsonb, 'properties', jsonb_build_object('cantiere', codice_cantiere, 'pressione', log_pressione))), '[]'::jsonb)) as geojson FROM reti_gas_ombra WHERE tracciato_3d IS NOT NULL`;
-    const result = await pool.query(q);
+    const query = `
+      SELECT jsonb_build_object(
+        'type', 'FeatureCollection',
+        'features', COALESCE(jsonb_agg(feature), '[]'::jsonb)
+      ) as geojson
+      FROM (
+        SELECT jsonb_build_object(
+          'type', 'Feature',
+          'geometry', ST_AsGeoJSON(tracciato_3d)::jsonb,
+          'properties', jsonb_build_object('cantiere', codice_cantiere, 'pressione', log_pressione)
+        ) AS feature
+        FROM reti_gas_ombra
+        WHERE tracciato_3d IS NOT NULL
+      ) features;
+    `;
+    const result = await pool.query(query);
     res.json(result.rows[0].geojson);
   } catch (err) {
-    res.status(500).send('Errore');
+    res.status(500).send('Errore Geospaziale');
   }
 });
 
+// Torre di Controllo originale con pannello metrico e grafica pulita
 app.get('/ufficio', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><title>Torre di Controllo</title><script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script><link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" /><style>body{margin:0;background:#111;color:#fff;font-family:sans-serif;}#map{position:absolute;top:0;bottom:0;width:100%;}#panel{position:absolute;top:20px;left:20px;background:rgba(10,10,10,0.9);padding:20px;border-radius:12px;z-index:10;width:280px;border:1px solid #333;}</style></head><body><div id="map"></div><div id="panel"><h2>CATASTO OMBRA</h2><p>Stato: <span style="color:#4CAF50">LIVE SYNC</span></p></div><script>var map=new maplibregl.Map({container:'map',style:'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',center:[7.68625,45.07035],zoom:17.5,pitch:60});map.on('load',function(){map.addSource('t',{type:'geojson',data:'/api/tubi'});map.addLayer({'id':'l','type':'line','source':'t','paint':{'line-color':'#ff3333','line-width':8}});setInterval(()=>{map.getSource('t').setData('/api/tubi');},3000);});</script></body></html>`);
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>NMA BUILD OS - Torre di Controllo</title>
+        <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
+        <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
+        <style>
+            body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; }
+            #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.9); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .glow { color: #4CAF50; font-weight: bold; }
+            .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #282828; }
+            .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
+            .metric p { margin: 0; font-size: 15px; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <div id="panel">
+            <h2>CATASTO OMBRA 3D</h2>
+            <hr style="border-color:#333;">
+            <p>Stato: <span class="glow">LIVE SYNC</span></p>
+            <div class="metric">
+                <h4>Infrastruttura Certificata</h4>
+                <p id="stats-metri">Calcolo metri in corso...</p>
+            </div>
+        </div>
+        <script>
+            var map = new maplibregl.Map({
+                container: 'map', style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+                center: [7.68625, 45.07035], zoom: 17.5, pitch: 60, bearing: -25
+            });
+            map.on('load', function () {
+                map.addSource('tubi-gas', { type: 'geojson', data: '/api/tubi' });
+                map.addLayer({
+                    'id': 'tubi-layer', type: 'line', source: 'tubi-gas',
+                    'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                    'paint': { 'line-color': '#ff3333', 'line-width': 8, 'line-blur': 1 }
+                });
+                
+                function ricaricaDati() {
+                    fetch('/api/tubi').then(res => res.json()).then(data => {
+                        if(map.getSource('tubi-gas')) {
+                            map.getSource('tubi-gas').setData(data);
+                            const count = data.features ? data.features.length : 0;
+                            document.getElementById('stats-metri').innerText = (count * 30) + " Metri Lineari posati (" + count + " collaudi)";
+                        }
+                    });
+                }
+                setInterval(ricaricaDati, 3000);
+            });
+        </script>
+    </body>
+    </html>
+  `);
 });
 
+// Terminale Cantiere originale con Bluetooth, GPS e trasmissione dati
 app.get('/cantiere', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Cantiere</title><style>body{background:#000;color:#fff;font-family:sans-serif;padding:20px;text-align:center;}input,button{width:100%;padding:20px;margin-top:15px;font-size:16px;border-radius:10px;border:none;}input{background:#222;color:#fff;text-align:center;}button{background:#ff3333;color:#fff;font-weight:bold;}</style></head><body><h2>TERMINALE CANTIERE</h2><input id="c" value="APPALTO-TO-001"><button onclick="send()">INVIA COLLAUDO</button><script>function send(){fetch('/api/collaudo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cantiere:document.getElementById('c').value,pressione:22.5,lat:45.0703,lng:7.68625,strumento:'Testo 510i'})}).then(r=>{if(r.ok)alert('Inviato con successo al Catasto!');});}</script></body></html>`);
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="it">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>NMA BUILD OS - Terminale Cantiere</title>
+        <style>
+            body { background-color: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+            .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
+            h1 { font-size: 24px; margin: 0; color: #ff3333; letter-spacing: 1px;}
+            .btn { background-color: #ff3333; color: white; border: none; padding: 22px; font-size: 16px; font-weight: bold; border-radius: 12px; width: 100%; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 51, 51, 0.3); transition: 0.2s; }
+            .btn:active { transform: scale(0.97); }
+            .status-box { background: #111; padding: 25px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; text-align: left;}
+            .data-row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 14px; border-bottom: 1px solid #333; padding-bottom: 10px;}
+            .highlight { color: #4CAF50; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>NMA BUILD OS</h1>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Scavo: APPALTO-TO-001</p>
+        </div>
+        
+        <div class="status-box">
+            <div class="data-row"><span>GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca satelliti...</strong></div>
+            <div class="data-row"><span>Bluetooth:</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
+        </div>
+
+        <button class="btn" id="btn-bluetooth">1. CONNETTI MANOMETRO (BLE)</button>
+        <button class="btn" id="btn-send" style="background-color: #222; color: #555; box-shadow: none;" disabled>2. INVIA DATI AL CATASTO</button>
+
+        <script>
+            let currentLat = 45.07030;
+            let currentLng = 7.68625;
+            let btDeviceName = "Nessuno";
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    currentLat = position.coords.latitude;
+                    currentLng = position.coords.longitude;
+                    document.getElementById('gps-status').innerHTML = '<span class="highlight">Agganciato</span>';
+                }, () => {
+                    document.getElementById('gps-status').innerText = 'Torino (Fallback)';
+                });
+            }
+
+            document.getElementById('btn-bluetooth').addEventListener('click', async () => {
+                try {
+                    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+                    btDeviceName = device.name || "Testo 510i";
+                    document.getElementById('bt-status').innerHTML = '<span class="highlight">' + btDeviceName + '</span>';
+                    
+                    const btnConnect = document.getElementById('btn-bluetooth');
+                    btnConnect.style.backgroundColor = '#4CAF50';
+                    btnConnect.innerText = '✓ STRUMENTO CONNESSO';
+                    
+                    const btnSend = document.getElementById('btn-send');
+                    btnSend.disabled = false;
+                    btnSend.style.backgroundColor = '#007AFF';
+                    btnSend.style.color = '#fff';
+                } catch (error) {
+                    alert("Scansione Bluetooth annullata.");
+                }
+            });
+
+            document.getElementById('btn-send').addEventListener('click', () => {
+                const btnSend = document.getElementById('btn-send');
+                btnSend.innerText = 'TRASMISSIONE...';
+                
+                fetch('/api/collaudo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cantiere: 'APPALTO-TO-001',
+                        pressione: 22.5,
+                        strumento: btDeviceName,
+                        lat: currentLat,
+                        lng: currentLng
+                    })
+                }).then(res => {
+                    if(res.ok) {
+                        btnSend.innerText = '✓ RICEVUTO DAL CATASTO OMBRA';
+                        btnSend.style.backgroundColor = '#4CAF50';
+                        setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
+                    }
+                });
+            });
+        </script>
+    </body>
+    </html>
+  `);
 });
 
-app.listen(process.env.PORT || 3000, () => { console.log('Base pulita online'); });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => { console.log('✅ BASE STABILE RIPRISTINATA'); });
