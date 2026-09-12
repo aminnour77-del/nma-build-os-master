@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminale Operatore - NMA</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; max-width: 500px; margin: auto; }
+        #pin-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f2f2f7; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #pin-input { padding: 15px; font-size: 24px; text-align: center; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 20px; width: 250px; }
+        #btn-unlock { padding: 15px 30px; background: #007aff; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .selector { width: 100%; padding: 15px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 20px; font-weight: bold; background: white; }
+        .task-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .task-info h3 { margin: 0 0 5px 0; font-size: 16px; } .task-info p { margin: 0; color: #666; font-size: 14px; }
+        .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; color: white; cursor: pointer; }
+        .bypass-box { margin-top: 15px; background: #fff; padding: 20px; border-radius: 12px; border: 2px solid #ff9500; text-align: center; }
+        .camera-box { margin-top: 15px; background: #fff; padding: 20px; border-radius: 12px; border: 2px solid #0ea5e9; text-align: center; }
+        .btn-orange { background: #ff9500; font-size: 16px; padding: 15px; width: 100%; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-blue { background: #0ea5e9; font-size: 16px; padding: 15px; width: 100%; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .meteo-badge { font-size: 14px; color: #0ea5e9; font-weight: bold; margin-top: 5px;}
+    </style>
+</head>
+<body>
+    <div id="pin-screen">
+        <h2>👷 NMA - Sblocco Cantiere</h2>
+        <input type="number" id="pin-input" placeholder="PIN Operatore" inputmode="numeric" />
+        <button id="btn-unlock" onclick="sbloccaOperatore()">SBLOCCA TERMINALE</button>
+    </div>
+    <div class="header">
+        <h2 id="header-titolo">NMA Terminale Cantiere</h2>
+        <p id="gps-status" style="margin-bottom:5px;">GPS: Rilevamento in corso...</p>
+        <p id="meteo-status" class="meteo-badge">🌦️ Meteo: In attesa del GPS...</p>
+    </div>
+    <select id="divSelezionata" class="selector" onchange="caricaTask()">
+        <option value="gas">🔥 Reti Gas Metano</option>
+        <option value="idriche">💧 Reti Idriche e Fognarie</option>
+        <option value="strade">🛣️ Opere Stradali</option>
+        <option value="edifici">🏢 Edifici Civili/Industriali</option>
+        <option value="fluviali">🌿 Opere Fluviali</option>
+        <option value="depurazione">⚙️ Impianti Depurazione</option>
+    </select>
+    <div id="task-container"></div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" onchange="inviaImmagine(event)" />
+    <div class="camera-box">
+        <h3>Ispezione Visiva</h3>
+        <button class="btn-blue" onclick="document.getElementById('camera-input').click()">📸 SCATTA FOTO CANTIERE</button>
+    </div>
+    <div class="bypass-box"><h3>Allarme Emergenza</h3><button class="btn-orange" onclick="inviaBypass()">INVIA ALERT GEOLOCALIZZATO</button></div>
+    <script>
+        const socket = io(); 
+        let posizioneGPS = "Non disponibile";
+        let meteoAttuale = "";
+
+        function sbloccaOperatore() {
+            let pin = document.getElementById('pin-input').value.toString().trim();
+            if(pin === '1234') {
+                document.getElementById('pin-screen').style.display = 'none';
+                richiediGPS(); caricaTask();
+            } else { alert('PIN Errato'); }
+        }
+
+        function richiediGPS() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (posizione) => { 
+                        let lat = posizione.coords.latitude;
+                        let lon = posizione.coords.longitude;
+                        posizioneGPS = lat.toFixed(5) + ", " + lon.toFixed(5); 
+                        document.getElementById('gps-status').innerText = "📍 GPS Attivo: " + posizioneGPS; 
+                        document.getElementById('gps-status').style.color = '#34c759'; 
+                        recuperaMeteo(lat, lon);
+                    },
+                    (errore) => { 
+                        posizioneGPS = "Negato dall'utente"; 
+                        document.getElementById('gps-status').innerText = "⚠️ GPS Disattivato"; 
+                        document.getElementById('gps-status').style.color = '#ef4444'; 
+                        document.getElementById('meteo-status').innerText = "Meteo non disponibile senza GPS";
+                    }
+                );
+            }
+        }
+
+        async function recuperaMeteo(lat, lon) {
+            try {
+                document.getElementById('meteo-status').innerText = "🌦️ Acquisizione meteo satellite...";
+                const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current_weather=true");
+                const data = await response.json();
+                meteoAttuale = data.current_weather.temperature + "°C, Vento " + data.current_weather.windspeed + "km/h";
+                document.getElementById('meteo-status').innerText = "🌦️ " + meteoAttuale;
+            } catch(e) {
+                document.getElementById('meteo-status').innerText = "⚠️ Errore satellite meteo";
+            }
+        }
+
+        const confTask = {
+            gas: [ { titolo: "Posa tubazione aerea", desc: "Saldatura/Staffaggio", color: "#007aff", btn: "INVIA", q: 15, eur: 450.00 }, { titolo: "Collaudo aereo tenuta", desc: "Ispezione finale", color: "#34c759", btn: "COLLAUDA", q: 10, eur: 300.00 } ],
+            strade: [ { titolo: "Fresatura asfalto", desc: "Rimozione manto", color: "#007aff", btn: "INVIA", q: 100, eur: 800.00 }, { titolo: "Posa Binder", desc: "Stesura bitume", color: "#af52de", btn: "INVIA", q: 100, eur: 2500.00 } ],
+            default: [ { titolo: "Avanzamento Cantiere", desc: "Task Generico", color: "#007aff", btn: "INVIA", q: 10, eur: 500.00 } ]
+        };
+
+        function caricaTask() {
+            const div = document.getElementById('divSelezionata').value; const container = document.getElementById('task-container');
+            const tasks = confTask[div] || confTask['default']; container.innerHTML = '';
+            tasks.forEach(t => { container.innerHTML += '<div class="task-card"><div class="task-info"><h3>' + t.titolo + '</h3><p>' + t.desc + ' (' + t.eur + '€)</p></div><button class="btn" style="background:' + t.color + ';" onclick="completaTask(this, ' + t.q + ', ' + t.eur + ')">' + t.btn + '</button></div>'; });
+        }
+
+        function completaTask(btn, qty, euro) {
+            const div = document.getElementById('divSelezionata').value;
+            socket.emit('update_sal', { divisione: div, qty: qty, euro: euro });
+            const orig = btn.innerText; btn.innerText = 'OK ✓'; setTimeout(() => btn.innerText = orig, 1000);
+        }
+
+        function getGPSMeteo() {
+            return meteoAttuale !== "" ? posizioneGPS + " | 🌦️ " + meteoAttuale : posizioneGPS;
+        }
+
+        function inviaBypass() {
+            const sel = document.getElementById('divSelezionata'); const nomeCantiere = sel.options[sel.selectedIndex].text;
+            const motivo = prompt("Inserisci motivo Alert per " + nomeCantiere + ":");
+            if(motivo) socket.emit('alert_override', { operatore: "Noureddine (Cantiere)", cantiere: nomeCantiere, motivo: motivo, gps: getGPSMeteo() });
+        }
+
+        function inviaImmagine(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const sel = document.getElementById('divSelezionata'); const nomeCantiere = sel.options[sel.selectedIndex].text;
+                socket.emit('invio_foto', { operatore: "Noureddine (Cantiere)", cantiere: nomeCantiere, immagineStr: e.target.result, gps: getGPSMeteo() });
+                alert("✅ Foto inviata alla Direzione con successo!");
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

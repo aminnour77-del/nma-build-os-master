@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Torre di Controllo - NMA BUILD OS</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #e2e8f0; margin: 0; padding-bottom: 50px; }
+        #pin-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        #pin-input { padding: 15px; font-size: 24px; text-align: center; border-radius: 8px; border: none; margin-bottom: 20px; width: 250px; }
+        #btn-unlock { padding: 15px 30px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .topbar { background: #0f172a; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .executive-summary { background: #1e293b; color: #10b981; padding: 10px 30px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: right; }
+        .dashboard { padding: 30px 40px; }
+        .main-layout { display: flex; gap: 30px; margin-bottom: 30px; flex-wrap: wrap; }
+        .chart-container { background: white; border-radius: 12px; padding: 20px; flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .grid-divisioni { flex: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .card { background: white; border-radius: 12px; padding: 20px; border-top: 5px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card.gas { border-color: #f97316; } .card.idriche { border-color: #3b82f6; } .card.strade { border-color: #64748b; } .card.edifici { border-color: #6366f1; } .card.fluviali { border-color: #22c55e; } .card.depurazione { border-color: #14b8a6; }
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; } .val-qty { font-weight: bold; color: #475569; font-size: 16px; } .val-eur { font-weight: bold; color: #10b981; font-size: 18px; }
+        .alerts-section { background: white; border-radius: 12px; padding: 20px; }
+        .alert-card { background: #fef08a; border-left: 5px solid #eab308; padding: 15px; margin-top: 10px; border-radius: 4px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .foto-card { background: #e0f2fe; border-left: 5px solid #0ea5e9; padding: 15px; margin-top: 10px; border-radius: 4px; font-size: 14px; }
+        .foto-preview { max-width: 300px; border-radius: 8px; margin-top: 10px; display: block; border: 2px solid #bae6fd; }
+        .gps-badge { background: #334155; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; margin-left: 10px; }
+        .btn-export { padding: 10px 15px; border-radius: 6px; border: none; font-weight: bold; color: white; cursor: pointer; margin-right: 10px; font-size: 14px; }
+        @media print { #pin-screen, .btn-export, #no-print { display: none !important; } body { background: white; } .topbar { background: white; color: black; } .executive-summary { background: white; color: black; } .chart-container { display: none; } .card { border: 1px solid #ddd; border-top: 5px solid #000; } }
+    </style>
+</head>
+<body>
+    <div id="pin-screen">
+        <h2>🔒 NMA BUILD OS - Direzione</h2>
+        <input type="password" id="pin-input" placeholder="PIN Direzionale" />
+        <button id="btn-unlock" onclick="sbloccaTorre()">ACCEDI AL SISTEMA</button>
+    </div>
+    <div class="topbar">
+        <div>
+            <h1 style="margin: 0;">NMA BUILD OS</h1><p style="margin: 5px 0 0 0; color: #94a3b8;">Centro di Comando Analitico</p>
+            <div style="margin-top: 15px;" id="no-print"><button class="btn-export" style="background: #3b82f6;" onclick="window.print()">🖨️ Esporta PDF</button><button class="btn-export" style="background: #ef4444;" onclick="chiudiGiornata()">⚠️ Reset SAL</button></div>
+        </div>
+        <div class="executive-summary"><div style="font-size: 14px; color: #94a3b8; font-weight: normal; margin-bottom: 5px;">Fatturato Globale:</div><span id="totale-globale">€ 0,00</span></div>
+    </div>
+    
+    <div class="dashboard">
+        <div class="main-layout">
+            <div class="chart-container">
+                <h3 style="margin-top:0; color: #334155;">Distribuzione Valore SAL</h3>
+                <div style="width: 100%; max-width: 250px; margin-top: 20px;"><canvas id="salChart"></canvas></div>
+            </div>
+            <div class="grid-divisioni">
+                <div class="card gas"><h3 id="nome-gas">Reti Gas Metano</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-gas">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-gas">€ 0,00</span></div></div>
+                <div class="card idriche"><h3 id="nome-idriche">Reti Idriche</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-idriche">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-idriche">€ 0,00</span></div></div>
+                <div class="card strade"><h3 id="nome-strade">Opere Stradali</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-strade">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-strade">€ 0,00</span></div></div>
+                <div class="card edifici"><h3 id="nome-edifici">Edifici Civili</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-edifici">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-edifici">€ 0,00</span></div></div>
+                <div class="card fluviali"><h3 id="nome-fluviali">Opere Fluviali</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-fluviali">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-fluviali">€ 0,00</span></div></div>
+                <div class="card depurazione"><h3 id="nome-depurazione">Impianti Depurazione</h3><div class="metric-row"><span>Produzione:</span> <span class="val-qty" id="qty-depurazione">0</span></div><div class="metric-row"><span>Valore SAL:</span> <span class="val-eur" id="eur-depurazione">€ 0,00</span></div></div>
+            </div>
+        </div>
+        <div class="alerts-section"><h2 style="margin-top:0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Flusso Ispezioni e Multimedia</h2><div id="alerts-container"></div></div>
+    </div>
+    
+    <script>
+        function sbloccaTorre() {
+            if(document.getElementById('pin-input').value === '9999') document.getElementById('pin-screen').style.display = 'none';
+            else alert('Accesso Negato');
+        }
+        const socket = io(); let dbLocale = {};
+        
+        const ctx = document.getElementById('salChart').getContext('2d');
+        let salChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['Gas', 'Idriche', 'Strade', 'Edifici', 'Fluviali', 'Depur.'], datasets: [{ data: [0, 0, 0, 0, 0, 0], backgroundColor: ['#f97316', '#3b82f6', '#64748b', '#6366f1', '#22c55e', '#14b8a6'], borderWidth: 2 }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        function formattaEur(v) { return `€ ${v.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2})}`; }
+        
+        function aggiornaCruscotto() {
+            let tot = 0; let dataArr = [0,0,0,0,0,0];
+            if(dbLocale['gas']) {
+                dataArr[0] = dbLocale['gas'].eur; dataArr[1] = dbLocale['idriche'].eur; dataArr[2] = dbLocale['strade'].eur;
+                dataArr[3] = dbLocale['edifici'].eur; dataArr[4] = dbLocale['fluviali'].eur; dataArr[5] = dbLocale['depurazione'].eur;
+                for(let k in dbLocale) tot += dbLocale[k].eur;
+            }
+            document.getElementById('totale-globale').innerText = formattaEur(tot);
+            salChart.data.datasets[0].data = dataArr; salChart.update();
+        }
+
+        function aggiornaCard(div, dati) { document.getElementById(`qty-${div}`).innerText = `+${dati.qty} ${dati.unita}`; document.getElementById(`eur-${div}`).innerText = formattaEur(dati.eur); }
+        
+        socket.on('init_data', (db) => { dbLocale = db; for(let div in db) aggiornaCard(div, db[div]); aggiornaCruscotto(); });
+        socket.on('update_sal', (payload) => { dbLocale[payload.div] = payload.dati; aggiornaCard(payload.div, payload.dati); aggiornaCruscotto(); });
+        
+        socket.on('alert_override', (data) => {
+            const gpsTag = data.gps ? `<span class="gps-badge">📍 GPS: ${data.gps}</span>` : '';
+            document.getElementById('alerts-container').innerHTML = `<div class="alert-card"><div><b>🚨 ${data.cantiere}</b> ${gpsTag}<br>Operatore: ${data.operatore} | Motivo: <i>${data.motivo}</i></div><div style="color: #64748b;">${new Date().toLocaleTimeString()}</div></div>` + document.getElementById('alerts-container').innerHTML;
+        });
+        socket.on('ricevi_foto', (data) => {
+            const gpsTag = data.gps ? `<span class="gps-badge" style="background:#0284c7;">📍 GPS: ${data.gps}</span>` : '';
+            document.getElementById('alerts-container').innerHTML = `
+                <div class="foto-card">
+                    <div style="display:flex; justify-content:space-between;">
+                        <div><b>📸 Rilevamento Fotografico - ${data.cantiere}</b> ${gpsTag}<br>Operatore: ${data.operatore}</div>
+                        <div style="color: #0284c7;">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                    <img src="${data.immagineStr}" class="foto-preview" />
+                </div>
+            ` + document.getElementById('alerts-container').innerHTML;
+        });
+        function chiudiGiornata() { if(confirm("Azzerare il SAL?")) { socket.emit('reset_sal'); document.getElementById('alerts-container').innerHTML = ''; } }
+    </script>
+</body>
+</html>

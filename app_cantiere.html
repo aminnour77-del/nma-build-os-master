@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NMA BUILD OS - Terminale Cantiere</title>
+    <style>
+        body { background-color: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
+        h1 { font-size: 24px; margin: 0; color: #ff3333; letter-spacing: 1px;}
+        .btn { background-color: #ff3333; color: white; border: none; padding: 22px; font-size: 18px; font-weight: bold; border-radius: 12px; width: 100%; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 51, 51, 0.3); transition: 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .status-box { background: #111; padding: 25px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; text-align: left;}
+        .data-row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 10px;}
+        .highlight { color: #4CAF50; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>NMA BUILD OS</h1>
+        <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Operatore - Scavo</p>
+    </div>
+    
+    <div class="status-box">
+        <div class="data-row"><span>Cantiere:</span> <strong>APPALTO-TO-001</strong></div>
+        <div class="data-row"><span>Sensore GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca satelliti...</strong></div>
+        <div class="data-row"><span>Strumento BLE:</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
+    </div>
+
+    <button class="btn" id="btn-bluetooth">1. CONNETTI MANOMETRO (BLE)</button>
+    <button class="btn" id="btn-send" style="background-color: #222; color: #555; box-shadow: none;" disabled>2. INVIA DATI A UFFICIO</button>
+
+    <script>
+        // Finta sincronizzazione GPS per la demo
+        setTimeout(() => { 
+            document.getElementById('gps-status').innerHTML = '<span class="highlight">Agganciato (Precisione: 2.1m)</span>'; 
+        }, 1500);
+
+        // L'API Web Bluetooth Reale
+        document.getElementById('btn-bluetooth').addEventListener('click', async () => {
+            try {
+                // Questo comando dice al browser di accendere l'antenna Bluetooth e cercare i dispositivi
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true
+                });
+                
+                // Se l'utente seleziona un dispositivo, aggiorniamo l'interfaccia
+                document.getElementById('bt-status').innerHTML = '<span class="highlight">' + device.name + ' (Sincronizzato)</span>';
+                
+                const btnConnect = document.getElementById('btn-bluetooth');
+                btnConnect.style.backgroundColor = '#4CAF50';
+                btnConnect.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.4)';
+                btnConnect.innerText = '✓ STRUMENTO CONNESSO';
+                
+                // Sblocca il pulsante di invio
+                const btnSend = document.getElementById('btn-send');
+                btnSend.disabled = false;
+                btnSend.style.backgroundColor = '#007AFF';
+                btnSend.style.color = '#fff';
+                btnSend.style.boxShadow = '0 4px 15px rgba(0, 122, 255, 0.4)';
+                btnSend.innerText = '2. INVIA AL CATASTO OMBRA';
+                
+            } catch (error) {
+                console.error('Errore Bluetooth:', error);
+                // Il browser su Mac potrebbe bloccare la richiesta se non è Chrome, quindi mettiamo un avviso
+                alert("Scansione annullata. Assicurati di usare Google Chrome per testare il Bluetooth.");
+            }
+        });
+    </script>
+</body>
+</html>

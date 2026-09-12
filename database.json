@@ -1,0 +1,38 @@
+{
+  "gas": {
+    "nome": "Reti Gas Metano",
+    "unita": "m",
+    "qty": 0,
+    "eur": 0
+  },
+  "idriche": {
+    "nome": "Reti Idriche",
+    "unita": "m",
+    "qty": 60,
+    "eur": 3000
+  },
+  "strade": {
+    "nome": "Opere Stradali",
+    "unita": "mq",
+    "qty": 0,
+    "eur": 0
+  },
+  "edifici": {
+    "nome": "Edifici Civili",
+    "unita": "mc",
+    "qty": 80,
+    "eur": 4000
+  },
+  "fluviali": {
+    "nome": "Opere Fluviali",
+    "unita": "m",
+    "qty": 50,
+    "eur": 2500
+  },
+  "depurazione": {
+    "nome": "Depurazione",
+    "unita": "%",
+    "qty": 0,
+    "eur": 0
+  }
+}

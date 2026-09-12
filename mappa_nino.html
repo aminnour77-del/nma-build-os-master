@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NMA BUILD OS - Torre di Controllo</title>
+    <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #panel { position: absolute; top: 20px; left: 20px; background: rgba(10, 10, 10, 0.85); padding: 25px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 320px; backdrop-filter: blur(10px); }
+        .glow { color: #ff3333; text-shadow: 0 0 12px #ff3333; font-weight: bold; }
+        h2 { margin-top: 0; font-size: 20px; letter-spacing: 1px; color: #fff; }
+        p { font-size: 14px; color: #ccc; line-height: 1.5; }
+        .data-value { color: #fff; font-weight: 600; float: right; }
+        hr { border-color: #333; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="panel">
+        <h2>CATASTO OMBRA 3D</h2>
+        <hr>
+        <p>Cantiere: <span class="data-value">APPALTO-TO-001</span></p>
+        <p>Operatore: <span class="data-value">Squadra NMA</span></p>
+        <hr>
+        <p>Sensori Bluetooth: <span class="data-value glow">LIVE</span></p>
+        <p>Pressione (Testo 510i): <span class="data-value">22.5 mbar</span></p>
+        <p>Esito Collaudo: <span class="data-value" style="color: #4CAF50;">SUPERATO</span></p>
+        <hr>
+        <p style="font-size: 11px; color: #777;">*Mappatura LIDAR acquisita. Dati georeferenziati a profondità -1.5m. Sincronizzazione PostGIS attiva.</p>
+    </div>
+    <script>
+        var map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+            center: [7.68625, 45.07035], // Coordinate di Torino
+            zoom: 19.5,
+            pitch: 65, // Inclinazione telecamera 3D
+            bearing: -25 // Rotazione mappa
+        });
+
+        map.on('load', function () {
+            // Estrazione virtuale del tubo dal database
+            map.addSource('tubo-gas', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': [
+                            [7.68612, 45.07031],
+                            [7.68625, 45.07035],
+                            [7.68640, 45.07040]
+                        ]
+                    }
+                }
+            });
+
+            // Disegno 3D del tubo sul tracciato
+            map.addLayer({
+                'id': 'tubo-gas-layer',
+                'type': 'line',
+                'source': 'tubo-gas',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': '#ff3333',
+                    'line-width': 12,
+                    'line-blur': 3
+                }
+            });
+        });
+    </script>
+</body>
+</html>
