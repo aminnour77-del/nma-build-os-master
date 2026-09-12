@@ -520,12 +520,66 @@ app.get('/cantiere', (req, res) => {
                 });
             });
 
-            updateNetworkStatus();
+            
+            // --- INIZIO: MODULO AUTO-SYNC AL RITORNO DELLA RETE ---
+            window.addEventListener('online', async () => {
+                let queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
+                if (queue.length === 0) return;
+                
+                // Cerca il bottone di trasmissione basandosi sui nomi standard
+                let btn = document.getElementById('btnSend') || document.querySelector('button');
+                if (btn) {
+                    btn.style.backgroundColor = '#FF9800';
+                    btn.innerText = '🔄 RETE AGGANCIATA! SVUOTAMENTO CODA...';
+                }
+                
+                try {
+                    let res = await fetch('/api/sync-offline', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ collaudi: queue })
+                    });
+                    
+                    if (res.ok) {
+                        localStorage.removeItem('nma_offline_queue_core');
+                        if (typeof updateNetworkStatus === 'function') updateNetworkStatus();
+                        if (btn) {
+                            btn.style.backgroundColor = '#4CAF50';
+                            btn.innerText = '✅ TUTTI I DATI RECUPERATI (Coda: 0)';
+                        }
+                        // Ripristina il bottone al suo stato originale dopo 4 secondi
+                        setTimeout(() => { 
+                            if (btn) btn.innerText = '2. REGISTRA E TRASMETTI IN DIRETTA'; 
+                        }, 4000);
+                    }
+                } catch(e) {
+                    console.error('Errore durante lo svuotamento asincrono:', e);
+                }
+            });
+            // --- FINE: MODULO AUTO-SYNC ---
+
+updateNetworkStatus();
         </script>
     </body>
     </html>
   `);
 });
+
+
+// --- INIZIO: ENDPOINT RECUPERO CODA OFF-GRID ---
+app.post('/api/sync-offline', express.json(), (req, res) => {
+    const collaudi = req.body.collaudi || [];
+    console.log(`[SYNC] 🔄 Ripristinati ${collaudi.length} collaudi dalla coda offline del cantiere.`);
+    
+    // Invia i dati recuperati alla mappa 3D se il WebSocket è attivo
+    collaudi.forEach(dati => {
+        if (typeof io !== 'undefined') {
+            io.emit('telemetria', dati); 
+        }
+    });
+    res.status(200).json({ success: true });
+});
+// --- FINE: ENDPOINT RECUPERO ---
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROL ROOM SATELLITARE 3D ONLINE'); });
