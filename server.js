@@ -15,12 +15,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Generatore di Hash SHA-256 per l'immutabilità legale del collaudo
 function generaHashImmutabile(dati) {
   return crypto.createHash('sha256').update(JSON.stringify(dati) + Date.now()).digest('hex');
 }
 
-// Endpoint Registrazione Collaudo e Telemetria in Diretta
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, fotoData, anomalia, offline_id } = req.body;
@@ -55,8 +53,8 @@ app.post('/api/collaudo', async (req, res) => {
     `;
     
     await pool.query(query, [
-      cantiere || 'CANTIERE-PRINCIPALE-01', 
-      operatore || 'Squadra Campo', 
+      cantiere || 'ERG-CANTIERE-01', 
+      operatore || 'Squadra Campo 1', 
       tracciato3D, 
       JSON.stringify({ 
         offline_sync_id: uniqueOfflineId,
@@ -75,8 +73,7 @@ app.post('/api/collaudo', async (req, res) => {
       })
     ]);
     
-    // Broadcast in tempo reale a tutte le Torri di Controllo collegate via WebSocket
-    io.emit('nuovo_collaudo', { cantiere: cantiere || 'CANTIERE-PRINCIPALE-01', metri: metriVal, offline_id: uniqueOfflineId });
+    io.emit('nuovo_collaudo', { cantiere: cantiere || 'ERG-CANTIERE-01', metri: metriVal, offline_id: uniqueOfflineId });
 
     res.json({ success: true, alert: pressioneVal < 15.0, hash: hashLegale, valore_eur: valoreProduzioneEur, synced_id: uniqueOfflineId });
   } catch (err) {
@@ -85,7 +82,6 @@ app.post('/api/collaudo', async (req, res) => {
   }
 });
 
-// Endpoint KPI di Cantiere in Diretta
 app.get('/api/kpi/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -136,7 +132,6 @@ app.get('/api/kpi/:cantiere', async (req, res) => {
   }
 });
 
-// Endpoint Lista Cantieri
 app.get('/api/cantieri', async (req, res) => {
   try {
     const result = await pool.query('SELECT DISTINCT codice_cantiere FROM reti_gas_ombra');
@@ -146,7 +141,6 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Endpoint GeoJSON per la mappa in diretta
 app.get('/api/tubi', async (req, res) => {
   try {
     const cantiereFiltro = req.query.cantiere;
@@ -195,25 +189,25 @@ app.get('/api/tubi', async (req, res) => {
   }
 });
 
-// Torre di Controllo (Ufficio) - Monitoraggio in Diretta
+// Torre di Controllo con Mappa 3D Immersiva (Stile Google Earth) e Telemetria a 360°
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo (Live Telemetry)</title>
+        <title>NMA BUILD OS - Torre di Controllo (Google Earth 3D View)</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <style>
-            body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
+            body { margin: 0; padding: 0; background-color: #0b0b0b; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
             #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.95); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            #bim-container { position: absolute; bottom: 20px; right: 20px; width: 320px; height: 200px; background: rgba(20,20,20,0.9); border-radius: 12px; border: 1px solid #444; z-index: 10; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            .glow { color: #4CAF50; font-weight: bold; }
-            .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #282828; }
-            .metric h4 { margin: 0 0 5px 0; color: #00BCD4; font-size: 13px; text-transform: uppercase; }
+            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.92); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); backdrop-filter: blur(10px); }
+            #bim-container { position: absolute; bottom: 20px; right: 20px; width: 340px; height: 210px; background: rgba(15,15,15,0.92); border-radius: 12px; border: 1px solid #444; z-index: 10; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
+            .glow { color: #4CAF50; font-weight: bold; text-shadow: 0 0 10px rgba(76,175,80,0.4); }
+            .metric { background: #181818; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #282828; }
+            .metric h4 { margin: 0 0 5px 0; color: #00BCD4; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
             .metric p { margin: 0; font-size: 15px; font-weight: bold; }
             select { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 5px; font-size: 14px; }
             .bim-title { position: absolute; top: 8px; left: 12px; font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: bold; z-index: 5; }
@@ -224,22 +218,23 @@ app.get('/ufficio', (req, res) => {
         <div id="bim-container"><div class="bim-title">Digital Twin 3D (Live)</div></div>
         
         <div id="panel">
-            <h2>NMA BUILD OS</h2>
-            <hr style="border-color:#333;">
-            <p>Stato Rete: <span class="glow">LIVE STREAM ATTIVO</span></p>
+            <h2>NMA BUILD OS <span style="font-size:11px; background:#00BCD4; color:#000; padding:2px 6px; border-radius:4px; float:right; margin-top:6px;">ERG EDITION</span></h2>
+            <hr style="border-color:#333; margin: 12px 0;">
+            <p>Controllo Linea: <span class="glow">360° LIVE ACTIVE</span></p>
             
             <div class="metric">
-                <h4>Seleziona Cantiere</h4>
+                <h4>Seleziona Cantiere Operativo</h4>
                 <select id="selettore-cantiere" onchange="aggiornaDatiAppalto()">
-                    <option value="TUTTI">Tutti i Cantieri (Panoramica)</option>
+                    <option value="TUTTI">Tutti i Cantieri (Panoramica Globale)</option>
                 </select>
             </div>
 
             <div class="metric">
-                <h4>Telemetry KPI & Produzione</h4>
-                <p id="stats-metri">Caricamento dati...</p>
+                <h4>Telemetria & Produzione Totale</h4>
+                <p id="stats-metri">Caricamento telemetria...</p>
                 <p id="stats-valore" style="font-size:13px; color:#4CAF50; margin-top:4px;"></p>
                 <p id="stats-esg" style="font-size:13px; color:#00BCD4; margin-top:3px;"></p>
+                <p id="stats-anomalie" style="font-size:13px; color:#ff9800; margin-top:3px;"></p>
             </div>
         </div>
 
@@ -267,9 +262,15 @@ app.get('/ufficio', (req, res) => {
             }
             animateBim();
 
+            // Mappa 3D Immersiva ad alto impatto visivo (Stile Google Earth satellitare)
             var map = new maplibregl.Map({
-                container: 'map', style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-                center: [7.68625, 45.07035], zoom: 17.5, pitch: 60, bearing: -25
+                container: 'map', 
+                style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+                center: [7.68625, 45.07035], 
+                zoom: 17.5, 
+                pitch: 65, 
+                bearing: -30,
+                antialias: true
             });
 
             let socket = io();
@@ -284,6 +285,7 @@ app.get('/ufficio', (req, res) => {
                     document.getElementById('stats-metri').innerText = kpi.metri_posati + " Metri posati (" + kpi.tratti_eseguiti + " tratti)";
                     document.getElementById('stats-valore').innerText = "Valore Produzione: € " + kpi.valore_produzione_eur.toLocaleString();
                     document.getElementById('stats-esg').innerText = "CO2 Risparmiata: " + kpi.esg_co2_kg + " kg";
+                    document.getElementById('stats-anomalie').innerText = "Anomalie Rilevate: " + kpi.anomalie_rilevate;
                 });
             }
 
@@ -296,7 +298,7 @@ app.get('/ufficio', (req, res) => {
                 fetch('/api/cantieri').then(res => res.json()).then(cantieri => {
                     const select = document.getElementById('selettore-cantiere');
                     let curr = select.value;
-                    select.innerHTML = '<option value="TUTTI">Tutti i Cantieri (Panoramica)</option>';
+                    select.innerHTML = '<option value="TUTTI">Tutti i Cantieri (Panoramica Globale)</option>';
                     cantieri.forEach(c => {
                         let opt = document.createElement('option');
                         opt.value = c; opt.innerText = c;
@@ -311,7 +313,7 @@ app.get('/ufficio', (req, res) => {
                 map.addLayer({
                     'id': 'tubi-layer', type: 'line', source: 'tubi-gas',
                     'layout': { 'line-join': 'round', 'line-cap': 'round' },
-                    'paint': { 'line-color': '#4CAF50', 'line-width': 8, 'line-blur': 1 }
+                    'paint': { 'line-color': '#00C853', 'line-width': 9, 'line-opacity': 0.9 }
                 });
                 caricaCantieri();
                 caricaMappaEKPI();
@@ -332,12 +334,12 @@ app.get('/cantiere', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <title>NMA BUILD OS - Terminale Campo</title>
         <style>
-            body { background-color: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+            body { background-color: #0b0b0b; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
             .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-            h1 { font-size: 24px; margin: 0; color: #4CAF50; letter-spacing: 1px;}
-            .btn { background-color: #4CAF50; color: #000; border: none; padding: 22px; font-size: 16px; font-weight: bold; border-radius: 12px; width: 100%; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
-            .status-box { background: #111; padding: 25px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; text-align: left;}
-            .data-row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 14px; border-bottom: 1px solid #333; padding-bottom: 10px; align-items: center;}
+            h1 { font-size: 22px; margin: 0; color: #4CAF50; letter-spacing: 1px;}
+            .btn { background-color: #4CAF50; color: #000; border: none; padding: 20px; font-size: 15px; font-weight: bold; border-radius: 12px; width: 100%; margin-top: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
+            .status-box { background: #141414; padding: 20px; border-radius: 12px; margin-top: 15px; border: 1px solid #222; text-align: left;}
+            .data-row { display: flex; justify-content: space-between; margin: 12px 0; font-size: 14px; border-bottom: 1px solid #282828; padding-bottom: 8px; align-items: center;}
             .highlight { color: #4CAF50; font-weight: bold; }
             input, select { background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 14px; text-align: right; width: 150px; }
             .offline-badge { background: #4CAF50; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; float: right; }
@@ -346,22 +348,22 @@ app.get('/cantiere', (req, res) => {
     <body>
         <div class="header">
             <h1>NMA BUILD OS <span id="net-status" class="offline-badge">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Collaudo & Telemetria Diretta</p>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 13px;">Terminale Collaudo & Telemetria a 360°</p>
         </div>
         
         <div class="status-box">
-            <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="CANTIERE-PRINCIPALE-01"></div>
+            <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="ERG-CANTIERE-01"></div>
             <div class="data-row"><span>Operatore:</span> <input type="text" id="input-operatore" value="Squadra Campo 1"></div>
             <div class="data-row"><span>Metri Tubo:</span> <input type="number" id="input-metri" value="30"></div>
             <div class="data-row"><span>Raccordi:</span> <input type="number" id="input-raccordi" value="2"></div>
-            <div class="data-row"><span>Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:160px; font-size:12px;"></div>
-            <div class="data-row"><span>Foto + Watermark:</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:170px; font-size:11px;"></div>
-            <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#007AFF;">0 elementi</strong></div>
+            <div class="data-row"><span>Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:150px; font-size:12px;"></div>
+            <div class="data-row"><span>Foto + Watermark:</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:160px; font-size:11px;"></div>
+            <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#00BCD4;">0 elementi</strong></div>
             <div class="data-row"><span>GPS (Hardware):</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
             <div class="data-row"><span>Bluetooth (BLE):</span> <strong id="bt-status" style="color:#4CAF50;">Pronto</strong></div>
         </div>
 
-        <button class="btn" id="btn-bluetooth" style="background-color: #333; color: #fff;">1. COLLEGAMENTO BLE STRUMENTO</button>
+        <button class="btn" id="btn-bluetooth" style="background-color: #222; color: #fff; border: 1px solid #444;">1. COLLEGAMENTO BLE STRUMENTO</button>
         <button class="btn" id="btn-send">2. REGISTRA E TRASMETTI IN DIRETTA</button>
 
         <script>
@@ -432,7 +434,7 @@ app.get('/cantiere', (req, res) => {
             document.getElementById('btn-send').addEventListener('click', () => {
                 const payload = {
                     offline_id: 'OFF-' + Date.now() + '-' + Math.floor(Math.random()*10000),
-                    cantiere: document.getElementById('input-cantiere').value || 'CANTIERE-PRINCIPALE-01',
+                    cantiere: document.getElementById('input-cantiere').value || 'ERG-CANTIERE-01',
                     operatore: document.getElementById('input-operatore').value || 'Squadra Campo 1',
                     metriTubo: Number(document.getElementById('input-metri').value || 30),
                     raccordi: Number(document.getElementById('input-raccordi').value || 2),
@@ -483,4 +485,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CORE INDUSTRIALE PURO ONLINE'); });
+server.listen(PORT, () => { console.log('✅ NMA BUILD OS - MAPPA 3D & TELEMETRIA 360° ONLINE'); });
