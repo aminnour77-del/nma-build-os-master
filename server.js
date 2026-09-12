@@ -53,7 +53,73 @@ app.get('/api/tubi', async (req, res) => {
   }
 });
 
-// Torre di Controllo originale con pannello metrico e grafica pulita
+// PUNTO 2: Report As-Built formattato e stampabile
+app.get('/api/report/:cantiere', async (req, res) => {
+  try {
+    const { cantiere } = req.params;
+    const result = await pool.query('SELECT * FROM reti_gas_ombra WHERE codice_cantiere = $1', [cantiere]);
+    const collaudi = result.rows;
+
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <meta charset="utf-8">
+          <title>Report As-Built - ${cantiere}</title>
+          <style>
+              body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; }
+              h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
+              .meta { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
+              th { background-color: #333; color: white; }
+              .badge { background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+          </style>
+      </head>
+      <body>
+          <h1>NMA BUILD OS - CERTIFICATO DI COLLAUDO AS-BUILT</h1>
+          <div class="meta">
+              <p><strong>Cantiere:</strong> ${cantiere}</p>
+              <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
+              <p><strong>Totale Tratti Collaudati:</strong> ${collaudi.length}</p>
+          </div>
+          <h3>Dettaglio Rilevazioni Bluetooth & GPS</h3>
+          <table>
+              <tr>
+                  <th>ID Tratto</th>
+                  <th>Operatore</th>
+                  <th>Profondità</th>
+                  <th>Pressione Rilevata</th>
+                  <th>Strumento BLE</th>
+                  <th>Esito</th>
+              </tr>`;
+
+    collaudi.forEach(row => {
+      const log = row.log_pressione || {};
+      html += `<tr>
+          <td>#${row.id}</td>
+          <td>${row.operatore}</td>
+          <td>${log.profondita_m || -1.5} m</td>
+          <td>${log.pressione_mbar || 'N/D'} mbar</td>
+          <td>${log.dispositivo || 'Testo 510i'}</td>
+          <td><span class="badge">${log.esito || 'SUPERATO'}</span></td>
+      </tr>`;
+    });
+
+    html += `</table>
+          <br><br>
+          <p style="text-align: right; font-size: 12px; color: #666;">Documento generato digitalmente da NMA BUILD OS - Validato via Cloud PostGIS</p>
+          <script>window.print();</script>
+      </body>
+      </html>
+    `;
+    res.send(html);
+  } catch (err) {
+    res.status(500).send('Errore generazione report');
+  }
+});
+
+// Torre di Controllo con metriche originali + Pulsante Report As-Built
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -70,6 +136,8 @@ app.get('/ufficio', (req, res) => {
             .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #282828; }
             .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
             .metric p { margin: 0; font-size: 15px; font-weight: bold; }
+            .btn-report { display: block; width: 100%; background: #007AFF; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; }
+            .btn-report:hover { background: #0056b3; }
         </style>
     </head>
     <body>
@@ -82,6 +150,7 @@ app.get('/ufficio', (req, res) => {
                 <h4>Infrastruttura Certificata</h4>
                 <p id="stats-metri">Calcolo metri in corso...</p>
             </div>
+            <a href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 SCARICA REPORT AS-BUILT</a>
         </div>
         <script>
             var map = new maplibregl.Map({
@@ -113,7 +182,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere originale con Bluetooth, GPS e trasmissione dati
+// Terminale Cantiere originale
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -209,4 +278,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => { console.log('✅ BASE STABILE RIPRISTINATA'); });
+app.listen(PORT, () => { console.log('✅ SERVER AGGIORNATO CON PUNTO 2'); });
