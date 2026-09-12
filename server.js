@@ -190,6 +190,24 @@ app.get('/api/tubi', async (req, res) => {
 });
 
 // Torre di Controllo - Control Room Satellitare 3D (Stile Google Earth & Flusso Live)
+
+app.get('/', (req, res) => {
+    res.send(`
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#121212;">
+            <h1 style="color:white; margin-bottom: 20px;">NMA BUILD OS</h1>
+            <input type="password" id="pin" placeholder="Inserisci PIN di accesso" style="padding:15px; font-size:20px; border-radius:5px; border:none; text-align:center; margin-bottom:20px;">
+            <button onclick="login()" style="background:#4CAF50; color:white; padding:15px 40px; font-size:20px; border:none; border-radius:5px; cursor:pointer;">ACCEDI</button>
+            <script>
+                function login() {
+                    const pin = document.getElementById('pin').value;
+                    if(pin === 'ADMIN3D') window.location.href = '/ufficio';
+                    else if(pin === 'TECNICO26') window.location.href = '/cantiere';
+                    else alert('PIN Errato');
+                }
+            </script>
+        </div>
+    `);
+});
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
