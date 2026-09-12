@@ -42,35 +42,20 @@ function generaHashImmutabile(dati) {
 
 app.post('/api/collaudo', async (req, res) => {
   try {
-    const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, fotoData, anomalia, offline_id } = req.body;
+    const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
     
     const uniqueOfflineId = offline_id || ('OFF-' + Date.now() + '-' + Math.floor(Math.random()*1000));
-    const lLat = Number(lat || 45.07030);
-    const lLng = Number(lng || 7.68625);
-    const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0005} ${lLat + 0.0005} -1.5)`;
-
     const pressioneVal = Number(pressione || 22.5);
     const metriVal = Number(metriTubo || 30);
     const raccordiVal = Number(raccordi || 2);
-    const esitoCollaudo = pressioneVal < 15.0 ? "ATTENZIONE - PRESSIONE BASSA" : "SUPERATO";
-    const segnalazioneAnomalia = anomalia || (pressioneVal < 15.0 ? "Calo di pressione rilevato" : "Nessuna anomalia");
+    const segnalazioneAnomalia = anomalia || "Nessuna anomalia";
+    const conteggioAnomalia = (segnalazioneAnomalia !== "Nessuna anomalia") ? 1 : 0;
 
     const payloadCertificato = { cantiere, operatore, offline_id: uniqueOfflineId, pressione: pressioneVal, metri: metriVal, data: new Date().toISOString() };
-    const hashLegale = generaHashImmutabile(payloadCertificato);
-
-    const watermarkedFotoMeta = fotoData ? {
-      originale_presente: true,
-      timestamp: new Date().toISOString(),
-      gps: { lat: lLat, lng: lLng },
-      hash_sha256: hashLegale
-    } : { originale_presente: false };
-
+    const hashLegale = require('crypto').createHash('sha256').update(JSON.stringify(payloadCertificato) + Date.now()).digest('hex');
     const valoreProduzioneEur = (metriVal * 45) + (raccordiVal * 35);
-    const co2RisparmiataKg = Math.round(metriVal * 1.2 * 10) / 10;
 
-    
-    // --- INIZIO: SALVATAGGIO PERMANENTE SU MONGODB ATLAS ---
-    let conteggioAnomalia = (segnalazioneAnomalia !== "Nessuna anomalia") ? 1 : 0;
+    // SALVATAGGIO DEFINITIVO E PULITO SOLO SU MONGODB ATLAS
     await Cantiere.findOneAndUpdate(
         { id_cantiere: cantiere || 'ERG-CANTIERE-01' },
         { 
@@ -79,41 +64,15 @@ app.post('/api/collaudo', async (req, res) => {
         },
         { upsert: true, new: true }
     );
-    console.log(`✅ [MONGODB] Salvati ${metriVal}m e ${raccordiVal} raccordi nel caveau cloud!`);
-    // --- FINE: SALVATAGGIO MONGODB ---
-
-    const query = `
-      INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione)
-      VALUES ($1, $2, ST_GeomFromText($3, 4326), $4)
-    `;
     
-    await pool.query(query, [
-      cantiere || 'ERG-CANTIERE-01', 
-      operatore || 'Squadra Campo 1', 
-      tracciato3D, 
-      JSON.stringify({ 
-        offline_sync_id: uniqueOfflineId,
-        strumento: strumento || 'Manuale / Manometro', 
-        pressione_mbar: pressioneVal, 
-        esito: esitoCollaudo,
-        profondita_m: -1.5,
-        metri_tubo: metriVal,
-        raccordi_salvati: raccordiVal,
-        anomalia_segnalata: segnalazioneAnomalia,
-        valore_produzione_eur: valoreProduzioneEur,
-        esg_co2_kg: co2RisparmiataKg,
-        hash_immutabile: hashLegale,
-        watermark_foto: watermarkedFotoMeta,
-        data_ora: new Date().toISOString()
-      })
-    ]);
-    
-    io.emit('nuovo_collaudo', { cantiere: cantiere || 'ERG-CANTIERE-01', metri: metriVal, offline_id: uniqueOfflineId });
+    if (typeof io !== 'undefined') {
+        io.emit('nuovo_collaudo', { cantiere: cantiere || 'ERG-CANTIERE-01', metri: metriVal, offline_id: uniqueOfflineId });
+    }
 
     res.json({ success: true, alert: pressioneVal < 15.0, hash: hashLegale, valore_eur: valoreProduzioneEur, synced_id: uniqueOfflineId });
   } catch (err) {
-    console.error('Errore registrazione collaudo:', err);
-    res.status(500).send('Errore server cantiere');
+    console.error('Errore salvataggio MongoDB:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
