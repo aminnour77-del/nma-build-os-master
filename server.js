@@ -9,10 +9,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Registrazione collaudo con Multi-Cantiere e Firma Digitale Operatore (Punto 3 + Punto 1)
+// Registrazione collaudo con supporto offline sync e ruoli
 app.post('/api/collaudo', async (req, res) => {
   try {
-    const { cantiere, pressione, lat, lng, strumento, operatore } = req.body;
+    const { cantiere, pressione, lat, lng, strumento, operatore, ruolo } = req.body;
     const lLat = lat || 45.07030;
     const lLng = lng || 7.68625;
     const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0004} ${lLat + 0.0004} -1.5)`;
@@ -24,7 +24,7 @@ app.post('/api/collaudo', async (req, res) => {
     
     await pool.query(query, [
       cantiere || 'APPALTO-TO-001', 
-      operatore || 'Noureddine M.', 
+      `${operatore || 'Noureddine M.'} [${ruolo || 'OPERATORE'}]`, 
       tracciato3D, 
       JSON.stringify({ 
         dispositivo: strumento || 'Testo 510i', 
@@ -42,7 +42,7 @@ app.post('/api/collaudo', async (req, res) => {
   }
 });
 
-// Endpoint GeoJSON filtrabile per cantiere (Punto 3)
+// Endpoint GeoJSON filtrabile per cantiere
 app.get('/api/tubi', async (req, res) => {
   try {
     const cantiereFiltro = req.query.cantiere;
@@ -91,7 +91,7 @@ app.get('/api/tubi', async (req, res) => {
   }
 });
 
-// Lista cantieri attivi (Punto 3)
+// Lista cantieri attivi
 app.get('/api/cantieri', async (req, res) => {
   try {
     const result = await pool.query('SELECT DISTINCT codice_cantiere FROM reti_gas_ombra');
@@ -101,7 +101,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Firma Digitale dell'Operatore (Punto 2 + Punto 1)
+// Report As-Built con dettagli ruoli e firma
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -131,11 +131,11 @@ app.get('/api/report/:cantiere', async (req, res) => {
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
               <p><strong>Totale Tratti Collaudati:</strong> ${collaudi.length}</p>
           </div>
-          <h3>Dettaglio Rilevazioni & Firma Digitale Operatore</h3>
+          <h3>Dettaglio Rilevazioni & Ruoli Operativi</h3>
           <table>
               <tr>
                   <th>ID Tratto</th>
-                  <th>Operatore (Firma)</th>
+                  <th>Operatore & Ruolo</th>
                   <th>Profondità</th>
                   <th>Pressione Rilevata</th>
                   <th>Strumento BLE</th>
@@ -156,7 +156,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Documento validato con Firma Digitale Cloud - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Documento validato con Ruoli Cloud RBAC - NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
@@ -167,7 +167,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
   }
 });
 
-// Torre di Controllo (Ufficio) con Selettore Multi-Cantiere e Metriche
+// Torre di Controllo (Ufficio) con Controllo Ruoli
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -194,7 +194,7 @@ app.get('/ufficio', (req, res) => {
         <div id="panel">
             <h2>CATASTO OMBRA 3D</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">LIVE SYNC</span></p>
+            <p>Stato: <span class="glow">LIVE SYNC + RBAC</span></p>
             
             <div class="metric">
                 <h4>Seleziona Appalto</h4>
@@ -270,7 +270,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere con Multi-Cantiere e Firma Digitale (Punto 3 + Punto 1)
+// Terminale Cantiere con Modalità Offline (Queue LocalStorage) e Ruoli (RBAC)
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -287,19 +287,28 @@ app.get('/cantiere', (req, res) => {
             .status-box { background: #111; padding: 25px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; text-align: left;}
             .data-row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 14px; border-bottom: 1px solid #333; padding-bottom: 10px; align-items: center;}
             .highlight { color: #4CAF50; font-weight: bold; }
-            input { background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 14px; text-align: right; width: 150px; }
+            input, select { background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 14px; text-align: right; width: 160px; }
+            .offline-badge { background: #ff9800; color: #000; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; float: right; }
         </style>
     </head>
     <body>
         <div class="header">
-            <h1>NMA BUILD OS</h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Scavo - Sistema Completo</p>
+            <h1>NMA BUILD OS <span id="net-status" class="offline-badge" style="background:#4CAF50; color:#fff;">ONLINE</span></h1>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Offline PWA + RBAC</p>
         </div>
         
         <div class="status-box">
             <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="APPALTO-TO-001"></div>
-            <div class="data-row"><span>Operatore (Firma):</span> <input type="text" id="input-operatore" value="Noureddine M."></div>
-            <div class="data-row"><span>GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca satelliti...</strong></div>
+            <div class="data-row"><span>Operatore:</span> <input type="text" id="input-operatore" value="Noureddine M."></div>
+            <div class="data-row"><span>Ruolo (RBAC):</span> 
+                <select id="input-ruolo">
+                    <option value="OPERATORE">Operatore Scavo</option>
+                    <option value="CAPOCANTIERE">Capocantiere</option>
+                    <option value="COLLAUDATORE">Collaudatore</option>
+                </select>
+            </div>
+            <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#007AFF;">0 elementi</strong></div>
+            <div class="data-row"><span>GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
             <div class="data-row"><span>Bluetooth:</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
         </div>
 
@@ -311,10 +320,49 @@ app.get('/cantiere', (req, res) => {
             let currentLng = 7.68625;
             let btDeviceName = "Nessuno";
 
+            function updateNetworkStatus() {
+                const badge = document.getElementById('net-status');
+                const queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
+                document.getElementById('queue-count').innerText = queue.length + " elementi";
+                
+                if (navigator.onLine) {
+                    badge.style.backgroundColor = '#4CAF50';
+                    badge.innerText = 'ONLINE';
+                    if (queue.length > 0) syncOfflineQueue();
+                } else {
+                    badge.style.backgroundColor = '#ff9800';
+                    badge.innerText = 'OFFLINE (Locale)';
+                }
+            }
+
+            window.addEventListener('online', updateNetworkStatus);
+            window.addEventListener('offline', updateNetworkStatus);
+
+            async function syncOfflineQueue() {
+                let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
+                if (queue.length === 0) return;
+
+                let remaining = [];
+                for (let item of queue) {
+                    try {
+                        let res = await fetch('/api/collaudo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(item)
+                        });
+                        if (!res.ok) remaining.push(item);
+                    } catch (e) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem('nma_offline_queue', JSON.stringify(remaining));
+                updateNetworkStatus();
+            }
+
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition((position) => {
-                    currentLat = position.coords.latitude;
-                    currentLng = position.coords.longitude;
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    currentLat = pos.coords.latitude;
+                    currentLng = pos.coords.longitude;
                     document.getElementById('gps-status').innerHTML = '<span class="highlight">Agganciato</span>';
                 }, () => {
                     document.getElementById('gps-status').innerText = 'Torino (Fallback)';
@@ -341,30 +389,51 @@ app.get('/cantiere', (req, res) => {
             });
 
             document.getElementById('btn-send').addEventListener('click', () => {
-                const cantiereCodice = document.getElementById('input-cantiere').value || 'APPALTO-TO-001';
-                const operatoreNome = document.getElementById('input-operatore').value || 'Noureddine M.';
+                const payload = {
+                    cantiere: document.getElementById('input-cantiere').value || 'APPALTO-TO-001',
+                    operatore: document.getElementById('input-operatore').value || 'Noureddine M.',
+                    ruolo: document.getElementById('input-ruolo').value || 'OPERATORE',
+                    pressione: 22.5,
+                    strumento: btDeviceName,
+                    lat: currentLat,
+                    lng: currentLng
+                };
+
                 const btnSend = document.getElementById('btn-send');
                 btnSend.innerText = 'TRASMISSIONE...';
+
+                if (!navigator.onLine) {
+                    let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
+                    queue.push(payload);
+                    localStorage.setItem('nma_offline_queue', JSON.stringify(queue));
+                    updateNetworkStatus();
+                    btnSend.innerText = '✓ SALVATO OFFLINE (In Coda)';
+                    btnSend.style.backgroundColor = '#ff9800';
+                    setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
+                    return;
+                }
                 
                 fetch('/api/collaudo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cantiere: cantiereCodice,
-                        operatore: operatoreNome,
-                        pressione: 22.5,
-                        strumento: btDeviceName,
-                        lat: currentLat,
-                        lng: currentLng
-                    })
+                    body: JSON.stringify(payload)
                 }).then(res => {
                     if(res.ok) {
                         btnSend.innerText = '✓ RICEVUTO DAL CATASTO OMBRA';
                         btnSend.style.backgroundColor = '#4CAF50';
                         setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
                     }
+                }).catch(() => {
+                    let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
+                    queue.push(payload);
+                    localStorage.setItem('nma_offline_queue', JSON.stringify(queue));
+                    updateNetworkStatus();
+                    btnSend.innerText = '⚠ SALVATO IN LOCALE (Errore rete)';
+                    btnSend.style.backgroundColor = '#ff9800';
                 });
             });
+
+            updateNetworkStatus();
         </script>
     </body>
     </html>
@@ -372,4 +441,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => { console.log('✅ NMA BUILD OS - COMPLETATO AL 100%'); });
+app.listen(PORT, () => { console.log('✅ NMA BUILD OS - OFFLINE + RBAC ONLINE'); });
