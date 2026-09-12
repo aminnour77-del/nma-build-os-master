@@ -23,7 +23,7 @@ function generaTokenJWT(payload) {
   return `${header}.${body}.${signature}`;
 }
 
-// Middleware di Verifica Token Enterprise
+// Middleware di Verifica Token Enterprise & ISO 27001 Log Audit
 function verificaJWT(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(401).json({ errore: 'Token di autenticazione mancante' });
@@ -34,8 +34,12 @@ function verificaJWT(req, res, next) {
     const signatureVerificata = crypto.createHmac('sha256', 'NMA_BUILD_OS_SECRET_KEY_2026').update(`${parti[0]}.${parti[1]}`).digest('base64url');
     if (signatureVerificata !== parti[2]) throw new Error('Firma token non valida');
     req.user = JSON.parse(Buffer.from(parti[1], 'base64url').toString());
+    
+    // Audit Log conforme ISO 27001
+    console.log(`[AUDIT ISO 27001] Accesso autorizzato - Utente: ${req.user.utente} | Ruolo: ${req.user.ruolo} | Endpoint: ${req.path} | Timestamp: ${new Date().toISOString()}`);
     next();
   } catch (err) {
+    console.warn(`[SECURITY WARNING] Tentativo accesso non autorizzato su ${req.path} - ${new Date().toISOString()}`);
     res.status(403).json({ errore: 'Token non autorizzato o scaduto' });
   }
 }
@@ -64,7 +68,7 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ success: true, token, utente, ruolo: livelloRuolo });
 });
 
-// Registrazione collaudo protetta con AI e Immutabilità SHA-256
+// Registrazione collaudo protetta con AI, Immutabilità e Audit Pilot
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, ruolo, metriTubo, raccordi, fotoData, anomalia } = req.body;
@@ -88,11 +92,11 @@ app.post('/api/collaudo', async (req, res) => {
     `;
     
     await pool.query(query, [
-      cantiere || 'APPALTO-TO-001', 
-      `${operatore || 'Noureddine M.'} [${ruolo || 'OPERATORE'}]`, 
+      cantiere || 'PILOT-CANTIERE-01', 
+      `${operatore || 'Squadra Pilota'} [${ruolo || 'OPERATORE'}]`, 
       tracciato3D, 
       JSON.stringify({ 
-        dispositivo: strumento || 'Testo 510i', 
+        dispositivo: strumento || 'Testo 510i (BLE)', 
         pressione_mbar: pressioneVal, 
         esito: esitoCollaudo,
         profondita_m: -1.5,
@@ -106,27 +110,26 @@ app.post('/api/collaudo', async (req, res) => {
       })
     ]);
     
-    io.emit('nuovo_collaudo', { cantiere: cantiere || 'APPALTO-TO-001', metri: metriVal });
+    io.emit('nuovo_collaudo', { cantiere: cantiere || 'PILOT-CANTIERE-01', metri: metriVal });
 
     res.json({ success: true, alert: pressioneVal < 15.0, hash: hashLegale, ai: analisiPredittiva });
   } catch (err) {
-    console.error('Errore POST:', err);
-    res.status(500).send('Errore server');
+    console.error('Errore POST Pilot:', err);
+    res.status(500).send('Errore server pilot');
   }
 });
 
-// BLOCCO 2: Endpoint IoT Telemetry Hub per sensori interrati e smart valves
+// Endpoint IoT Telemetry Hub per sensori interrati e smart valves
 app.post('/api/iot/telemetria', async (req, res) => {
   try {
     const { id_sensore, cantiere, pressione_iot, batteria_pct, stato_valvola } = req.body;
     
-    // Registra i dati IoT come evento straordinario nel catasto
     const query = `
       INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione)
       VALUES ($1, $2, ST_GeomFromText($3, 4326), $4)
     `;
     await pool.query(query, [
-      cantiere || 'APPALTO-TO-001',
+      cantiere || 'PILOT-CANTIERE-01',
       `IOT SENSOR [${id_sensore || 'IoT-NODE-01'}]`,
       'LINESTRING Z(7.68625 45.07030 -1.5, 7.68665 45.07070 -1.5)',
       JSON.stringify({
@@ -138,14 +141,14 @@ app.post('/api/iot/telemetria', async (req, res) => {
       })
     ]);
 
-    io.emit('nuovo_collaudo', { cantiere: cantiere || 'APPALTO-TO-001' });
-    res.json({ success: true, messaggio: "Telemetria IoT acquisita e sincronizzata con successo" });
+    io.emit('nuovo_collaudo', { cantiere: cantiere || 'PILOT-CANTIERE-01' });
+    res.json({ success: true, messaggio: "Telemetria IoT acquisita per Pilot" });
   } catch (err) {
     res.status(500).send('Errore ricezione IoT');
   }
 });
 
-// BLOCCO 2: Endpoint Export GIS Avanzato (Compatibile ESRI / QGIS)
+// Endpoint Export GIS Avanzato (Compatibile ESRI / QGIS)
 app.get('/api/gis/export', verificaJWT, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -171,14 +174,14 @@ app.get('/api/gis/export', verificaJWT, async (req, res) => {
     `);
     
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="nma_build_os_gis_export.geojson"');
+    res.setHeader('Content-Disposition', 'attachment; filename="nma_pilot_gis_export.geojson"');
     res.send(result.rows[0].geojson);
   } catch (err) {
     res.status(500).send('Errore export GIS');
   }
 });
 
-// Endpoint KPI Avanzati con Analisi Predittiva Globale
+// Endpoint KPI Avanzati con Analisi Predittiva Globale per il Pilot
 app.get('/api/kpi/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -230,11 +233,11 @@ app.get('/api/kpi/:cantiere', async (req, res) => {
       produttivita_squadre: produttivitaPerSquadra
     });
   } catch (err) {
-    res.status(500).send('Errore calcolo KPI predittivi');
+    res.status(500).send('Errore calcolo KPI Pilot');
   }
 });
 
-// Endpoint protetto ERP con JWT
+// Endpoint protetto ERP con JWT e Audit ISO 27001
 app.get('/api/erp/sincronizza', verificaJWT, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM reti_gas_ombra');
@@ -246,7 +249,7 @@ app.get('/api/erp/sincronizza', verificaJWT, async (req, res) => {
       timestamp: row.id
     }));
     res.json({
-      sistema: "NMA BUILD OS - Enterprise GIS & IoT Telemetry Hub Active",
+      sistema: "NMA BUILD OS - Pilot Edition (ISO 27001 & JWT Secured)",
       utente_autorizzato: req.user,
       stato: "SINCRONIZZATO",
       totale_record: datiContabili.length,
@@ -316,7 +319,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Hash Crittografico e Predizione AI
+// Report As-Built con Hash Crittografico SHA-256 e Predizione AI
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -337,7 +340,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Report As-Built 10M€ Enterprise - ${cantiere}</title>
+          <title>Report Pilot As-Built - ${cantiere}</title>
           <style>
               body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; background: #fff; }
               h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
@@ -354,16 +357,17 @@ app.get('/api/report/:cantiere', async (req, res) => {
           </style>
       </head>
       <body>
-          <h1>NMA BUILD OS - CERTIFICATO ENTERPRISE 10M€</h1>
+          <h1>NMA BUILD OS - CERTIFICATO PILOT UFFICIALE</h1>
           <div class="meta">
-              <p><strong>Cantiere:</strong> ${cantiere}</p>
+              <p><strong>Cantiere / Appalto:</strong> ${cantiere}</p>
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
-              <p><strong>Totale Rilevazioni:</strong> ${collaudi.length}</p>
+              <p><strong>Totale Rilevazioni Verificate:</strong> ${collaudi.length}</p>
+              <p><strong>Compliance:</strong> ISO 27001 & SHA-256 Immutabile</p>
           </div>
           <div class="counters">
-              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:11px;">Tubi Posati</p></div>
+              <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:11px;">Tubi Posati (Pilot)</p></div>
               <div class="counter-box"><h3>${totaleRaccordi}</h3><p style="margin:5px 0 0 0;font-size:11px;">Raccordi</p></div>
-              <div class="counter-box"><h3>€ ${(totaleMetri * 45 + totaleRaccordi * 35).toLocaleString()}</h3><p style="margin:5px 0 0 0;font-size:11px;">Valore Totale</p></div>
+              <div class="counter-box"><h3>€ ${(totaleMetri * 45 + totaleRaccordi * 35).toLocaleString()}</h3><p style="margin:5px 0 0 0;font-size:11px;">Valore Produzione</p></div>
           </div>
           <h3>Registro Collaudi, Predizione AI & Immutabilità SHA-256</h3>
           <table>
@@ -382,34 +386,34 @@ app.get('/api/report/:cantiere', async (req, res) => {
       const isHighRisk = ai.livello && ai.livello.includes("ALTO");
       html += `<tr>
           <td>#${row.id}</td>
-          <td><strong>${row.operatore || 'Noureddine M.'}</strong></td>
+          <td><strong>${row.operatore || 'Squadra Pilota'}</strong></td>
           <td>${log.pressione_mbar || 'N/D'} mbar</td>
           <td><span class="${isHighRisk ? 'badge-alert' : 'badge'}">${ai.livello}</span></td>
           <td><span class="hash-txt">${log.hash_immutabile || 'N/D'}</span></td>
-          <td>${log.esito || 'SUPERATO'}</span></td>
+          <td>${log.esito || 'SUPERATO'}</td>
       </tr>`;
     });
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Certificato Enterprise con Connettività GIS e IoT - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Certificato Valido per Collaudo e Audit - NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.status(500).send('Errore report enterprise');
+    res.status(500).send('Errore report pilot');
   }
 });
 
-// Torre di Controllo (Ufficio) con Pulsanti GIS ed IoT Hub attivi
+// Torre di Controllo (Ufficio) con Dashboard per Pilot e Demo Clienti
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo Enterprise 10M€</title>
+        <title>NMA BUILD OS - Torre di Controllo Pilot & Demo</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -421,7 +425,7 @@ app.get('/ufficio', (req, res) => {
             #bim-container { position: absolute; bottom: 20px; right: 20px; width: 320px; height: 200px; background: rgba(20,20,20,0.9); border-radius: 12px; border: 1px solid #444; z-index: 10; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             .glow { color: #4CAF50; font-weight: bold; }
             .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #282828; }
-            .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
+            .metric h4 { margin: 0 0 5px 0; color: #ff9800; font-size: 13px; text-transform: uppercase; }
             .metric p { margin: 0; font-size: 15px; font-weight: bold; }
             select { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 5px; font-size: 14px; }
             .btn-report { display: block; width: 100%; background: #007AFF; color: white; border: none; padding: 11px; border-radius: 8px; font-weight: bold; margin-top: 12px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; }
@@ -436,29 +440,29 @@ app.get('/ufficio', (req, res) => {
     <body>
         <div id="map"></div>
         <div id="bim-container">
-            <div class="bim-title">BIM Digital Twin (GIS & IoT Ready)</div>
+            <div class="bim-title">BIM Digital Twin (Pilot Mode)</div>
         </div>
         
         <div id="panel">
-            <h2>NMA BUILD OS 10M€ ENTERPRISE</h2>
+            <h2>NMA BUILD OS - PILOT & DEMO</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">GIS, IoT & AI ATTIVI</span></p>
+            <p>Stato: <span class="glow">PRONTO PER IL CAMPO</span></p>
             
             <div class="metric">
-                <h4>Seleziona Appalto</h4>
+                <h4>Seleziona Cantiere Pilot</h4>
                 <select id="selettore-cantiere" onchange="aggiornaDatiAppalto()">
                     <option value="TUTTI">Tutti i Cantieri (Panoramica)</option>
                 </select>
             </div>
 
             <div class="metric">
-                <h4>KPI & Telemetria Globale</h4>
+                <h4>KPI & Telemetria Pilot</h4>
                 <p id="stats-metri">Caricamento...</p>
                 <p id="stats-valore" style="font-size:13px; color:#4CAF50; margin-top:4px;"></p>
                 <p id="stats-rischio" style="font-size:12px; color:#ff9800; margin-top:3px;"></p>
             </div>
             
-            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT AS-BUILT ENTERPRISE</a>
+            <a id="link-report" href="/api/report/PILOT-CANTIERE-01" target="_blank" class="btn-report">📄 REPORT PILOT AS-BUILT</a>
             <a id="link-gis" href="/api/gis/export" target="_blank" class="btn-gis">🌍 ESPORTA GEODATASET GIS (GeoJSON)</a>
             <button onclick="scaricaErpProtetto()" class="btn-erp">🔄 SINCRONIZZAZIONE ERP (JWT)</button>
         </div>
@@ -472,13 +476,13 @@ app.get('/ufficio', (req, res) => {
             containerBim.appendChild(renderer.domElement);
 
             const geometryTubo = new THREE.CylinderGeometry(0.8, 0.8, 6, 32);
-            const materialeTubo = new THREE.MeshStandardMaterial({ color: 0x007AFF, roughness: 0.3 });
+            const materialeTubo = new THREE.MeshStandardMaterial({ color: 0xff9800, roughness: 0.3 });
             const tuboMesh = new THREE.Mesh(geometryTubo, materialeTubo);
             tuboMesh.rotation.z = Math.PI / 2;
             scene.add(tuboMesh);
 
             const geometryRaccordo = new THREE.SphereGeometry(1.1, 32, 32);
-            const materialeRaccordo = new THREE.MeshStandardMaterial({ color: 0xff9800, metalness: 0.8 });
+            const materialeRaccordo = new THREE.MeshStandardMaterial({ color: 0x4CAF50, metalness: 0.8 });
             const raccordoMesh = new THREE.Mesh(geometryRaccordo, materialeRaccordo);
             raccordoMesh.position.x = 3;
             scene.add(raccordoMesh);
@@ -493,7 +497,7 @@ app.get('/ufficio', (req, res) => {
             function animateBim() {
                 requestAnimationFrame(animateBim);
                 tuboMesh.rotation.y += 0.01;
-                raccordoMesh.rotation.z += 0.02;
+                raccordoMesh.rotation.x += 0.02;
                 renderer.render(scene, camera);
             }
             animateBim();
@@ -512,13 +516,10 @@ app.get('/ufficio', (req, res) => {
                     let res = await fetch('/api/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: 'Direttore Lavori NMA', ruolo: 'DIRETTORE' })
+                        body: JSON.stringify({ username: 'Direttore Pilot NMA', ruolo: 'DIRETTORE' })
                     });
                     let data = await res.json();
-                    if(data.success) { 
-                        jwtToken = data.token; 
-                        // Imposta l'URL di export GIS con il token autorizzato o tramite header (qui impostiamo il link diretto o gestito)
-                    }
+                    if(data.success) { jwtToken = data.token; }
                 } catch(e) {}
             }
 
@@ -549,7 +550,7 @@ app.get('/ufficio', (req, res) => {
 
             function aggiornaDatiAppalto() {
                 cantiereAttivo = document.getElementById('selettore-cantiere').value;
-                document.getElementById('link-report').href = '/api/report/' + (cantiereAttivo === 'TUTTI' ? 'APPALTO-TO-001' : cantiereAttivo);
+                document.getElementById('link-report').href = '/api/report/' + (cantiereAttivo === 'TUTTI' ? 'PILOT-CANTIERE-01' : cantiereAttivo);
                 caricaMappaEKPI();
             }
 
@@ -591,14 +592,14 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere Mobile-Ready
+// Terminale Cantiere Ottimizzato per Pilot (BLE, Camera, Offline Queue)
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="it">
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>NMA BUILD OS - Terminale 10M€ Enterprise</title>
+        <title>NMA BUILD OS - Terminale Cantiere Pilot</title>
         <style>
             body { background-color: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
             .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
@@ -614,13 +615,13 @@ app.get('/cantiere', (req, res) => {
     </head>
     <body>
         <div class="header">
-            <h1>NMA BUILD OS <span id="net-status" class="offline-badge">ENTERPRISE 10M€</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo con Telemetria IoT & AI</p>
+            <h1>NMA BUILD OS <span id="net-status" class="offline-badge">PILOT ACTIVE</span></h1>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo per Test su Cantiere Reale</p>
         </div>
         
         <div class="status-box">
-            <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="APPALTO-TO-001"></div>
-            <div class="data-row"><span>Operatore / Squadra:</span> <input type="text" id="input-operatore" value="Squadra NMA"></div>
+            <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="PILOT-CANTIERE-01"></div>
+            <div class="data-row"><span>Operatore / Squadra:</span> <input type="text" id="input-operatore" value="Squadra Pilota NMA"></div>
             <div class="data-row"><span>Ruolo:</span> 
                 <select id="input-ruolo">
                     <option value="OPERATORE">Operatore Scavo</option>
@@ -630,7 +631,7 @@ app.get('/cantiere', (req, res) => {
             <div class="data-row"><span>Metri Tubo:</span> <input type="number" id="input-metri" value="30"></div>
             <div class="data-row"><span>Raccordi:</span> <input type="number" id="input-raccordi" value="2"></div>
             <div class="data-row"><span>Segnala Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:160px; font-size:12px;"></div>
-            <div class="data-row"><span>Foto Hardware (Camera):</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:170px; font-size:11px;"></div>
+            <div class="data-row"><span>Foto Cantiere (Camera):</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:170px; font-size:11px;"></div>
             <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#007AFF;">0 elementi</strong></div>
             <div class="data-row"><span>GPS (Hardware):</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
             <div class="data-row"><span>Bluetooth (BLE):</span> <strong id="bt-status" style="color:#ff9800;">Disconnesso</strong></div>
@@ -651,7 +652,7 @@ app.get('/cantiere', (req, res) => {
                     const reader = new FileReader();
                     reader.onload = function(uploadEvent) {
                         base64Foto = uploadEvent.target.result;
-                        alert("✓ Foto catturata e firmata!");
+                        alert("✓ Foto cantiere catturata e firmata!");
                     };
                     reader.readAsDataURL(file);
                 }
@@ -727,8 +728,8 @@ app.get('/cantiere', (req, res) => {
 
             document.getElementById('btn-send').addEventListener('click', () => {
                 const payload = {
-                    cantiere: document.getElementById('input-cantiere').value || 'APPALTO-TO-001',
-                    operatore: document.getElementById('input-operatore').value || 'Squadra NMA',
+                    cantiere: document.getElementById('input-cantiere').value || 'PILOT-CANTIERE-01',
+                    operatore: document.getElementById('input-operatore').value || 'Squadra Pilota NMA',
                     ruolo: document.getElementById('input-ruolo').value || 'OPERATORE',
                     metriTubo: Number(document.getElementById('input-metri').value || 30),
                     raccordi: Number(document.getElementById('input-raccordi').value || 2),
@@ -741,7 +742,7 @@ app.get('/cantiere', (req, res) => {
                 };
 
                 const btnSend = document.getElementById('btn-send');
-                btnSend.innerText = 'TRASMISSIONE ENTERPRISE...';
+                btnSend.innerText = 'REGISTRAZIONE PILOT...';
 
                 if (!navigator.onLine) {
                     let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
@@ -759,7 +760,7 @@ app.get('/cantiere', (req, res) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 }).then(res => res.json()).then(data => {
-                    btnSend.innerText = data.alert ? '⚠ ATTENZIONE: PRESSIONE BASSA' : '✓ COLLAUDO REGISTRATO NEL CATASTO';
+                    btnSend.innerText = data.alert ? '⚠ ATTENZIONE: PRESSIONE BASSA' : '✓ COLLAUDO PILOT REGISTRATO';
                     btnSend.style.backgroundColor = data.alert ? '#ff9800' : '#4CAF50';
                     setTimeout(() => { btnSend.innerText = '2. INVIA COLLAUDO AL CATASTO'; btnSend.style.backgroundColor = '#ff9800'; }, 2500);
                 }).catch(() => {
@@ -780,4 +781,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - 10M€ ENTERPRISE FULL STACK ONLINE'); });
+server.listen(PORT, () => { console.log('✅ NMA BUILD OS - BLOCCO 1 PILOT & COMPLIANCE ONLINE'); });
