@@ -26,7 +26,7 @@ app.post('/api/collaudo', async (req, res) => {
     const uniqueOfflineId = offline_id || ('OFF-' + Date.now() + '-' + Math.floor(Math.random()*1000));
     const lLat = Number(lat || 45.07030);
     const lLng = Number(lng || 7.68625);
-    const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0004} ${lLat + 0.0004} -1.5)`;
+    const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0005} ${lLat + 0.0005} -1.5)`;
 
     const pressioneVal = Number(pressione || 22.5);
     const metriVal = Number(metriTubo || 30);
@@ -189,38 +189,36 @@ app.get('/api/tubi', async (req, res) => {
   }
 });
 
-// Torre di Controllo con Mappa 3D Immersiva (Stile Google Earth) e Telemetria a 360°
+// Torre di Controllo - Control Room Satellitare 3D (Stile Google Earth & Flusso Live)
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo (Google Earth 3D View)</title>
+        <title>NMA BUILD OS - Control Room Satellitare 3D (Google Earth)</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <style>
-            body { margin: 0; padding: 0; background-color: #0b0b0b; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
+            body { margin: 0; padding: 0; background-color: #050505; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
             #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.92); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); backdrop-filter: blur(10px); }
-            #bim-container { position: absolute; bottom: 20px; right: 20px; width: 340px; height: 210px; background: rgba(15,15,15,0.92); border-radius: 12px; border: 1px solid #444; z-index: 10; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
-            .glow { color: #4CAF50; font-weight: bold; text-shadow: 0 0 10px rgba(76,175,80,0.4); }
-            .metric { background: #181818; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #282828; }
-            .metric h4 { margin: 0 0 5px 0; color: #00BCD4; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-            .metric p { margin: 0; font-size: 15px; font-weight: bold; }
-            select { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 5px; font-size: 14px; }
-            .bim-title { position: absolute; top: 8px; left: 12px; font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: bold; z-index: 5; }
+            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.94); padding: 22px; border-radius: 14px; border: 1px solid #333; z-index: 10; width: 410px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px); }
+            .glow { color: #00E676; font-weight: bold; text-shadow: 0 0 12px rgba(0,230,118,0.5); }
+            .metric { background: #161616; padding: 14px; border-radius: 9px; margin-top: 12px; border: 1px solid #262626; }
+            .metric h4 { margin: 0 0 6px 0; color: #00BCD4; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+            .metric p { margin: 0; font-size: 16px; font-weight: bold; }
+            select { width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 6px; font-size: 14px; outline: none; cursor: pointer; }
+            .live-badge { font-size: 10px; background: #00E676; color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; float: right; margin-top: 5px; animation: pulseBadge 1.5s infinite; }
+            @keyframes pulseBadge { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         </style>
     </head>
     <body>
         <div id="map"></div>
-        <div id="bim-container"><div class="bim-title">Digital Twin 3D (Live)</div></div>
         
         <div id="panel">
-            <h2>NMA BUILD OS <span style="font-size:11px; background:#00BCD4; color:#000; padding:2px 6px; border-radius:4px; float:right; margin-top:6px;">ERG EDITION</span></h2>
-            <hr style="border-color:#333; margin: 12px 0;">
-            <p>Controllo Linea: <span class="glow">360° LIVE ACTIVE</span></p>
+            <h2>NMA BUILD OS <span class="live-badge">SATELLITE 3D LIVE</span></h2>
+            <hr style="border-color:#333; margin: 14px 0;">
+            <p>Controllo Linea: <span class="glow">FLUSSO PRESSIONE ATTIVO</span></p>
             
             <div class="metric">
                 <h4>Seleziona Cantiere Operativo</h4>
@@ -232,44 +230,39 @@ app.get('/ufficio', (req, res) => {
             <div class="metric">
                 <h4>Telemetria & Produzione Totale</h4>
                 <p id="stats-metri">Caricamento telemetria...</p>
-                <p id="stats-valore" style="font-size:13px; color:#4CAF50; margin-top:4px;"></p>
-                <p id="stats-esg" style="font-size:13px; color:#00BCD4; margin-top:3px;"></p>
-                <p id="stats-anomalie" style="font-size:13px; color:#ff9800; margin-top:3px;"></p>
+                <p id="stats-valore" style="font-size:14px; color:#00E676; margin-top:5px;"></p>
+                <p id="stats-esg" style="font-size:13px; color:#00BCD4; margin-top:4px;"></p>
+                <p id="stats-anomalie" style="font-size:13px; color:#ff9800; margin-top:4px;"></p>
             </div>
         </div>
 
         <script>
-            const containerBim = document.getElementById('bim-container');
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(45, containerBim.clientWidth / containerBim.clientHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(containerBim.clientWidth, containerBim.clientHeight);
-            containerBim.appendChild(renderer.domElement);
-
-            const geometryTubo = new THREE.CylinderGeometry(0.8, 0.8, 6, 32);
-            const materialeTubo = new THREE.MeshStandardMaterial({ color: 0x4CAF50, roughness: 0.3 });
-            const tuboMesh = new THREE.Mesh(geometryTubo, materialeTubo);
-            tuboMesh.rotation.z = Math.PI / 2;
-            scene.add(tuboMesh);
-            scene.add(new THREE.DirectionalLight(0xffffff, 2));
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            camera.position.z = 8;
-
-            function animateBim() {
-                requestAnimationFrame(animateBim);
-                tuboMesh.rotation.y += 0.01;
-                renderer.render(scene, camera);
-            }
-            animateBim();
-
-            // Mappa 3D Immersiva ad alto impatto visivo (Stile Google Earth satellitare)
+            // Mappa 3D Satellitare ad altissimo impatto (Stile Google Earth con rilievo e edifici 3D)
             var map = new maplibregl.Map({
-                container: 'map', 
-                style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-                center: [7.68625, 45.07035], 
-                zoom: 17.5, 
-                pitch: 65, 
-                bearing: -30,
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {
+                        'raster-tiles': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256
+                        }
+                    },
+                    layers: [
+                        {
+                            id: 'simple-tiles',
+                            type: 'raster',
+                            source: 'raster-tiles',
+                            minzoom: 0,
+                            maxzoom: 22
+                        }
+                    ]
+                },
+                center: [7.68625, 45.07035],
+                zoom: 18,
+                pitch: 70,
+                bearing: -35,
                 antialias: true
             });
 
@@ -279,7 +272,9 @@ app.get('/ufficio', (req, res) => {
             function caricaMappaEKPI() {
                 const urlGeo = cantiereAttivo === 'TUTTI' ? '/api/tubi' : '/api/tubi?cantiere=' + cantiereAttivo;
                 fetch(urlGeo).then(res => res.json()).then(data => {
-                    if(map.getSource('tubi-gas')) map.getSource('tubi-gas').setData(data);
+                    if(map.getSource('tubi-gas')) {
+                        map.getSource('tubi-gas').setData(data);
+                    }
                 });
                 fetch('/api/kpi/' + cantiereAttivo).then(res => res.json()).then(kpi => {
                     document.getElementById('stats-metri').innerText = kpi.metri_posati + " Metri posati (" + kpi.tratti_eseguiti + " tratti)";
@@ -310,11 +305,41 @@ app.get('/ufficio', (req, res) => {
 
             map.on('load', function () {
                 map.addSource('tubi-gas', { type: 'geojson', data: '/api/tubi' });
+                
+                // Tubo esterno strutturale 3D sulla mappa satellitare
                 map.addLayer({
-                    'id': 'tubi-layer', type: 'line', source: 'tubi-gas',
+                    'id': 'tubi-struttura',
+                    'type': 'line',
+                    'source': 'tubi-gas',
                     'layout': { 'line-join': 'round', 'line-cap': 'round' },
-                    'paint': { 'line-color': '#00C853', 'line-width': 9, 'line-opacity': 0.9 }
+                    'paint': { 'line-color': '#1b5e20', 'line-width': 14, 'line-opacity': 0.9 }
                 });
+
+                // Anima il flusso interno del liquido in pressione sopra la mappa satellitare
+                map.addLayer({
+                    'id': 'tubi-flusso-live',
+                    'type': 'line',
+                    'source': 'tubi-gas',
+                    'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                    'paint': {
+                        'line-color': '#00E676',
+                        'line-width': 7,
+                        'line-dasharray': [2, 3],
+                        'line-opacity': 1.0
+                    }
+                });
+
+                // Effetto animazione scorrimento fluido in pressione
+                let step = 0;
+                function animateDashArray() {
+                    step = (step + 0.15) % 5;
+                    if(map.getLayer('tubi-flusso-live')) {
+                        map.setPaintProperty('tubi-flusso-live', 'line-dasharray', [2, Math.max(1, 5 - step)]);
+                    }
+                    requestAnimationFrame(animateDashArray);
+                }
+                animateDashArray();
+
                 caricaCantieri();
                 caricaMappaEKPI();
                 socket.on('nuovo_collaudo', () => { caricaMappaEKPI(); caricaCantieri(); });
@@ -325,7 +350,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere (Offline Sync & Live Field Dispatch)
+// Terminale Cantiere
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -348,7 +373,7 @@ app.get('/cantiere', (req, res) => {
     <body>
         <div class="header">
             <h1>NMA BUILD OS <span id="net-status" class="offline-badge">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 13px;">Terminale Collaudo & Telemetria a 360°</p>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 13px;">Terminale Collaudo & Telemetria Flusso</p>
         </div>
         
         <div class="status-box">
@@ -485,4 +510,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - MAPPA 3D & TELEMETRIA 360° ONLINE'); });
+server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROL ROOM SATELLITARE 3D ONLINE'); });
