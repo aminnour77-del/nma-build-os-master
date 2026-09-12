@@ -14,16 +14,17 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Registrazione collaudo con WebSockets Live Broadcast e Magazzino
+// Registrazione collaudo con Storico Pressione, Anomalie e Produttività Squadra
 app.post('/api/collaudo', async (req, res) => {
   try {
-    const { cantiere, pressione, lat, lng, strumento, operatore, ruolo, metriTubo, raccordi, fotoData } = req.body;
+    const { cantiere, pressione, lat, lng, strumento, operatore, ruolo, metriTubo, raccordi, fotoData, anomalia } = req.body;
     const lLat = lat || 45.07030;
     const lLng = lng || 7.68625;
     const tracciato3D = `LINESTRING Z(${lLng} ${lLat} -1.5, ${lLng + 0.0004} ${lLat + 0.0004} -1.5)`;
 
     const pressioneVal = Number(pressione || 22.5);
     const esitoCollaudo = pressioneVal < 15.0 ? "ATTENZIONE - PRESSIONE BASSA" : "SUPERATO";
+    const segnalazioneAnomalia = anomalia || (pressioneVal < 15.0 ? "Calo di pressione rilevato" : "Nessuna anomalia");
 
     const query = `
       INSERT INTO reti_gas_ombra (codice_cantiere, operatore, tracciato_3d, log_pressione)
@@ -41,6 +42,7 @@ app.post('/api/collaudo', async (req, res) => {
         profondita_m: -1.5,
         metri_tubo: metriTubo || 30,
         raccordi_salvati: raccordi || 2,
+        anomalia_segnalata: segnalazioneAnomalia,
         foto_presente: fotoData ? true : false,
         data_ora: new Date().toISOString()
       })
@@ -55,11 +57,11 @@ app.post('/api/collaudo', async (req, res) => {
   }
 });
 
-// Endpoint KPI Economici e Magazzino
+// Endpoint KPI Avanzati e Produttività per Squadra / Operatore
 app.get('/api/kpi/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
-    let query = 'SELECT log_pressione FROM reti_gas_ombra';
+    let query = 'SELECT operatore, log_pressione FROM reti_gas_ombra';
     let params = [];
     if (cantiere && cantiere !== 'TUTTI') {
       query += ' WHERE codice_cantiere = $1';
@@ -69,26 +71,40 @@ app.get('/api/kpi/:cantiere', async (req, res) => {
     
     let totalMetri = 0;
     let totalRaccordi = 0;
+    let anomalieCount = 0;
+    let produttivitaPerSquadra = {};
+
     result.rows.forEach(r => {
       const log = r.log_pressione || {};
-      totalMetri += Number(log.metri_tubo || 30);
+      const op = r.operatore || 'Sconosciuto';
+      const metri = Number(log.metri_tubo || 30);
+      
+      totalMetri += metri;
       totalRaccordi += Number(log.raccordi_salvati || 2);
+      if (log.anomalia_segnalata && log.anomalia_segnalata !== "Nessuna anomalia") {
+        anomalieCount++;
+      }
+
+      if (!produttivitaPerSquadra[op]) produttivitaPerSquadra[op] = { tratti: 0, metri_totali: 0 };
+      produttivitaPerSquadra[op].tratti += 1;
+      produttivitaPerSquadra[op].metri_totali += metri;
     });
 
     const costoPosa = totalMetri * 45;
     const costoRaccordi = totalRaccordi * 35;
-    const valoreTotaleAppalto = costoPosa + costoRaccordi;
 
     res.json({
       cantiere: cantiere || 'Tutti',
       tratti_eseguiti: result.rows.length,
       metri_posati: totalMetri,
       raccordi_utilizzati: totalRaccordi,
+      anomalie_aperte: anomalieCount,
       rimanenza_magazzino_tubi_m: Math.max(0, 5000 - totalMetri),
-      valore_produzione_eur: valoreTotaleAppalto
+      valore_produzione_eur: costoPosa + costoRaccordi,
+      produttivita_squadre: produttivitaPerSquadra
     });
   } catch (err) {
-    res.status(500).send('Errore calcolo KPI');
+    res.status(500).send('Errore calcolo KPI avanzati');
   }
 });
 
@@ -104,7 +120,7 @@ app.get('/api/erp/sincronizza', async (req, res) => {
       timestamp: row.id
     }));
     res.json({
-      sistema: "NMA BUILD OS - ERP Connector",
+      sistema: "NMA BUILD OS - Controllo Totale Enterprise",
       stato: "SINCRONIZZATO",
       totale_record: datiContabili.length,
       dati: datiContabili
@@ -173,7 +189,7 @@ app.get('/api/cantieri', async (req, res) => {
   }
 });
 
-// Report As-Built con Contabilità e KPI
+// Report As-Built con Storico Pressione e Anomalie
 app.get('/api/report/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
@@ -194,7 +210,7 @@ app.get('/api/report/:cantiere', async (req, res) => {
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Report As-Built & KPI - ${cantiere}</title>
+          <title>Report As-Built & Controllo Totale - ${cantiere}</title>
           <style>
               body { font-family: Helvetica, Arial, sans-serif; margin: 40px; color: #111; background: #fff; }
               h1 { color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; }
@@ -206,10 +222,11 @@ app.get('/api/report/:cantiere', async (req, res) => {
               th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
               th { background-color: #333; color: white; }
               .badge { background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+              .badge-alert { background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
           </style>
       </head>
       <body>
-          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & KPI DIREZIONALI</h1>
+          <h1>NMA BUILD OS - CERTIFICATO AS-BUILT & STORICO COLLAUDI</h1>
           <div class="meta">
               <p><strong>Cantiere:</strong> ${cantiere}</p>
               <p><strong>Data Emissione:</strong> ${new Date().toLocaleString()}</p>
@@ -218,58 +235,59 @@ app.get('/api/report/:cantiere', async (req, res) => {
           <div class="counters">
               <div class="counter-box"><h3>${totaleMetri} m</h3><p style="margin:5px 0 0 0;font-size:11px;">Tubi Posati</p></div>
               <div class="counter-box"><h3>${totaleRaccordi}</h3><p style="margin:5px 0 0 0;font-size:11px;">Raccordi</p></div>
-              <div class="counter-box"><h3>€ ${(totaleMetri * 45 + totaleRaccordi * 35).toLocaleString()}</h3><p style="margin:5px 0 0 0;font-size:11px;">Valore Produzione</p></div>
+              <div class="counter-box"><h3>€ ${(totaleMetri * 45 + totaleRaccordi * 35).toLocaleString()}</h3><p style="margin:5px 0 0 0;font-size:11px;">Valore Totale</p></div>
           </div>
-          <h3>Dettaglio Tratti & Compliance</h3>
+          <h3>Registro Storico Pressioni & Anomalie</h3>
           <table>
               <tr>
                   <th>ID</th>
                   <th>Operatore & Ruolo</th>
                   <th>Tubi (m)</th>
-                  <th>Raccordi</th>
-                  <th>Pressione</th>
+                  <th>Pressione Test</th>
+                  <th>Anomalia / Segnalazione</th>
                   <th>Esito</th>
               </tr>`;
 
     collaudi.forEach(row => {
       const log = row.log_pressione || {};
+      const hasAnomaly = log.anomalia_segnalata && log.anomalia_segnalata !== "Nessuna anomalia";
       html += `<tr>
           <td>#${row.id}</td>
           <td><strong>${row.operatore || 'Noureddine M.'}</strong></td>
           <td>${log.metri_tubo || 30} m</td>
-          <td>${log.raccordi_salvati || 2}</td>
           <td>${log.pressione_mbar || 'N/D'} mbar</td>
-          <td><span class="badge">${log.esito || 'SUPERATO'}</span></td>
+          <td>${log.anomalia_segnalata || 'Nessuna'}</td>
+          <td><span class="${hasAnomaly ? 'badge-alert' : 'badge'}">${log.esito || 'SUPERATO'}</span></td>
       </tr>`;
     });
 
     html += `</table>
           <br><br>
-          <p style="text-align: right; font-size: 12px; color: #666;">Report Direzionale Cloud - NMA BUILD OS</p>
+          <p style="text-align: right; font-size: 12px; color: #666;">Report Storico Certificato - NMA BUILD OS</p>
           <script>window.print();</script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.status(500).send('Errore report KPI');
+    res.status(500).send('Errore report storico');
   }
 });
 
-// Torre di Controllo (Ufficio) con WebSockets Live e Dashboard KPI
+// Torre di Controllo (Ufficio) con Dashboard Controllo Totale
 app.get('/ufficio', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-        <title>NMA BUILD OS - Torre di Controllo Live</title>
+        <title>NMA BUILD OS - Controllo Totale Struttura</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
         <script src="/socket.io/socket.io.js"></script>
         <style>
             body { margin: 0; padding: 0; background-color: #111; color: white; font-family: -apple-system, sans-serif; }
             #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.95); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            #panel { position: absolute; top: 20px; left: 20px; background: rgba(10,10,10,0.95); padding: 20px; border-radius: 12px; border: 1px solid #333; z-index: 10; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             .glow { color: #4CAF50; font-weight: bold; }
             .metric { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #282828; }
             .metric h4 { margin: 0 0 5px 0; color: #ff3333; font-size: 13px; text-transform: uppercase; }
@@ -284,9 +302,9 @@ app.get('/ufficio', (req, res) => {
     <body>
         <div id="map"></div>
         <div id="panel">
-            <h2>CATASTO OMBRA 3D</h2>
+            <h2>CONTROLLO STRUTTURALE</h2>
             <hr style="border-color:#333;">
-            <p>Stato: <span class="glow">WEBSOCKETS LIVE</span></p>
+            <p>Stato: <span class="glow">ATTIVO & PROTETTO</span></p>
             
             <div class="metric">
                 <h4>Seleziona Appalto</h4>
@@ -296,13 +314,14 @@ app.get('/ufficio', (req, res) => {
             </div>
 
             <div class="metric">
-                <h4>KPI & Produzione</h4>
+                <h4>KPI & Produttività Squadre</h4>
                 <p id="stats-metri">Caricamento...</p>
                 <p id="stats-valore" style="font-size:13px; color:#4CAF50; margin-top:5px;"></p>
-                <p id="stats-magazzino" style="font-size:12px; color:#888; margin-top:3px;"></p>
+                <p id="stats-anomalie" style="font-size:13px; color:#ff9800; margin-top:3px;"></p>
+                <p id="stats-squadre" style="font-size:11px; color:#aaa; margin-top:5px; line-height:1.4;"></p>
             </div>
             
-            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT DIREZIONALE KPI</a>
+            <a id="link-report" href="/api/report/APPALTO-TO-001" target="_blank" class="btn-report">📄 REPORT STORICO & COLLAUDI</a>
             <a href="/api/erp/sincronizza" target="_blank" class="btn-erp">🔄 ESPORTA JSON PER ERP ESTERNO</a>
         </div>
         <script>
@@ -326,7 +345,13 @@ app.get('/ufficio', (req, res) => {
                 fetch(urlKpi).then(res => res.json()).then(kpi => {
                     document.getElementById('stats-metri').innerText = kpi.metri_posati + " Metri posati (" + kpi.tratti_eseguiti + " tratti)";
                     document.getElementById('stats-valore').innerText = "Valore Produzione: € " + kpi.valore_produzione_eur.toLocaleString();
-                    document.getElementById('stats-magazzino').innerText = "Magazzino Tubi Disponibile: " + kpi.rimanenza_magazzino_tubi_m + " m";
+                    document.getElementById('stats-anomalie').innerText = "Anomalie/Segnalazioni: " + kpi.anomalie_aperte;
+                    
+                    let sqText = "<strong>Produttività Squadre:</strong><br>";
+                    for (let sq in kpi.produttivita_squadre) {
+                        sqText += "- " + sq + ": " + kpi.produttivita_squadre[sq].metri_totali + "m (" + kpi.produttivita_squadre[sq].tratti + " tratti)<br>";
+                    }
+                    document.getElementById('stats-squadre').innerHTML = sqText;
                 });
             }
 
@@ -373,7 +398,7 @@ app.get('/ufficio', (req, res) => {
   `);
 });
 
-// Terminale Cantiere con WebSockets
+// Terminale Cantiere con Registro Anomalia e Storico
 app.get('/cantiere', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -397,12 +422,12 @@ app.get('/cantiere', (req, res) => {
     <body>
         <div class="header">
             <h1>NMA BUILD OS <span id="net-status" class="offline-badge" style="background:#4CAF50; color:#fff;">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Terminale Campo - WebSockets Active</p>
+            <p style="margin:5px 0 0 0; color:#888; font-size: 14px;">Controllo Strutturale & Storico</p>
         </div>
         
         <div class="status-box">
             <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="APPALTO-TO-001"></div>
-            <div class="data-row"><span>Operatore:</span> <input type="text" id="input-operatore" value="Noureddine M."></div>
+            <div class="data-row"><span>Operatore / Squadra:</span> <input type="text" id="input-operatore" value="Squadra NMA"></div>
             <div class="data-row"><span>Ruolo:</span> 
                 <select id="input-ruolo">
                     <option value="OPERATORE">Operatore Scavo</option>
@@ -410,15 +435,16 @@ app.get('/cantiere', (req, res) => {
                 </select>
             </div>
             <div class="data-row"><span>Metri Tubo:</span> <input type="number" id="input-metri" value="30"></div>
-            <div class="data-row"><span>Raccordi / Manicotti:</span> <input type="number" id="input-raccordi" value="2"></div>
-            <div class="data-row"><span>Foto Scavo/Giunto:</span> <input type="file" id="input-foto" accept="image/*" style="width:180px; font-size:12px;"></div>
+            <div class="data-row"><span>Raccordi:</span> <input type="number" id="input-raccordi" value="2"></div>
+            <div class="data-row"><span>Segnala Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:160px; font-size:12px;"></div>
+            <div class="data-row"><span>Foto Scavo/Giunto:</span> <input type="file" id="input-foto" accept="image/*" style="width:170px; font-size:11px;"></div>
             <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#007AFF;">0 elementi</strong></div>
             <div class="data-row"><span>GPS:</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
             <div class="data-row"><span>Bluetooth:</span> <strong id="bt-status" style="color:#ff3333;">Disconnesso</strong></div>
         </div>
 
         <button class="btn" id="btn-bluetooth">1. CONNETTI MANOMETRO (BLE)</button>
-        <button class="btn" id="btn-send" style="background-color: #222; color: #555; box-shadow: none;" disabled>2. INVIA DATI AL CATASTO</button>
+        <button class="btn" id="btn-send" style="background-color: #222; color: #555; box-shadow: none;" disabled>2. INVIA COLLAUDO AL CATASTO</button>
 
         <script>
             let currentLat = 45.07030;
@@ -432,7 +458,7 @@ app.get('/cantiere', (req, res) => {
                     const reader = new FileReader();
                     reader.onload = function(uploadEvent) {
                         base64Foto = uploadEvent.target.result;
-                        alert("✓ Foto scattata e georeferenziata!");
+                        alert("✓ Foto allegata al collaudo!");
                     };
                     reader.readAsDataURL(file);
                 }
@@ -509,10 +535,11 @@ app.get('/cantiere', (req, res) => {
             document.getElementById('btn-send').addEventListener('click', () => {
                 const payload = {
                     cantiere: document.getElementById('input-cantiere').value || 'APPALTO-TO-001',
-                    operatore: document.getElementById('input-operatore').value || 'Noureddine M.',
+                    operatore: document.getElementById('input-operatore').value || 'Squadra NMA',
                     ruolo: document.getElementById('input-ruolo').value || 'OPERATORE',
                     metriTubo: Number(document.getElementById('input-metri').value || 30),
                     raccordi: Number(document.getElementById('input-raccordi').value || 2),
+                    anomalia: document.getElementById('input-anomalia').value || 'Nessuna anomalia',
                     fotoData: base64Foto,
                     pressione: 22.5,
                     strumento: btDeviceName,
@@ -521,7 +548,7 @@ app.get('/cantiere', (req, res) => {
                 };
 
                 const btnSend = document.getElementById('btn-send');
-                btnSend.innerText = 'TRASMISSIONE...';
+                btnSend.innerText = 'REGISTRAZIONE IN CORSO...';
 
                 if (!navigator.onLine) {
                     let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
@@ -530,7 +557,7 @@ app.get('/cantiere', (req, res) => {
                     updateNetworkStatus();
                     btnSend.innerText = '✓ SALVATO OFFLINE (In Coda)';
                     btnSend.style.backgroundColor = '#ff9800';
-                    setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
+                    setTimeout(() => { btnSend.innerText = '2. INVIA COLLAUDO AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
                     return;
                 }
                 
@@ -539,9 +566,9 @@ app.get('/cantiere', (req, res) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 }).then(res => res.json()).then(data => {
-                    btnSend.innerText = data.alert ? '⚠ ATTENZIONE: PRESSIONE BASSA' : '✓ RICEVUTO DAL CATASTO OMBRA';
+                    btnSend.innerText = data.alert ? '⚠ ATTENZIONE: PRESSIONE BASSA' : '✓ COLLAUDO REGISTRATO NEL CATASTO';
                     btnSend.style.backgroundColor = data.alert ? '#ff9800' : '#4CAF50';
-                    setTimeout(() => { btnSend.innerText = '2. INVIA DATI AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
+                    setTimeout(() => { btnSend.innerText = '2. INVIA COLLAUDO AL CATASTO'; btnSend.style.backgroundColor = '#007AFF'; }, 2500);
                 }).catch(() => {
                     let queue = JSON.parse(localStorage.getItem('nma_offline_queue') || '[]');
                     queue.push(payload);
@@ -560,4 +587,4 @@ app.get('/cantiere', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('✅ NMA BUILD OS - VERSIONE FINALE CONCERTATA AL 120%'); });
+server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROLLO TOTALE STRUTTURALE ONLINE'); });
