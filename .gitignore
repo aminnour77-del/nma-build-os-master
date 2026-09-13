@@ -1,2 +1,9 @@
 node_modules/
 .DS_Store
+.env
+*.env
+server.js.backup-*
+server.js.pre-*
+*.backup
+backup-pre-pulizia-postgres-*/
+archivio-postgres-disattivato-*/

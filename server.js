@@ -1,5 +1,5 @@
+require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
@@ -10,7 +10,7 @@ const app = express();
 const mongoose = require('mongoose');
 
 // Connessione al cluster cloud (AWS)
-mongoose.connect('mongodb+srv://aminnour77_db_user:uqAx4jZg9PeiRENX@amin93.twub44j.mongodb.net/nma_build_os?retryWrites=true&w=majority&appName=Amin93')
+mongoose.connect(process.env.MONGODB_URI, { dbName: 'nma_build_os' })
   .then(() => console.log('✅ [SISTEMA] Connesso al Database Industriale MongoDB Atlas'))
   .catch(err => console.error('❌ [ERRORE] Connessione DB fallita:', err));
 
@@ -24,18 +24,62 @@ const CantiereSchema = new mongoose.Schema({
 });
 
 const Cantiere = mongoose.model('Cantiere', CantiereSchema);
+// === STORICO IMMUTABILE DEI COLLAUDI ===
+const CollaudoSchema = new mongoose.Schema({
+  id_collaudo: { type: String, required: true, unique: true },
+  id_cantiere: { type: String, required: true },
+  operatore: { type: String, default: 'Operatore' },
+  pressione: { type: Number, default: 22.5 },
+  metri_tubo: { type: Number, default: 30 },
+  raccordi: { type: Number, default: 2 },
+  anomalia: { type: String, default: 'Nessuna anomalia' },
+  lat: { type: Number },
+  lng: { type: Number },
+  strumento: { type: String, default: '' },
+  offline_id: { type: String, required: true, unique: true },
+  hash_sha256: { type: String, required: true },
+  valore_produzione_eur: { type: Number, default: 0 },
+  data_ora: { type: Date, default: Date.now }
+}, {
+  collection: 'collaudi'
+});
+
+const Collaudo = mongoose.model('Collaudo', CollaudoSchema);
+
+// === GEMELLO DIGITALE GEOMETRICO DELLA RETE ===
+const TrattoReteSchema = new mongoose.Schema({
+  id_tratto: { type: String, required: true, unique: true },
+  id_cantiere: { type: String, required: true },
+
+  geometry: {
+    type: {
+      type: String,
+      enum: ['LineString'],
+      default: 'LineString',
+      required: true
+    },
+    coordinates: {
+      type: [[Number]],
+      required: true
+    }
+  },
+
+  pressione: { type: Number, default: 0 },
+  operatore: { type: String, default: '' },
+  descrizione: { type: String, default: '' },
+  ultimo_aggiornamento: { type: Date, default: Date.now }
+}, {
+  collection: 'tratti_rete'
+});
+
+const TrattoRete = mongoose.model('TrattoRete', TrattoReteSchema);
+
 // -------------------------------------------------------------
 
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json({ limit: '15mb' }));
-
-const pool = new Pool({
-  connectionString: 'postgresql://catasto_ombra_user:YKeK1Ad2PbX9mr2m7cs5HbCHmT7YjC1t@dpg-dai8ud3m8hqs739mmjd0-a.frankfurt-postgres.render.com/catasto_ombra',
-  ssl: { rejectUnauthorized: false }
-});
-
 function generaHashImmutabile(dati) {
   return crypto.createHash('sha256').update(JSON.stringify(dati) + Date.now()).digest('hex');
 }
@@ -56,7 +100,30 @@ app.post('/api/collaudo', async (req, res) => {
     const valoreProduzioneEur = (metriVal * 45) + (raccordiVal * 35);
 
     // SALVATAGGIO DEFINITIVO E PULITO SOLO SU MONGODB ATLAS
-    await Cantiere.findOneAndUpdate(
+    // Salva lo storico del singolo collaudo
+await Collaudo.findOneAndUpdate(
+  { offline_id: uniqueOfflineId },
+  {
+    $setOnInsert: {
+      id_collaudo: 'COL-' + uniqueOfflineId,
+      id_cantiere: cantiere || 'ERG-CANTIERE-01',
+      operatore: operatore || 'Operatore',
+      pressione: pressioneVal,
+      metri_tubo: metriVal,
+      raccordi: raccordiVal,
+      anomalia: segnalazioneAnomalia,
+      lat: Number.isFinite(Number(lat)) ? Number(lat) : undefined,
+      lng: Number.isFinite(Number(lng)) ? Number(lng) : undefined,
+      strumento: strumento || '',
+      offline_id: uniqueOfflineId,
+      hash_sha256: hashLegale,
+      valore_produzione_eur: valoreProduzioneEur,
+      data_ora: new Date()
+    }
+  },
+  { upsert: true, new: true }
+);
+await Cantiere.findOneAndUpdate(
         { id_cantiere: cantiere || 'ERG-CANTIERE-01' },
         { 
             $inc: { metri_posati: metriVal, raccordi: raccordiVal, anomalie: conteggioAnomalia },
@@ -76,110 +143,149 @@ app.post('/api/collaudo', async (req, res) => {
   }
 });
 
+// === KPI CANTIERE - MONGODB ===
 app.get('/api/kpi/:cantiere', async (req, res) => {
   try {
     const { cantiere } = req.params;
-    let query = 'SELECT operatore, log_pressione FROM reti_gas_ombra';
-    let params = [];
-    if (cantiere && cantiere !== 'TUTTI') {
-      query += ' WHERE codice_cantiere = $1';
-      params.push(cantiere);
-    }
-    const result = await pool.query(query, params);
-    
+
+    const filtro =
+      cantiere && cantiere !== 'TUTTI' && cantiere !== 'Tutti'
+        ? { id_cantiere: cantiere }
+        : {};
+
+    const collaudi = await Collaudo.find(filtro).lean();
+
     let totalMetri = 0;
     let totalRaccordi = 0;
     let anomalieCount = 0;
     let totalValoreProduzione = 0;
     let totalCo2 = 0;
-    let attivitaSquadre = {};
+    const attivitaSquadre = {};
 
-    result.rows.forEach(r => {
-      const log = r.log_pressione || {};
-      const op = r.operatore || 'Squadra';
-      const metri = Number(log.metri_tubo || 30);
-      const raccordi = Number(log.raccordi_salvati || 2);
-      
+    for (const log of collaudi) {
+      const metri = Number(log.metri_tubo || 0);
+      const raccordi = Number(log.raccordi || 0);
+      const operatore = log.operatore || 'Squadra';
+
       totalMetri += metri;
       totalRaccordi += raccordi;
-      totalValoreProduzione += (metri * 45) + (raccordi * 35);
-      if (log.esg_co2_kg) totalCo2 += log.esg_co2_kg;
-      if (log.anomalia_segnalata && log.anomalia_segnalata !== "Nessuna anomalia") anomalieCount++;
+      totalValoreProduzione += Number(
+        log.valore_produzione_eur ||
+        ((metri * 45) + (raccordi * 35))
+      );
 
-      if (!attivitaSquadre[op]) attivitaSquadre[op] = { tratti: 0, metri_totali: 0 };
-      attivitaSquadre[op].tratti += 1;
-      attivitaSquadre[op].metri_totali += metri;
-    });
+      totalCo2 += Number(log.esq_co2_kg || 0);
+
+      if (
+        log.anomalia &&
+        log.anomalia !== 'Nessuna anomalia'
+      ) {
+        anomalieCount++;
+      }
+
+      if (!attivitaSquadre[operatore]) {
+        attivitaSquadre[operatore] = {
+          tratti: 0,
+          metri_totali: 0
+        };
+      }
+
+      attivitaSquadre[operatore].tratti += 1;
+      attivitaSquadre[operatore].metri_totali += metri;
+    }
 
     res.json({
       cantiere: cantiere || 'Tutti',
-      tratti_eseguiti: result.rows.length,
+      tratti_eseguiti: collaudi.length,
       metri_posati: totalMetri,
       raccordi_utilizzati: totalRaccordi,
       anomalie_rilevate: anomalieCount,
       valore_produzione_eur: totalValoreProduzione,
-      esg_co2_kg: totalCo2,
+      esq_co2_kg: totalCo2,
+        co2_risparmiata_kg: totalCo2,
       squadre_attive: attivitaSquadre
     });
+
   } catch (err) {
-    res.status(500).send('Errore calcolo KPI');
+    console.error('[KPI MongoDB]', err);
+    res.status(500).json({
+      error: 'Errore calcolo KPI'
+    });
   }
 });
 
+// === ELENCO CANTIERI - MONGODB ===
 app.get('/api/cantieri', async (req, res) => {
   try {
-    const result = await pool.query('SELECT DISTINCT codice_cantiere FROM reti_gas_ombra');
-    res.json(result.rows.map(r => r.codice_cantiere));
+    const cantieri = await Cantiere
+      .find({}, { id_cantiere: 1, _id: 0 })
+      .lean();
+
+    const elenco = [...new Set(
+      cantieri
+        .map(c => c.id_cantiere)
+        .filter(Boolean)
+    )];
+
+    res.json(elenco);
+
   } catch (err) {
+    console.error('[CANTIERI MongoDB]', err);
     res.status(500).send('Errore caricamento cantieri');
   }
 });
 
+// === RETE GAS / GEOJSON - MONGODB ===
 app.get('/api/tubi', async (req, res) => {
   try {
     const cantiereFiltro = req.query.cantiere;
-    let q;
-    let params = [];
 
-    if (cantiereFiltro && cantiereFiltro !== 'TUTTI') {
-      q = `
-        SELECT jsonb_build_object(
-          'type', 'FeatureCollection',
-          'features', COALESCE(jsonb_agg(feature), '[]'::jsonb)
-        ) as geojson
-        FROM (
-          SELECT jsonb_build_object(
-            'type', 'Feature',
-            'geometry', ST_AsGeoJSON(tracciato_3d)::jsonb,
-            'properties', jsonb_build_object('cantiere', codice_cantiere, 'pressione', log_pressione, 'operatore', operatore)
-          ) AS feature
-          FROM reti_gas_ombra
-          WHERE tracciato_3d IS NOT NULL AND codice_cantiere = $1
-        ) features;
-      `;
-      params.push(cantiereFiltro);
-    } else {
-      q = `
-        SELECT jsonb_build_object(
-          'type', 'FeatureCollection',
-          'features', COALESCE(jsonb_agg(feature), '[]'::jsonb)
-        ) as geojson
-        FROM (
-          SELECT jsonb_build_object(
-            'type', 'Feature',
-            'geometry', ST_AsGeoJSON(tracciato_3d)::jsonb,
-            'properties', jsonb_build_object('cantiere', codice_cantiere, 'pressione', log_pressione, 'operatore', operatore)
-          ) AS feature
-          FROM reti_gas_ombra
-          WHERE tracciato_3d IS NOT NULL
-        ) features;
-      `;
-    }
+    const filtro =
+      cantiereFiltro &&
+      cantiereFiltro !== 'TUTTI' &&
+      cantiereFiltro !== 'Tutti'
+        ? { id_cantiere: cantiereFiltro }
+        : {};
 
-    const result = await pool.query(q, params);
-    res.json(result.rows[0].geojson);
+    const tratti = await TrattoRete.find(filtro).lean();
+
+    const features = tratti
+      .filter(tratto =>
+        tratto.geometry &&
+        tratto.geometry.type === 'LineString' &&
+        Array.isArray(tratto.geometry.coordinates) &&
+        tratto.geometry.coordinates.length >= 2
+      )
+      .map(tratto => ({
+        type: 'Feature',
+
+        geometry: {
+          type: 'LineString',
+          coordinates: tratto.geometry.coordinates
+        },
+
+        properties: {
+          id_tratto: tratto.id_tratto,
+          cantiere: tratto.id_cantiere,
+          pressione: Number(tratto.pressione || 0),
+          operatore: tratto.operatore || '',
+          descrizione: tratto.descrizione || ''
+        }
+      }));
+
+    res.json({
+      type: 'FeatureCollection',
+      features
+    });
+
   } catch (err) {
-    res.status(500).send('Errore geodataset GIS');
+    console.error('[TUBI MongoDB]', err);
+
+    res.status(500).json({
+      type: 'FeatureCollection',
+      features: [],
+      error: 'Errore geodataset GIS'
+    });
   }
 });
 
@@ -291,7 +397,7 @@ app.get('/ufficio', (req, res) => {
                 fetch('/api/kpi/' + cantiereAttivo).then(res => res.json()).then(kpi => {
                     document.getElementById('stats-metri').innerText = kpi.metri_posati + " Metri posati (" + kpi.tratti_eseguiti + " tratti)";
                     document.getElementById('stats-valore').innerText = "Valore Produzione: € " + kpi.valore_produzione_eur.toLocaleString();
-                    document.getElementById('stats-esg').innerText = "CO2 Risparmiata: " + kpi.esg_co2_kg + " kg";
+                    document.getElementById('stats-esg').innerText = "CO2 Risparmiata: " + (kpi.esq_co2_kg ?? kpi.co2_risparmiata_kg ?? 0) + " kg";
                     document.getElementById('stats-anomalie').innerText = "Anomalie Rilevate: " + kpi.anomalie_rilevate;
                 });
             }
