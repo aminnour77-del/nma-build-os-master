@@ -148,12 +148,6 @@ app.post('/api/login', (req, res) => {
 
     const suppliedPin = String(req.body?.pin ?? '');
     const expectedPin = String(process.env.ADMIN_PIN ?? '');
-
-    // DIAGNOSTICA TEMPORANEA LOGIN — non stampa PIN o segreti
-    console.log(
-        `[AUTH-DIAG] ricevuti=${suppliedPin.length} attesi=${expectedPin.length} stessaLunghezza=${suppliedPin.length === expectedPin.length} adminPinPresente=${expectedPin.length > 0}`
-    );
-
     let valid = false;
 
     try {
