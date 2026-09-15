@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
+const session = require('express-session');
 
 const app = express();
 
@@ -80,6 +81,179 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json({ limit: '15mb' }));
+
+// === NMA AUTH SERVER SIDE ===
+
+if (!process.env.SESSION_SECRET) {
+    throw new Error('SESSION_SECRET non configurato');
+}
+
+if (!process.env.ADMIN_PIN) {
+    throw new Error('ADMIN_PIN non configurato');
+}
+
+// Render usa un reverse proxy HTTPS
+app.set('trust proxy', 1);
+
+app.use(session({
+    name: 'nma.sid',
+
+    secret: process.env.SESSION_SECRET,
+
+    resave: false,
+
+    saveUninitialized: false,
+
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 8 * 60 * 60 * 1000
+    }
+}));
+
+const requireAuth = (req, res, next) => {
+    if (req.session && req.session.authenticated === true) {
+        return next();
+    }
+
+    return res.redirect('/');
+};
+
+
+// Protezione elementare contro tentativi ripetuti
+const loginAttempts = new Map();
+
+app.post('/api/login', (req, res) => {
+
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+
+    let record = loginAttempts.get(ip) || {
+        attempts: 0,
+        blockedUntil: 0
+    };
+
+    if (record.blockedUntil > now) {
+
+        const seconds = Math.ceil(
+            (record.blockedUntil - now) / 1000
+        );
+
+        return res.status(429).json({
+            ok: false,
+            error: `Troppi tentativi. Riprova tra ${seconds} secondi.`
+        });
+    }
+
+    const suppliedPin = String(req.body?.pin ?? '');
+    const expectedPin = String(process.env.ADMIN_PIN ?? '');
+
+    let valid = false;
+
+    try {
+
+        const suppliedBuffer = Buffer.from(suppliedPin);
+        const expectedBuffer = Buffer.from(expectedPin);
+
+        valid =
+            suppliedBuffer.length === expectedBuffer.length &&
+            crypto.timingSafeEqual(
+                suppliedBuffer,
+                expectedBuffer
+            );
+
+    } catch (error) {
+        valid = false;
+    }
+
+    if (!valid) {
+
+        record.attempts += 1;
+
+        if (record.attempts >= 5) {
+
+            record.attempts = 0;
+            record.blockedUntil =
+                Date.now() + (5 * 60 * 1000);
+        }
+
+        loginAttempts.set(ip, record);
+
+        return res.status(401).json({
+            ok: false,
+            error: 'PIN non valido'
+        });
+    }
+
+    loginAttempts.delete(ip);
+
+    req.session.regenerate(error => {
+
+        if (error) {
+            console.error('Errore sessione login:', error);
+
+            return res.status(500).json({
+                ok: false,
+                error: 'Errore durante autenticazione'
+            });
+        }
+
+        req.session.authenticated = true;
+        req.session.role = 'admin';
+        req.session.loginAt = new Date().toISOString();
+
+        req.session.save(error => {
+
+            if (error) {
+                console.error('Errore salvataggio sessione:', error);
+
+                return res.status(500).json({
+                    ok: false,
+                    error: 'Errore sessione'
+                });
+            }
+
+            return res.json({
+                ok: true,
+                role: 'admin'
+            });
+        });
+    });
+});
+
+
+app.post('/api/logout', (req, res) => {
+
+    if (!req.session) {
+        return res.json({ ok: true });
+    }
+
+    req.session.destroy(() => {
+
+        res.clearCookie('nma.sid');
+
+        res.json({
+            ok: true
+        });
+    });
+});
+
+
+app.get('/api/session', (req, res) => {
+
+    res.json({
+        authenticated:
+            !!req.session?.authenticated,
+
+        role:
+            req.session?.role || null
+    });
+});
+
+// === FINE NMA AUTH SERVER SIDE ===
+
+
 function generaHashImmutabile(dati) {
   return crypto.createHash('sha256').update(JSON.stringify(dati) + Date.now()).digest('hex');
 }
@@ -293,22 +467,152 @@ app.get('/api/tubi', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.send(`
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#121212;">
-            <h1 style="color:white; margin-bottom: 20px;">NMA BUILD OS</h1>
-            <input type="password" id="pin" placeholder="Inserisci PIN di accesso" style="padding:15px; font-size:20px; border-radius:5px; border:none; text-align:center; margin-bottom:20px;">
-            <button onclick="login()" style="background:#4CAF50; color:white; padding:15px 40px; font-size:20px; border:none; border-radius:5px; cursor:pointer;">ACCEDI</button>
-            <script>
-                function login() {
-                    const pin = document.getElementById('pin').value;
-                    if(pin === 'ADMIN3D') window.location.href = '/ufficio';
-                    else if(pin === 'TECNICO26') window.location.href = '/cantiere';
-                    else alert('PIN Errato');
-                }
-            </script>
-        </div>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMA BUILD OS - Accesso</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #05070a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .login-box {
+            width: min(420px, 90vw);
+            padding: 40px;
+            background: #10151c;
+            border: 1px solid #263241;
+            border-radius: 18px;
+            text-align: center;
+            box-shadow: 0 25px 70px rgba(0,0,0,.55);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            text-align: center;
+            border-radius: 9px;
+            border: 1px solid #334155;
+            background: #080c11;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 16px;
+            padding: 15px;
+            border: 0;
+            border-radius: 9px;
+            background: #00c875;
+            color: #04110b;
+            font-size: 17px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        #message {
+            min-height: 22px;
+            margin-top: 16px;
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-box">
+        <h1>NMA BUILD OS</h1>
+        <div class="subtitle">Accesso Direzione</div>
+
+        <input
+            type="password"
+            id="pin"
+            placeholder="PIN Direzionale"
+            autocomplete="current-password"
+        >
+
+        <button id="loginButton">ACCEDI AL SISTEMA</button>
+
+        <div id="message"></div>
+    </div>
+
+<script>
+const pinInput = document.getElementById('pin');
+const button = document.getElementById('loginButton');
+const message = document.getElementById('message');
+
+async function login() {
+    message.textContent = '';
+    button.disabled = true;
+    button.textContent = 'VERIFICA...';
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                pin: pinInput.value
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Accesso negato');
+        }
+
+        pinInput.value = '';
+
+        window.location.href = '/ufficio';
+
+    } catch (error) {
+        message.textContent = error.message;
+        pinInput.select();
+
+    } finally {
+        button.disabled = false;
+        button.textContent = 'ACCEDI AL SISTEMA';
+    }
+}
+
+button.addEventListener('click', login);
+
+pinInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        login();
+    }
+});
+</script>
+
+</body>
+</html>
     `);
 });
-app.get('/ufficio', (req, res) => {
+app.get('/ufficio', requireAuth, (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -736,7 +1040,7 @@ app.get('/api/squadre-attive', (req, res) => {
 
 
 // --- INIZIO: MODULO GENERAZIONE SAL IN PDF ---
-app.get('/sal', (req, res) => {
+app.get('/sal', requireAuth, (req, res) => {
     const dataOggi = new Date().toLocaleDateString('it-IT');
     const hashValidazione = require('crypto').createHash('sha256').update(dataOggi + Math.random()).digest('hex');
     

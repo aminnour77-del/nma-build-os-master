@@ -62,8 +62,31 @@
     
     <script>
         function sbloccaTorre() {
-            if(document.getElementById('pin-input').value === '9999') document.getElementById('pin-screen').style.display = 'none';
-            else alert('Accesso Negato');
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    pin: document.getElementById('pin-input').value
+                })
+            })
+            .then(async response => {
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Accesso negato');
+                }
+
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-screen').style.display = 'none';
+
+            })
+            .catch(error => {
+                alert(error.message);
+            });
+
         }
         const socket = io(); let dbLocale = {};
         
