@@ -141,6 +141,27 @@ const requireRole = (...allowedRoles) => (req, res, next) => {
     return next();
 };
 
+
+// ============================================================
+// NMA BUILD OS — SYSTEM HEALTH v1
+// Endpoint non invasivo: nessun dato operativo viene modificato.
+// ============================================================
+
+app.get('/api/health', async (req, res) => {
+    const mongoState = mongoose.connection.readyState;
+    const mongoOk = mongoState === 1;
+
+    const health = {
+        ok: mongoOk,
+        status: mongoOk ? 'OPERATIONAL' : 'DEGRADED',
+        server: 'ONLINE',
+        mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
+        timestamp: new Date().toISOString()
+    };
+
+    return res.status(mongoOk ? 200 : 503).json(health);
+});
+
 // Protezione elementare contro tentativi ripetuti
 const loginAttempts = new Map();
 
