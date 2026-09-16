@@ -4,6 +4,11 @@ const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 const session = require('express-session');
+const ConnectMongoModule = require('connect-mongo');
+const MongoStore =
+    ConnectMongoModule.default ||
+    ConnectMongoModule.MongoStore ||
+    ConnectMongoModule;
 
 const app = express();
 
@@ -96,6 +101,14 @@ if (!process.env.ADMIN_PIN) {
 app.set('trust proxy', 1);
 
 app.use(session({
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        dbName: 'nma_build_os',
+        collectionName: 'sessions',
+        ttl: 8 * 60 * 60,
+        autoRemove: 'native',
+        touchAfter: 60
+    }),
     name: 'nma.sid',
 
     secret: process.env.SESSION_SECRET,
