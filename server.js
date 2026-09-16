@@ -147,7 +147,30 @@ app.post('/api/login', (req, res) => {
     }
 
     const suppliedPin = String(req.body?.pin ?? '');
-    const expectedPin = String(process.env.ADMIN_PIN ?? '');
+    const roleCredentials = [
+        { role: req.session.role, pin: String(process.env.ADMIN_PIN ?? '') },
+        { role: 'supervisore', pin: String(process.env.SUPERVISOR_PIN ?? '') },
+        { role: 'operatore', pin: String(process.env.OPERATOR_PIN ?? '') }
+    ].filter(item => item.pin.length > 0);
+
+    let matchedRole = null;
+    let matchedPin = '';
+
+    for (const credential of roleCredentials) {
+        const suppliedRoleBuffer = Buffer.from(suppliedPin);
+        const expectedRoleBuffer = Buffer.from(credential.pin);
+
+        if (
+            suppliedRoleBuffer.length === expectedRoleBuffer.length &&
+            crypto.timingSafeEqual(suppliedRoleBuffer, expectedRoleBuffer)
+        ) {
+            matchedRole = credential.role;
+            matchedPin = credential.pin;
+            break;
+        }
+    }
+
+    const expectedPin = matchedPin || String(process.env.ADMIN_PIN ?? '');
     let valid = false;
 
     try {
@@ -199,7 +222,7 @@ app.post('/api/login', (req, res) => {
         }
 
         req.session.authenticated = true;
-        req.session.role = 'admin';
+        req.session.role = matchedRole || 'admin';
         req.session.loginAt = new Date().toISOString();
 
         req.session.save(error => {
@@ -215,7 +238,7 @@ app.post('/api/login', (req, res) => {
 
             return res.json({
                 ok: true,
-                role: 'admin'
+                role: req.session.role
             });
         });
     });
