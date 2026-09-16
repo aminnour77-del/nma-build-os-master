@@ -121,6 +121,26 @@ const requireAuth = (req, res, next) => {
 };
 
 
+
+// ============================================================
+// NMA BUILD OS — RBAC FASE 2
+// Controllo autorizzazioni per ruolo
+// ============================================================
+
+const requireRole = (...allowedRoles) => (req, res, next) => {
+    if (!req.session || req.session.authenticated !== true) {
+        return res.redirect('/');
+    }
+
+    const currentRole = String(req.session.role || '');
+
+    if (!allowedRoles.includes(currentRole)) {
+        return res.status(403).send('Accesso non autorizzato');
+    }
+
+    return next();
+};
+
 // Protezione elementare contro tentativi ripetuti
 const loginAttempts = new Map();
 
@@ -634,7 +654,7 @@ pinInput.addEventListener('keydown', event => {
 </html>
     `);
 });
-app.get('/ufficio', requireAuth, (req, res) => {
+app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -800,7 +820,7 @@ app.get('/ufficio', requireAuth, (req, res) => {
 });
 
 // Terminale Cantiere
-app.get('/cantiere', (req, res) => {
+app.get('/cantiere', requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="it">
@@ -1062,7 +1082,7 @@ app.get('/api/squadre-attive', (req, res) => {
 
 
 // --- INIZIO: MODULO GENERAZIONE SAL IN PDF ---
-app.get('/sal', requireAuth, (req, res) => {
+app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => {
     const dataOggi = new Date().toLocaleDateString('it-IT');
     const hashValidazione = require('crypto').createHash('sha256').update(dataOggi + Math.random()).digest('hex');
     
