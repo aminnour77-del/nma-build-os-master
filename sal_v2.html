@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>NMA BUILD OS — SAL</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#061015;
+  color:#eef7f8;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+header{
+  padding:18px;
+  background:#09171d;
+  border-bottom:1px solid #244650;
+}
+
+.brand{
+  font-size:19px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.sub{
+  color:#20e88b;
+  font-size:12px;
+  margin-top:5px;
+}
+
+main{
+  width:min(1150px,100%);
+  margin:auto;
+  padding:16px 16px 80px;
+}
+
+.filters,
+.actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+input,
+select{
+  background:#08161c;
+  border:1px solid #31515a;
+  color:white;
+  padding:10px;
+  border-radius:8px;
+}
+
+button{
+  border:0;
+  padding:11px 15px;
+  border-radius:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.primary{
+  background:#23d8ff;
+  color:#031419;
+}
+
+.pdf{
+  background:#20e88b;
+  color:#032016;
+}
+
+.back{
+  background:#182e36;
+  color:white;
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+
+.kpi{
+  background:#0d1b22;
+  border:1px solid #244650;
+  border-radius:12px;
+  padding:14px;
+}
+
+.label{
+  color:#78959c;
+  font-size:10px;
+  text-transform:uppercase;
+}
+
+.value{
+  font-size:24px;
+  font-weight:900;
+  margin-top:6px;
+}
+
+.panel{
+  margin-top:14px;
+  padding:14px;
+  background:#0d1b22;
+  border:1px solid #244650;
+  border-radius:12px;
+}
+
+.row{
+  display:grid;
+  grid-template-columns:
+    1.3fr 1fr 1fr .6fr .6fr .6fr;
+  gap:8px;
+  padding:9px 3px;
+  border-bottom:1px solid #183039;
+  font-size:12px;
+}
+
+.head{
+  color:#78959c;
+  text-transform:uppercase;
+  font-size:10px;
+}
+
+.meta{
+  margin-top:15px;
+  color:#78959c;
+  font-size:11px;
+}
+
+@media(max-width:800px){
+  .kpis{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .row{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .head{
+    display:none;
+  }
+}
+
+@media print{
+
+  body{
+    background:white;
+    color:black;
+  }
+
+  header{
+    background:white;
+    color:black;
+  }
+
+  .sub{
+    color:black;
+  }
+
+  .filters,
+  .actions{
+    display:none;
+  }
+
+  .kpi,
+  .panel{
+    background:white;
+    color:black;
+    border:1px solid #bbb;
+  }
+
+  .label,
+  .meta,
+  .head{
+    color:#444;
+  }
+
+  main{
+    width:100%;
+    padding:10px;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="brand">
+    NMA BUILD OS — STATO AVANZAMENTO LAVORI
+  </div>
+
+  <div class="sub">
+    ● REPORT BASATO ESCLUSIVAMENTE SU INTERVENTI VALIDATI
+  </div>
+
+</header>
+
+<main>
+
+<div class="filters">
+
+  <select id="cantiere">
+    <option value="">
+      Tutti i cantieri
+    </option>
+  </select>
+
+  <input
+    id="dal"
+    type="date">
+
+  <input
+    id="al"
+    type="date">
+
+  <button
+    class="primary"
+    onclick="carica()">
+    APPLICA
+  </button>
+
+</div>
+
+<div class="actions">
+
+  <button
+    class="pdf"
+    onclick="window.print()">
+    GENERA / SALVA PDF
+  </button>
+
+  <button
+    class="back"
+    onclick="location.href='/direzione'">
+    CONTROL ROOM
+  </button>
+
+</div>
+
+<div class="kpis">
+
+  <div class="kpi">
+    <div class="label">
+      Interventi validati
+    </div>
+    <div id="interventi" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Metri validati
+    </div>
+    <div id="metri" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Raccordi
+    </div>
+    <div id="raccordi" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Anomalie
+    </div>
+    <div id="anomalie" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Evidenze
+    </div>
+    <div id="evidenze" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Operatori
+    </div>
+    <div id="operatori" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Squadre
+    </div>
+    <div id="squadre" class="value">0</div>
+  </div>
+
+  <div class="kpi">
+    <div class="label">
+      Cantieri
+    </div>
+    <div id="cantieriN" class="value">0</div>
+  </div>
+
+</div>
+
+<div class="panel">
+
+  <h3>DETTAGLIO INTERVENTI VALIDATI</h3>
+
+  <div class="row head">
+    <div>Intervento</div>
+    <div>Cantiere</div>
+    <div>Operatore</div>
+    <div>Metri</div>
+    <div>Raccordi</div>
+    <div>Anomalia</div>
+  </div>
+
+  <div id="lista"></div>
+
+</div>
+
+<div class="meta" id="meta"></div>
+
+</main>
+
+<script>
+
+const esc=v=>
+  String(v??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;');
+
+function set(id,v){
+  document.getElementById(id).textContent=v;
+}
+
+async function caricaCantieri(){
+
+  try{
+
+    const r=
+      await fetch('/api/cantieri');
+
+    const data=
+      await r.json();
+
+    if(!Array.isArray(data)){
+      return;
+    }
+
+    const select=
+      document.getElementById('cantiere');
+
+    data.forEach(c=>{
+
+      const o=
+        document.createElement('option');
+
+      o.value=String(c);
+      o.textContent=String(c);
+
+      select.appendChild(o);
+    });
+
+  }catch{}
+}
+
+async function carica(){
+
+  const params=
+    new URLSearchParams();
+
+  const c=
+    document.getElementById('cantiere').value;
+
+  const dal=
+    document.getElementById('dal').value;
+
+  const al=
+    document.getElementById('al').value;
+
+  if(c){
+    params.set('cantiere',c);
+  }
+
+  if(dal){
+    params.set('dal',dal);
+  }
+
+  if(al){
+    params.set('al',al);
+  }
+
+  try{
+
+    const r=
+      await fetch(
+        '/api/sal-report?' +
+        params.toString()
+      );
+
+    const data=
+      await r.json();
+
+    if(!r.ok || !data.ok){
+      throw new Error();
+    }
+
+    const k=data.riepilogo;
+
+    set(
+      'interventi',
+      k.interventi_validati
+    );
+
+    set(
+      'metri',
+      Number(k.metri).toFixed(2)
+    );
+
+    set(
+      'raccordi',
+      k.raccordi
+    );
+
+    set(
+      'anomalie',
+      k.anomalie
+    );
+
+    set(
+      'evidenze',
+      k.evidenze
+    );
+
+    set(
+      'operatori',
+      k.operatori
+    );
+
+    set(
+      'squadre',
+      k.squadre
+    );
+
+    set(
+      'cantieriN',
+      k.cantieri
+    );
+
+    const lista=
+      document.getElementById('lista');
+
+    if(!data.interventi.length){
+
+      lista.innerHTML=
+        '<div class="row">'+
+        '<div>Nessun intervento validato nel periodo selezionato.</div>'+
+        '</div>';
+
+    }else{
+
+      lista.innerHTML=
+        data.interventi
+          .map(x=>`
+
+          <div class="row">
+
+            <div>
+              ${esc(x.id_intervento)}
+            </div>
+
+            <div>
+              ${esc(x.id_cantiere)}
+            </div>
+
+            <div>
+              ${esc(x.operatore)}
+            </div>
+
+            <div>
+              ${Number(x.metri).toFixed(2)}
+            </div>
+
+            <div>
+              ${Number(x.raccordi)}
+            </div>
+
+            <div>
+              ${x.anomalia ? 'SÌ' : 'NO'}
+            </div>
+
+          </div>
+
+        `).join('');
+    }
+
+    document.getElementById(
+      'meta'
+    ).textContent=
+      'Report generato: '+
+      new Date(
+        data.generato_il
+      ).toLocaleString()+
+      ' — Dati: esclusivamente interventi validati.';
+
+  }catch{
+
+    document.getElementById(
+      'meta'
+    ).textContent=
+      'Errore generazione SAL.';
+  }
+}
+
+caricaCantieri();
+carica();
+
+</script>
+
+</body>
+</html>

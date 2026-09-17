@@ -1758,6 +1758,305 @@ app.get(
     }
 );
 
+
+// ============================================================
+// NMA BUILD OS — SAL REPORT v2
+// Solo dati reali e interventi VALIDATI
+// ============================================================
+
+app.get(
+    '/api/sal-report',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const filtro = {
+                stato: 'validato'
+            };
+
+            const cantiere =
+                String(req.query.cantiere || '').trim();
+
+            if (cantiere) {
+                filtro.id_cantiere = cantiere;
+            }
+
+            const dal =
+                req.query.dal
+                    ? new Date(req.query.dal)
+                    : null;
+
+            const al =
+                req.query.al
+                    ? new Date(req.query.al)
+                    : null;
+
+            if (
+                (dal && !Number.isNaN(dal.getTime())) ||
+                (al && !Number.isNaN(al.getTime()))
+            ) {
+
+                filtro.aggiornato_il = {};
+
+                if (
+                    dal &&
+                    !Number.isNaN(dal.getTime())
+                ) {
+                    filtro.aggiornato_il.$gte = dal;
+                }
+
+                if (
+                    al &&
+                    !Number.isNaN(al.getTime())
+                ) {
+
+                    const fine =
+                        new Date(al);
+
+                    fine.setHours(
+                        23,59,59,999
+                    );
+
+                    filtro.aggiornato_il.$lte =
+                        fine;
+                }
+            }
+
+            const interventi =
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({
+                        aggiornato_il: 1
+                    })
+                    .lean();
+
+            const ids =
+                interventi.map(
+                    x => x.id_intervento
+                );
+
+            const evidenze =
+                ids.length
+                    ? await Evidenza.countDocuments({
+                        id_intervento: {
+                            $in: ids
+                        }
+                    })
+                    : 0;
+
+            const metri =
+                interventi.reduce(
+                    (tot, x) =>
+                        tot +
+                        Number(
+                            x.tubazione?.metri || 0
+                        ),
+                    0
+                );
+
+            const raccordi =
+                interventi.reduce(
+                    (tot, x) =>
+                        tot +
+                        Number(
+                            x.raccordi || 0
+                        ),
+                    0
+                );
+
+            const anomalie =
+                interventi.filter(
+                    x =>
+                        x.anomalia?.presente === true
+                ).length;
+
+            const operatori =
+                [
+                    ...new Set(
+                        interventi
+                            .map(
+                                x =>
+                                    String(
+                                        x.operatore || ''
+                                    ).trim()
+                            )
+                            .filter(Boolean)
+                    )
+                ];
+
+            const squadre =
+                [
+                    ...new Set(
+                        interventi
+                            .map(
+                                x =>
+                                    String(
+                                        x.squadra || ''
+                                    ).trim()
+                            )
+                            .filter(Boolean)
+                    )
+                ];
+
+            const cantieri =
+                [
+                    ...new Set(
+                        interventi
+                            .map(
+                                x =>
+                                    String(
+                                        x.id_cantiere || ''
+                                    ).trim()
+                            )
+                            .filter(Boolean)
+                    )
+                ];
+
+            return res.json({
+
+                ok: true,
+
+                tipo:
+                    'SAL_VALIDATO',
+
+                filtro: {
+                    cantiere:
+                        cantiere || null,
+
+                    dal:
+                        dal &&
+                        !Number.isNaN(
+                            dal.getTime()
+                        )
+                            ? dal.toISOString()
+                            : null,
+
+                    al:
+                        al &&
+                        !Number.isNaN(
+                            al.getTime()
+                        )
+                            ? al.toISOString()
+                            : null
+                },
+
+                riepilogo: {
+
+                    interventi_validati:
+                        interventi.length,
+
+                    metri:
+                        Number(
+                            metri.toFixed(2)
+                        ),
+
+                    raccordi,
+
+                    anomalie,
+
+                    evidenze,
+
+                    operatori:
+                        operatori.length,
+
+                    squadre:
+                        squadre.length,
+
+                    cantieri:
+                        cantieri.length
+                },
+
+                operatori,
+
+                squadre,
+
+                cantieri,
+
+                interventi:
+                    interventi.map(x => ({
+
+                        id_intervento:
+                            x.id_intervento,
+
+                        id_cantiere:
+                            x.id_cantiere,
+
+                        operatore:
+                            x.operatore,
+
+                        squadra:
+                            x.squadra,
+
+                        metri:
+                            Number(
+                                x.tubazione?.metri || 0
+                            ),
+
+                        materiale:
+                            x.tubazione?.materiale || '',
+
+                        diametro_mm:
+                            Number(
+                                x.tubazione?.diametro_mm || 0
+                            ),
+
+                        raccordi:
+                            Number(
+                                x.raccordi || 0
+                            ),
+
+                        anomalia:
+                            x.anomalia?.presente === true,
+
+                        collaudo_esito:
+                            x.collaudo?.esito || '',
+
+                        pressione:
+                            Number(
+                                x.collaudo?.pressione || 0
+                            ),
+
+                        validato_il:
+                            x.validazione?.validato_il || null,
+
+                        aggiornato_il:
+                            x.aggiornato_il
+                    })),
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        } catch (error) {
+
+            console.error(
+                'Errore SAL Report:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore generazione SAL'
+            });
+        }
+    }
+);
+
+app.get(
+    '/sal-v2',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    (req, res) => {
+        res.sendFile(
+            __dirname +
+            '/sal_v2.html'
+        );
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
