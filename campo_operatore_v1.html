@@ -135,6 +135,14 @@ button{
   color:white;
 }
 
+.sync{
+  float:right;
+  margin-right:8px;
+  padding:8px 12px;
+  background:#14343d;
+  color:#23d8ff;
+}
+
 .status{
   display:none;
   padding:14px;
@@ -179,6 +187,10 @@ button{
 
 <header>
   <button class="logout" onclick="logout()">ESCI</button>
+  <button class="sync"
+          onclick="sincronizzaCoda(false)">
+    SYNC <span id="pendingCount">0</span>
+  </button>
   <div class="brand">NMA BUILD OS</div>
   <div class="live">● CAMPO / OPERATORE — ONLINE</div>
 </header>
@@ -450,6 +462,198 @@ function acquisisciGPS(){
   );
 }
 
+
+// ============================================================
+// NMA_OFFLINE_QUEUE_V1
+// Coda locale + sincronizzazione automatica
+// ============================================================
+
+const NMA_QUEUE_KEY = 'nma_build_os_offline_queue_v1';
+
+function leggiCoda(){
+  try{
+    const q=JSON.parse(
+      localStorage.getItem(NMA_QUEUE_KEY) || '[]'
+    );
+
+    return Array.isArray(q) ? q : [];
+  }catch{
+    return [];
+  }
+}
+
+function salvaCoda(q){
+  localStorage.setItem(
+    NMA_QUEUE_KEY,
+    JSON.stringify(q)
+  );
+
+  aggiornaContatoreCoda();
+}
+
+function aggiornaContatoreCoda(){
+  const q=leggiCoda();
+  const el=document.getElementById('pendingCount');
+
+  if(el){
+    el.textContent=q.length;
+  }
+}
+
+function accodaOffline(payload){
+  const q=leggiCoda();
+
+  if(!q.some(x=>x.offline_id===payload.offline_id)){
+    q.push({
+      ...payload,
+      accodato_il:new Date().toISOString()
+    });
+  }
+
+  // Limite di sicurezza locale
+  while(q.length>100){
+    q.shift();
+  }
+
+  salvaCoda(q);
+}
+
+async function inviaPayloadCampo(payload){
+
+  const r=await fetch('/api/interventi',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify(payload)
+  });
+
+  let result={};
+
+  try{
+    result=await r.json();
+  }catch{}
+
+  if(!r.ok || !result.ok){
+    throw new Error(
+      result.error ||
+      'Salvataggio intervento non riuscito'
+    );
+  }
+
+  const rc=await fetch('/api/collaudo',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      cantiere:payload.id_cantiere,
+      pressione:payload.collaudo.pressione,
+      lat:payload.gps.lat,
+      lng:payload.gps.lng,
+      strumento:payload.collaudo.strumento,
+      operatore:payload.operatore,
+      metriTubo:payload.tubazione.metri,
+      raccordi:payload.raccordi,
+      anomalia:
+        payload.anomalia.presente
+          ? payload.anomalia.descrizione || 'Anomalia'
+          : '',
+      offline_id:payload.offline_id
+    })
+  });
+
+  if(!rc.ok){
+    throw new Error(
+      'Intervento registrato ma sincronizzazione KPI incompleta'
+    );
+  }
+
+  return true;
+}
+
+async function sincronizzaCoda(silenzioso=true){
+
+  if(!navigator.onLine){
+    if(!silenzioso){
+      status(
+        'Dispositivo offline — sincronizzazione rinviata',
+        'warn'
+      );
+    }
+    return;
+  }
+
+  let q=leggiCoda();
+
+  if(!q.length){
+    aggiornaContatoreCoda();
+
+    if(!silenzioso){
+      status(
+        'Nessun intervento in attesa di sincronizzazione',
+        'ok'
+      );
+    }
+
+    return;
+  }
+
+  if(!silenzioso){
+    status(
+      'Sincronizzazione di '+q.length+' interventi...',
+      'warn'
+    );
+  }
+
+  const rimasti=[];
+
+  for(const payload of q){
+    try{
+      await inviaPayloadCampo(payload);
+    }catch{
+      rimasti.push(payload);
+    }
+  }
+
+  salvaCoda(rimasti);
+
+  if(!silenzioso){
+    if(!rimasti.length){
+      status(
+        '✓ SINCRONIZZAZIONE COMPLETATA',
+        'ok'
+      );
+    }else{
+      status(
+        rimasti.length+
+        ' interventi ancora in attesa',
+        'warn'
+      );
+    }
+  }
+}
+
+function nuovoIdentificativo(){
+  offlineId=crypto.randomUUID();
+
+  idIntervento =
+    'INT-' +
+    new Date()
+      .toISOString()
+      .replace(/\D/g,'')
+      .slice(0,14) +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2,7)
+      .toUpperCase();
+
+  document.getElementById(
+    'idIntervento'
+  ).textContent=idIntervento;
+}
+
 async function registraIntervento(){
 
   const cantiere =
@@ -479,7 +683,7 @@ async function registraIntervento(){
       .map(x=>x.trim())
       .filter(Boolean);
 
-  const payload = {
+  const payload={
     id_intervento:idIntervento,
     offline_id:offlineId,
     id_cantiere:cantiere,
@@ -497,7 +701,6 @@ async function registraIntervento(){
     tubazione:{
       materiale:
         document.getElementById('materiale').value,
-
       diametro_mm:num('diametro'),
       metri:num('metri')
     },
@@ -516,7 +719,9 @@ async function registraIntervento(){
     collaudo:{
       pressione:num('pressione'),
       strumento:
-        document.getElementById('strumento').value.trim(),
+        document.getElementById(
+          'strumento'
+        ).value.trim(),
       esito:
         document.getElementById('esito').value
     },
@@ -529,76 +734,29 @@ async function registraIntervento(){
 
   try{
 
-    const r=await fetch('/api/interventi',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify(payload)
-    });
-
-    const result=await r.json();
-
-    if(!r.ok || !result.ok){
-      throw new Error(
-        result.error || 'Salvataggio intervento fallito'
-      );
+    if(!navigator.onLine){
+      throw new Error('OFFLINE');
     }
 
-    const rc=await fetch('/api/collaudo',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify({
-        cantiere,
-        pressione:payload.collaudo.pressione,
-        lat:payload.gps.lat,
-        lng:payload.gps.lng,
-        strumento:payload.collaudo.strumento,
-        operatore,
-        metriTubo:payload.tubazione.metri,
-        raccordi:payload.raccordi,
-        anomalia:
-          payload.anomalia.presente
-            ? payload.anomalia.descrizione || 'Anomalia'
-            : '',
-        offline_id:offlineId
-      })
-    });
-
-    if(!rc.ok){
-      status(
-        'Intervento registrato. Sincronizzazione KPI da riprovare.',
-        'warn'
-      );
-      return;
-    }
+    await inviaPayloadCampo(payload);
 
     status(
       '✓ INTERVENTO REGISTRATO E SINCRONIZZATO',
       'ok'
     );
 
-    offlineId=crypto.randomUUID();
-
-    idIntervento =
-      'INT-' +
-      new Date()
-        .toISOString()
-        .replace(/\D/g,'')
-        .slice(0,14) +
-      '-' +
-      Math.random()
-        .toString(36)
-        .slice(2,7)
-        .toUpperCase();
-
-    document.getElementById('idIntervento').textContent =
-      idIntervento;
+    nuovoIdentificativo();
 
   }catch(e){
-    status(e.message,'err');
+
+    accodaOffline(payload);
+    nuovoIdentificativo();
+
+    status(
+      '✓ INTERVENTO SALVATO OFFLINE — '+
+      'sarà sincronizzato automaticamente',
+      'warn'
+    );
   }
 }
 
@@ -611,6 +769,23 @@ async function logout(){
 }
 
 caricaCantieri();
+
+aggiornaContatoreCoda();
+
+window.addEventListener(
+  'online',
+  ()=>sincronizzaCoda(true)
+);
+
+setInterval(
+  ()=>sincronizzaCoda(true),
+  30000
+);
+
+setTimeout(
+  ()=>sincronizzaCoda(true),
+  1500
+);
 </script>
 
 </body>
