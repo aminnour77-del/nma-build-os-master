@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<title>NMA BUILD OS — Campo Operatore</title>
+
+<style>
+*{box-sizing:border-box}
+
+:root{
+  --bg:#071015;
+  --panel:#0d1b22;
+  --panel2:#11262f;
+  --line:#1d404b;
+  --text:#eef7f8;
+  --muted:#87a3aa;
+  --green:#20e88b;
+  --cyan:#23d8ff;
+  --orange:#ff9d21;
+  --red:#ff5252;
+}
+
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at top,#13323c 0,#071015 48%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:20;
+  padding:16px;
+  background:rgba(5,15,20,.94);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(14px);
+}
+
+.brand{
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.live{
+  color:var(--green);
+  font-size:12px;
+  margin-top:5px;
+}
+
+main{
+  width:min(900px,100%);
+  margin:auto;
+  padding:14px 14px 100px;
+}
+
+.card{
+  background:rgba(13,27,34,.94);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:14px;
+}
+
+.card h2{
+  font-size:14px;
+  color:var(--cyan);
+  letter-spacing:.08em;
+  margin:0 0 14px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+
+.full{grid-column:1/-1}
+
+label{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:6px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+input,select,textarea{
+  width:100%;
+  border:1px solid #284c56;
+  background:#08161c;
+  color:white;
+  border-radius:10px;
+  padding:12px;
+  font-size:16px;
+}
+
+textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+button{
+  border:0;
+  border-radius:12px;
+  padding:13px 16px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.gps{
+  width:100%;
+  background:#14343d;
+  color:var(--cyan);
+  margin-top:10px;
+}
+
+.save{
+  width:100%;
+  padding:17px;
+  background:var(--green);
+  color:#03130b;
+  font-size:16px;
+}
+
+.logout{
+  float:right;
+  padding:8px 12px;
+  background:#172c33;
+  color:white;
+}
+
+.status{
+  display:none;
+  padding:14px;
+  border-radius:12px;
+  margin-bottom:14px;
+  font-weight:700;
+}
+
+.ok{
+  display:block;
+  background:#0e3926;
+  border:1px solid var(--green);
+}
+
+.err{
+  display:block;
+  background:#3d1616;
+  border:1px solid var(--red);
+}
+
+.warn{
+  display:block;
+  background:#3b2b11;
+  border:1px solid var(--orange);
+}
+
+.idbox{
+  font-family:monospace;
+  color:var(--green);
+  word-break:break-all;
+  font-size:12px;
+}
+
+@media(max-width:650px){
+  .grid{grid-template-columns:1fr}
+  .full{grid-column:auto}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <button class="logout" onclick="logout()">ESCI</button>
+  <div class="brand">NMA BUILD OS</div>
+  <div class="live">● CAMPO / OPERATORE — ONLINE</div>
+</header>
+
+<main>
+
+<div id="status" class="status"></div>
+
+<div class="card">
+  <h2>IDENTIFICAZIONE INTERVENTO</h2>
+
+  <div class="grid">
+
+    <div class="full">
+      <label>Cantiere</label>
+      <select id="cantiere">
+        <option value="">Caricamento cantieri...</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Operatore</label>
+      <input id="operatore"
+             autocomplete="name"
+             placeholder="Nome operatore">
+    </div>
+
+    <div>
+      <label>Squadra</label>
+      <input id="squadra"
+             placeholder="Es. Squadra 1">
+    </div>
+
+    <div class="full">
+      <label>ID intervento</label>
+      <div class="idbox" id="idIntervento"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card">
+  <h2>GPS / POSIZIONE</h2>
+
+  <div class="grid">
+    <div>
+      <label>Latitudine</label>
+      <input id="lat" inputmode="decimal">
+    </div>
+
+    <div>
+      <label>Longitudine</label>
+      <input id="lng" inputmode="decimal">
+    </div>
+
+    <div class="full">
+      <label>Accuratezza GPS (m)</label>
+      <input id="accuracy"
+             inputmode="decimal"
+             readonly>
+    </div>
+  </div>
+
+  <button class="gps" onclick="acquisisciGPS()">
+    📍 ACQUISISCI POSIZIONE GPS
+  </button>
+</div>
+
+<div class="card">
+  <h2>TUBAZIONE / PRODUZIONE</h2>
+
+  <div class="grid">
+    <div>
+      <label>Materiale</label>
+      <select id="materiale">
+        <option>PE</option>
+        <option>Acciaio</option>
+        <option>Rame</option>
+        <option>Altro</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Diametro mm</label>
+      <input id="diametro"
+             type="number"
+             min="0">
+    </div>
+
+    <div>
+      <label>Metri posati</label>
+      <input id="metri"
+             type="number"
+             step="0.01"
+             min="0">
+    </div>
+
+    <div>
+      <label>Raccordi</label>
+      <input id="raccordi"
+             type="number"
+             min="0"
+             value="0">
+    </div>
+
+    <div class="full">
+      <label>Componenti installati</label>
+      <textarea id="componenti"
+        placeholder="Uno per riga: valvola, giunto, tee..."></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>ANOMALIE</h2>
+
+  <div class="grid">
+
+    <div>
+      <label>Anomalia presente</label>
+      <select id="anomaliaPresente">
+        <option value="false">NO</option>
+        <option value="true">SÌ</option>
+      </select>
+    </div>
+
+    <div class="full">
+      <label>Descrizione anomalia</label>
+      <textarea id="anomaliaDescrizione"
+        placeholder="Descrizione tecnica"></textarea>
+    </div>
+
+  </div>
+</div>
+
+<div class="card">
+  <h2>COLLAUDO</h2>
+
+  <div class="grid">
+
+    <div>
+      <label>Pressione</label>
+      <input id="pressione"
+             type="number"
+             step="0.01"
+             value="22.5">
+    </div>
+
+    <div>
+      <label>Strumento</label>
+      <input id="strumento"
+             placeholder="ID / matricola strumento">
+    </div>
+
+    <div class="full">
+      <label>Esito</label>
+      <select id="esito">
+        <option value="positivo">POSITIVO</option>
+        <option value="da_verificare">DA VERIFICARE</option>
+        <option value="negativo">NEGATIVO</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+<div class="card">
+  <h2>NOTE OPERATIVE</h2>
+  <textarea id="note"
+    placeholder="Note, condizioni operative, osservazioni..."></textarea>
+</div>
+
+<button class="save" onclick="registraIntervento()">
+  REGISTRA INTERVENTO
+</button>
+
+</main>
+
+<script>
+let offlineId = crypto.randomUUID();
+let idIntervento =
+  'INT-' +
+  new Date().toISOString().replace(/\D/g,'').slice(0,14) +
+  '-' +
+  Math.random().toString(36).slice(2,7).toUpperCase();
+
+document.getElementById('idIntervento').textContent =
+  idIntervento;
+
+function num(id){
+  const n = Number(document.getElementById(id).value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function status(msg,type='ok'){
+  const el=document.getElementById('status');
+  el.className='status '+type;
+  el.textContent=msg;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function caricaCantieri(){
+  try{
+    const r=await fetch('/api/cantieri');
+    const data=await r.json();
+
+    const select=document.getElementById('cantiere');
+    select.innerHTML='';
+
+    const lista=Array.isArray(data) ? data : [];
+
+    if(!lista.length){
+      const o=document.createElement('option');
+      o.value='';
+      o.textContent='Nessun cantiere disponibile';
+      select.appendChild(o);
+      return;
+    }
+
+    lista.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=String(c);
+      o.textContent=String(c);
+      select.appendChild(o);
+    });
+
+  }catch(e){
+    status('Errore caricamento cantieri','err');
+  }
+}
+
+function acquisisciGPS(){
+  if(!navigator.geolocation){
+    status('GPS non disponibile su questo dispositivo','err');
+    return;
+  }
+
+  status('Acquisizione GPS in corso...','warn');
+
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      document.getElementById('lat').value =
+        pos.coords.latitude.toFixed(7);
+
+      document.getElementById('lng').value =
+        pos.coords.longitude.toFixed(7);
+
+      document.getElementById('accuracy').value =
+        Math.round(pos.coords.accuracy);
+
+      status(
+        'GPS acquisito — accuratezza ' +
+        Math.round(pos.coords.accuracy) +
+        ' m',
+        'ok'
+      );
+    },
+    err=>{
+      status(
+        'Impossibile acquisire GPS: '+err.message,
+        'err'
+      );
+    },
+    {
+      enableHighAccuracy:true,
+      timeout:15000,
+      maximumAge:0
+    }
+  );
+}
+
+async function registraIntervento(){
+
+  const cantiere =
+    document.getElementById('cantiere').value;
+
+  const operatore =
+    document.getElementById('operatore').value.trim();
+
+  if(!cantiere){
+    status('Seleziona un cantiere','err');
+    return;
+  }
+
+  if(!operatore){
+    status('Inserisci il nome operatore','err');
+    return;
+  }
+
+  const anomalia =
+    document.getElementById('anomaliaPresente').value
+      === 'true';
+
+  const componenti =
+    document.getElementById('componenti')
+      .value
+      .split('\n')
+      .map(x=>x.trim())
+      .filter(Boolean);
+
+  const payload = {
+    id_intervento:idIntervento,
+    offline_id:offlineId,
+    id_cantiere:cantiere,
+
+    operatore,
+    squadra:
+      document.getElementById('squadra').value.trim(),
+
+    gps:{
+      lat:num('lat'),
+      lng:num('lng'),
+      accuratezza:num('accuracy')
+    },
+
+    tubazione:{
+      materiale:
+        document.getElementById('materiale').value,
+
+      diametro_mm:num('diametro'),
+      metri:num('metri')
+    },
+
+    raccordi:num('raccordi'),
+    componenti,
+
+    anomalia:{
+      presente:anomalia,
+      descrizione:
+        document.getElementById(
+          'anomaliaDescrizione'
+        ).value.trim()
+    },
+
+    collaudo:{
+      pressione:num('pressione'),
+      strumento:
+        document.getElementById('strumento').value.trim(),
+      esito:
+        document.getElementById('esito').value
+    },
+
+    note:
+      document.getElementById('note').value.trim()
+  };
+
+  status('Registrazione intervento...','warn');
+
+  try{
+
+    const r=await fetch('/api/interventi',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify(payload)
+    });
+
+    const result=await r.json();
+
+    if(!r.ok || !result.ok){
+      throw new Error(
+        result.error || 'Salvataggio intervento fallito'
+      );
+    }
+
+    const rc=await fetch('/api/collaudo',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        cantiere,
+        pressione:payload.collaudo.pressione,
+        lat:payload.gps.lat,
+        lng:payload.gps.lng,
+        strumento:payload.collaudo.strumento,
+        operatore,
+        metriTubo:payload.tubazione.metri,
+        raccordi:payload.raccordi,
+        anomalia:
+          payload.anomalia.presente
+            ? payload.anomalia.descrizione || 'Anomalia'
+            : '',
+        offline_id:offlineId
+      })
+    });
+
+    if(!rc.ok){
+      status(
+        'Intervento registrato. Sincronizzazione KPI da riprovare.',
+        'warn'
+      );
+      return;
+    }
+
+    status(
+      '✓ INTERVENTO REGISTRATO E SINCRONIZZATO',
+      'ok'
+    );
+
+    offlineId=crypto.randomUUID();
+
+    idIntervento =
+      'INT-' +
+      new Date()
+        .toISOString()
+        .replace(/\D/g,'')
+        .slice(0,14) +
+      '-' +
+      Math.random()
+        .toString(36)
+        .slice(2,7)
+        .toUpperCase();
+
+    document.getElementById('idIntervento').textContent =
+      idIntervento;
+
+  }catch(e){
+    status(e.message,'err');
+  }
+}
+
+async function logout(){
+  try{
+    await fetch('/api/logout',{method:'POST'});
+  }finally{
+    location.href='/';
+  }
+}
+
+caricaCantieri();
+</script>
+
+</body>
+</html>

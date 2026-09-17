@@ -334,6 +334,310 @@ function generaHashImmutabile(dati) {
   return crypto.createHash('sha256').update(JSON.stringify(dati) + Date.now()).digest('hex');
 }
 
+
+// ============================================================
+// NMA BUILD OS — CAMPO OPERATORE v1
+// Scheda digitale intervento di campo
+// ============================================================
+
+const InterventoCampoSchema = new mongoose.Schema({
+    id_intervento: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    offline_id: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
+
+    id_cantiere: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    operatore: {
+        type: String,
+        default: ''
+    },
+
+    squadra: {
+        type: String,
+        default: ''
+    },
+
+    gps: {
+        lat: Number,
+        lng: Number,
+        accuratezza: Number
+    },
+
+    tubazione: {
+        materiale: String,
+        diametro_mm: Number,
+        metri: Number
+    },
+
+    raccordi: {
+        type: Number,
+        default: 0
+    },
+
+    componenti: [{
+        type: String
+    }],
+
+    anomalia: {
+        presente: {
+            type: Boolean,
+            default: false
+        },
+        descrizione: {
+            type: String,
+            default: ''
+        }
+    },
+
+    collaudo: {
+        pressione: Number,
+        strumento: String,
+        esito: String
+    },
+
+    note: {
+        type: String,
+        default: ''
+    },
+
+    stato: {
+        type: String,
+        enum: ['bozza', 'registrato', 'validato'],
+        default: 'registrato'
+    },
+
+    creato_il: {
+        type: Date,
+        default: Date.now
+    },
+
+    aggiornato_il: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    collection: 'interventi_campo'
+});
+
+const InterventoCampo =
+    mongoose.models.InterventoCampo ||
+    mongoose.model(
+        'InterventoCampo',
+        InterventoCampoSchema,
+        'interventi_campo'
+    );
+
+app.post(
+    '/api/interventi',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+            const body = req.body || {};
+
+            const idCantiere =
+                String(body.id_cantiere || '').trim();
+
+            const offlineId =
+                String(body.offline_id || '').trim();
+
+            const idIntervento =
+                String(body.id_intervento || '').trim();
+
+            if (!idCantiere || !offlineId || !idIntervento) {
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'id_cantiere, id_intervento e offline_id obbligatori'
+                });
+            }
+
+            const esistente =
+                await InterventoCampo.findOne({
+                    offline_id: offlineId
+                }).lean();
+
+            if (esistente) {
+                return res.status(200).json({
+                    ok: true,
+                    idempotente: true,
+                    intervento: esistente
+                });
+            }
+
+            const numero = (v, fallback = 0) => {
+                const n = Number(v);
+                return Number.isFinite(n) ? n : fallback;
+            };
+
+            const componenti =
+                Array.isArray(body.componenti)
+                    ? body.componenti
+                        .map(v => String(v).trim())
+                        .filter(Boolean)
+                    : [];
+
+            const doc = await InterventoCampo.create({
+                id_intervento: idIntervento,
+                offline_id: offlineId,
+                id_cantiere: idCantiere,
+
+                operatore:
+                    String(body.operatore || '').trim(),
+
+                squadra:
+                    String(body.squadra || '').trim(),
+
+                gps: {
+                    lat: numero(body.gps?.lat, 0),
+                    lng: numero(body.gps?.lng, 0),
+                    accuratezza:
+                        numero(body.gps?.accuratezza, 0)
+                },
+
+                tubazione: {
+                    materiale:
+                        String(
+                            body.tubazione?.materiale || ''
+                        ).trim(),
+
+                    diametro_mm:
+                        numero(
+                            body.tubazione?.diametro_mm,
+                            0
+                        ),
+
+                    metri:
+                        numero(
+                            body.tubazione?.metri,
+                            0
+                        )
+                },
+
+                raccordi:
+                    numero(body.raccordi, 0),
+
+                componenti,
+
+                anomalia: {
+                    presente:
+                        body.anomalia?.presente === true,
+
+                    descrizione:
+                        String(
+                            body.anomalia?.descrizione || ''
+                        ).trim()
+                },
+
+                collaudo: {
+                    pressione:
+                        numero(
+                            body.collaudo?.pressione,
+                            0
+                        ),
+
+                    strumento:
+                        String(
+                            body.collaudo?.strumento || ''
+                        ).trim(),
+
+                    esito:
+                        String(
+                            body.collaudo?.esito || ''
+                        ).trim()
+                },
+
+                note:
+                    String(body.note || '').trim(),
+
+                stato: 'registrato',
+
+                aggiornato_il: new Date()
+            });
+
+            return res.status(201).json({
+                ok: true,
+                idempotente: false,
+                intervento: doc
+            });
+
+        } catch (error) {
+
+            if (error?.code === 11000) {
+                return res.status(200).json({
+                    ok: true,
+                    idempotente: true
+                });
+            }
+
+            console.error(
+                'Errore /api/interventi:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error: 'Errore salvataggio intervento'
+            });
+        }
+    }
+);
+
+app.get(
+    '/api/interventi',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+            const filtro = {};
+
+            if (req.query.cantiere) {
+                filtro.id_cantiere =
+                    String(req.query.cantiere);
+            }
+
+            const interventi =
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({ creato_il: -1 })
+                    .limit(100)
+                    .lean();
+
+            return res.json({
+                ok: true,
+                totale: interventi.length,
+                interventi
+            });
+
+        } catch (error) {
+            console.error(
+                'Errore GET /api/interventi:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error: 'Errore lettura interventi'
+            });
+        }
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
@@ -854,225 +1158,16 @@ app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res)
 });
 
 // Terminale Cantiere
-app.get('/cantiere', requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>NMA BUILD OS - Terminale Campo</title>
-        <style>
-            body { background-color: #0b0b0b; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
-            .header { background: #151515; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-            h1 { font-size: 22px; margin: 0; color: #4CAF50; letter-spacing: 1px;}
-            .btn { background-color: #4CAF50; color: #000; border: none; padding: 20px; font-size: 15px; font-weight: bold; border-radius: 12px; width: 100%; margin-top: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
-            .status-box { background: #141414; padding: 20px; border-radius: 12px; margin-top: 15px; border: 1px solid #222; text-align: left;}
-            .data-row { display: flex; justify-content: space-between; margin: 12px 0; font-size: 14px; border-bottom: 1px solid #282828; padding-bottom: 8px; align-items: center;}
-            .highlight { color: #4CAF50; font-weight: bold; }
-            input, select { background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; font-size: 14px; text-align: right; width: 150px; }
-            .offline-badge { background: #4CAF50; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; float: right; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>NMA BUILD OS <span id="net-status" class="offline-badge">ONLINE</span></h1>
-            <p style="margin:5px 0 0 0; color:#888; font-size: 13px;">Terminale Collaudo & Telemetria Flusso</p>
-        </div>
-        
-        <div class="status-box">
-            <div class="data-row"><span>Codice Cantiere:</span> <input type="text" id="input-cantiere" value="ERG-CANTIERE-01"></div>
-            <div class="data-row"><span>Operatore:</span> <input type="text" id="input-operatore" value="Squadra Campo 1"></div>
-            <div class="data-row"><span>Metri Tubo:</span> <input type="number" id="input-metri" value="30"></div>
-            <div class="data-row"><span>Raccordi:</span> <input type="number" id="input-raccordi" value="2"></div>
-            <div class="data-row"><span>Anomalia:</span> <input type="text" id="input-anomalia" value="Nessuna anomalia" style="width:150px; font-size:12px;"></div>
-            <div class="data-row"><span>Foto + Watermark:</span> <input type="file" id="input-foto" accept="image/*" capture="environment" style="width:160px; font-size:11px;"></div>
-            <div class="data-row"><span>Coda Offline:</span> <strong id="queue-count" style="color:#00BCD4;">0 elementi</strong></div>
-            <div class="data-row"><span>GPS (Hardware):</span> <strong id="gps-status" style="color:#ffcc00;">Ricerca...</strong></div>
-            <div class="data-row"><span>Bluetooth (BLE):</span> <strong id="bt-status" style="color:#4CAF50;">Pronto</strong></div>
-        </div>
-
-        <button class="btn" id="btn-bluetooth" style="background-color: #222; color: #fff; border: 1px solid #444;">1. COLLEGAMENTO BLE STRUMENTO</button>
-        <button class="btn" id="btn-send">2. REGISTRA E TRASMETTI IN DIRETTA</button>
-
-        <script>
-            let currentLat = 45.07030;
-            let currentLng = 7.68625;
-            let btDeviceName = "Manuale / Testo 510i";
-            let base64Foto = null;
-
-            document.getElementById('input-foto').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(uploadEvent) {
-                        base64Foto = uploadEvent.target.result;
-                        alert("✓ Foto acquisita con Watermark crittografato SHA-256!");
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            function updateNetworkStatus() {
-                const badge = document.getElementById('net-status');
-                const queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
-                document.getElementById('queue-count').innerText = queue.length + " elementi";
-                if (navigator.onLine) {
-                    badge.style.backgroundColor = '#4CAF50'; badge.innerText = 'ONLINE';
-                    if (queue.length > 0) syncOfflineQueue();
-                } else {
-                    badge.style.backgroundColor = '#ff9800'; badge.innerText = 'OFFLINE';
-                }
-            }
-
-            window.addEventListener('online', updateNetworkStatus);
-            window.addEventListener('offline', updateNetworkStatus);
-
-            async function syncOfflineQueue() {
-                let queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
-                if (queue.length === 0) return;
-                let remaining = [];
-                for (let item of queue) {
-                    try {
-                        let res = await fetch('/api/collaudo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
-                        if (!res.ok) remaining.push(item);
-                    } catch (e) { remaining.push(item); }
-                }
-                localStorage.setItem('nma_offline_queue_core', JSON.stringify(remaining));
-                updateNetworkStatus();
-            }
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    currentLat = pos.coords.latitude; currentLng = pos.coords.longitude;
-                    document.getElementById('gps-status').innerHTML = '<span class="highlight">GPS HW Agganciato</span>';
-                }, () => { document.getElementById('gps-status').innerText = 'Torino (Fallback)'; });
-            }
-
-            document.getElementById('btn-bluetooth').addEventListener('click', async () => {
-                try {
-                    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-                    btDeviceName = device.name || "Testo 510i";
-                    document.getElementById('bt-status').innerHTML = '<span class="highlight">' + btDeviceName + '</span>';
-                    document.getElementById('btn-bluetooth').style.backgroundColor = '#4CAF50';
-                    document.getElementById('btn-bluetooth').style.color = '#000';
-                    document.getElementById('btn-bluetooth').innerText = '✓ STRUMENTO CONNESSO';
-                } catch (error) { alert("Bluetooth saltato: inserimento manuale standard."); }
-            });
-
-            document.getElementById('btn-send').addEventListener('click', () => {
-                const payload = {
-                    offline_id: 'OFF-' + Date.now() + '-' + Math.floor(Math.random()*10000),
-                    cantiere: document.getElementById('input-cantiere').value || 'ERG-CANTIERE-01',
-                    operatore: document.getElementById('input-operatore').value || 'Squadra Campo 1',
-                    metriTubo: Number(document.getElementById('input-metri').value || 30),
-                    raccordi: Number(document.getElementById('input-raccordi').value || 2),
-                    anomalia: document.getElementById('input-anomalia').value || 'Nessuna anomalia',
-                    fotoData: base64Foto,
-                    pressione: 22.5,
-                    strumento: btDeviceName,
-                    lat: currentLat,
-                    lng: currentLng
-                };
-
-                const btnSend = document.getElementById('btn-send');
-                btnSend.innerText = 'TRASMISSIONE IN CORSO...';
-
-                if (!navigator.onLine) {
-                    let queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
-                    queue.push(payload);
-                    localStorage.setItem('nma_offline_queue_core', JSON.stringify(queue));
-                    updateNetworkStatus();
-                    btnSend.innerText = '✓ SALVATO OFFLINE (In Coda)';
-                    setTimeout(() => { btnSend.innerText = '2. REGISTRA E TRASMETTI IN DIRETTA'; }, 2500);
-                    return;
-                }
-                
-                fetch('/api/collaudo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                }).then(res => res.json()).then(data => {
-                    alert("✓ COLLAUDO REGISTRATO E TRASMESSO!\\nHash SHA-256: " + data.hash.substring(0, 16) + "...\\nValore: € " + data.valore_eur);
-                    btnSend.innerText = '✓ TRASMESSO IN DIRETTA';
-                    btnSend.style.backgroundColor = '#4CAF50';
-                    setTimeout(() => { btnSend.innerText = '2. REGISTRA E TRASMETTI IN DIRETTA'; btnSend.style.backgroundColor = '#4CAF50'; }, 2500);
-                }).catch(() => {
-                    let queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
-                    queue.push(payload);
-                    localStorage.setItem('nma_offline_queue_core', JSON.stringify(queue));
-                    updateNetworkStatus();
-                    btnSend.innerText = '⚠ SALVATO IN LOCALE (Offline)';
-                });
-            });
-
-            
-            // --- INIZIO: MODULO AUTO-SYNC AL RITORNO DELLA RETE ---
-            window.addEventListener('online', async () => {
-                let queue = JSON.parse(localStorage.getItem('nma_offline_queue_core') || '[]');
-                if (queue.length === 0) return;
-                
-                // Cerca il bottone di trasmissione basandosi sui nomi standard
-                let btn = document.getElementById('btnSend') || document.querySelector('button');
-                if (btn) {
-                    btn.style.backgroundColor = '#FF9800';
-                    btn.innerText = '🔄 RETE AGGANCIATA! SVUOTAMENTO CODA...';
-                }
-                
-                try {
-                    let res = await fetch('/api/sync-offline', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ collaudi: queue })
-                    });
-                    
-                    if (res.ok) {
-                        localStorage.removeItem('nma_offline_queue_core');
-                        if (typeof updateNetworkStatus === 'function') updateNetworkStatus();
-                        if (btn) {
-                            btn.style.backgroundColor = '#4CAF50';
-                            btn.innerText = '✅ TUTTI I DATI RECUPERATI (Coda: 0)';
-                        }
-                        // Ripristina il bottone al suo stato originale dopo 4 secondi
-                        setTimeout(() => { 
-                            if (btn) btn.innerText = '2. REGISTRA E TRASMETTI IN DIRETTA'; 
-                        }, 4000);
-                    }
-                } catch(e) {
-                    console.error('Errore durante lo svuotamento asincrono:', e);
-                }
-            });
-            // --- FINE: MODULO AUTO-SYNC ---
-
-
-            // --- INIZIO: AUTO-REGISTRAZIONE IDENTITÀ SQUADRA ---
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(async () => {
-                    // Cerca di estrarre i dati compilati nel terminale (Codice Cantiere e Operatore)
-                    const inputs = document.querySelectorAll('input');
-                    const cantiereVal = inputs[0] ? inputs[0].value : 'ERG-CANTIERE-01';
-                    const operatoreVal = inputs[1] ? inputs[1].value : 'Squadra Campo';
-                    
-                    try {
-                        await fetch('/api/registra-squadra', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                cantiere: cantiereVal,
-                                operatore: operatoreVal,
-                                hardwareId: 'Sensore-BLE-' + Math.floor(Math.random() * 1000) // Simula ID hardware
-                            })
-                        });
-                    } catch(e) { console.error('Errore registrazione identità squadra:', e); }
-                }, 3000);
-            });
-            // --- FINE: AUTO-REGISTRAZIONE ---
-
-updateNetworkStatus();
-        </script>
-    </body>
-    </html>
-  `);
-});
+app.get(
+    '/cantiere',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    (req, res) => {
+        res.sendFile(
+            __dirname + '/campo_operatore_v1.html'
+        );
+    }
+);
 
 
 // --- INIZIO: ENDPOINT RECUPERO CODA OFF-GRID ---
