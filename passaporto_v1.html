@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>NMA BUILD OS — Passaporto Infrastruttura</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#061015;
+  color:#eef7f8;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+header{
+  padding:18px;
+  background:#09171d;
+  border-bottom:1px solid #244650;
+}
+
+.brand{
+  font-size:19px;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+
+.status{
+  color:#20e88b;
+  font-size:12px;
+  margin-top:5px;
+}
+
+main{
+  width:min(1100px,100%);
+  margin:auto;
+  padding:16px 16px 80px;
+}
+
+.actions{
+  display:flex;
+  gap:8px;
+  margin-bottom:15px;
+}
+
+button{
+  border:0;
+  padding:11px 15px;
+  border-radius:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.print{
+  background:#20e88b;
+  color:#032016;
+}
+
+.back{
+  background:#172d35;
+  color:white;
+}
+
+.section{
+  background:#0d1b22;
+  border:1px solid #244650;
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:12px;
+}
+
+.section h2{
+  font-size:13px;
+  color:#23d8ff;
+  letter-spacing:.08em;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.box{
+  background:#08161c;
+  padding:10px;
+  border-radius:8px;
+}
+
+.label{
+  color:#78959c;
+  font-size:10px;
+  text-transform:uppercase;
+}
+
+.value{
+  margin-top:5px;
+  font-size:13px;
+  word-break:break-word;
+}
+
+.green{color:#20e88b}
+.red{color:#ff6262}
+
+.hash{
+  font-family:monospace;
+  font-size:11px;
+}
+
+@media(max-width:800px){
+  .grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media print{
+
+  body{
+    background:white;
+    color:black;
+  }
+
+  header{
+    background:white;
+    color:black;
+  }
+
+  .actions{
+    display:none;
+  }
+
+  .section,
+  .box{
+    background:white;
+    color:black;
+    border:1px solid #bbb;
+  }
+
+  .label{
+    color:#444;
+  }
+
+  main{
+    width:100%;
+    padding:8px;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="brand">
+    NMA BUILD OS — PASSAPORTO INFRASTRUTTURA
+  </div>
+
+  <div id="system"
+       class="status">
+    ● CARICAMENTO DOSSIER...
+  </div>
+
+</header>
+
+<main>
+
+<div class="actions">
+
+  <button
+    class="print"
+    onclick="window.print()">
+    STAMPA / SALVA PDF
+  </button>
+
+  <button
+    class="back"
+    onclick="location.href='/supervisore'">
+    SUPERVISORE
+  </button>
+
+</div>
+
+<div id="content"></div>
+
+</main>
+
+<script>
+
+const esc=v=>
+  String(v??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;');
+
+const val=v=>
+  v===undefined ||
+  v===null ||
+  v===''
+    ? '—'
+    : esc(v);
+
+function box(label,value,cls=''){
+
+  return `
+    <div class="box">
+      <div class="label">
+        ${esc(label)}
+      </div>
+      <div class="value ${cls}">
+        ${val(value)}
+      </div>
+    </div>
+  `;
+}
+
+async function carica(){
+
+  const id=
+    decodeURIComponent(
+      location.pathname
+        .split('/')
+        .filter(Boolean)
+        .pop()
+    );
+
+  try{
+
+    const r=
+      await fetch(
+        '/api/interventi/' +
+        encodeURIComponent(id) +
+        '/passaporto'
+      );
+
+    const data=
+      await r.json();
+
+    if(!r.ok || !data.ok){
+      throw new Error(
+        data.error ||
+        'Passaporto non disponibile'
+      );
+    }
+
+    const x=data.intervento;
+
+    document.getElementById(
+      'system'
+    ).textContent=
+      data.audit.integrita_catena
+        ? '● DOSSIER CARICATO — INTEGRITÀ AUDIT OK'
+        : '● ATTENZIONE — VERIFICA AUDIT NECESSARIA';
+
+    const componenti=
+      Array.isArray(x.componenti)
+        ? x.componenti.join(', ')
+        : '';
+
+    document.getElementById(
+      'content'
+    ).innerHTML=`
+
+      <div class="section">
+
+        <h2>IDENTIFICAZIONE</h2>
+
+        <div class="grid">
+
+          ${box(
+            'ID intervento',
+            x.id_intervento
+          )}
+
+          ${box(
+            'Cantiere',
+            x.id_cantiere
+          )}
+
+          ${box(
+            'Operatore',
+            x.operatore
+          )}
+
+          ${box(
+            'Squadra',
+            x.squadra
+          )}
+
+          ${box(
+            'Stato',
+            x.stato
+          )}
+
+          ${box(
+            'Data',
+            x.creato_il
+              ? new Date(
+                  x.creato_il
+                ).toLocaleString()
+              : ''
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>TUBAZIONE / COMPONENTI</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Materiale',
+            x.tubazione?.materiale
+          )}
+
+          ${box(
+            'Diametro mm',
+            x.tubazione?.diametro_mm
+          )}
+
+          ${box(
+            'Metri dichiarati',
+            x.tubazione?.metri
+          )}
+
+          ${box(
+            'Raccordi',
+            x.raccordi
+          )}
+
+          ${box(
+            'Componenti',
+            componenti
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>SCAVO / POSA</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Tipo scavo',
+            x.scavo?.tipo
+          )}
+
+          ${box(
+            'Profondità scavo cm',
+            x.scavo?.profondita_cm
+          )}
+
+          ${box(
+            'Larghezza scavo cm',
+            x.scavo?.larghezza_cm
+          )}
+
+          ${box(
+            'Terreno',
+            x.scavo?.terreno
+          )}
+
+          ${box(
+            'Ripristino',
+            x.scavo?.ripristino
+          )}
+
+          ${box(
+            'Profondità posa cm',
+            x.posa?.profondita_cm
+          )}
+
+          ${box(
+            'Letto posa',
+            x.posa?.letto_posa
+          )}
+
+          ${box(
+            'Nastro segnalatore',
+            x.posa?.nastro_segnalatore
+              ? 'SÌ'
+              : 'NO'
+          )}
+
+          ${box(
+            'Protezione meccanica',
+            x.posa?.protezione_meccanica
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>MISURE / RIFERIMENTI</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Quota inizio cm',
+            x.misure?.quota_inizio_cm
+          )}
+
+          ${box(
+            'Quota fine cm',
+            x.misure?.quota_fine_cm
+          )}
+
+          ${box(
+            'Distanza riferimento cm',
+            x.misure?.distanza_riferimento_cm
+          )}
+
+          ${box(
+            'Riferimento fisso',
+            x.misure?.riferimento
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>AS-BUILT / GEOLOCALIZZAZIONE</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Tracciato presente',
+            data.as_built.presente
+              ? 'SÌ'
+              : 'NO'
+          )}
+
+          ${box(
+            'Punti GPS',
+            data.as_built.punti
+          )}
+
+          ${box(
+            'Lunghezza GPS m',
+            data.as_built.lunghezza_m
+          )}
+
+          ${box(
+            'ID tratto',
+            data.as_built.id_tratto
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>COLLAUDO / ANOMALIE</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Pressione',
+            x.collaudo?.pressione
+          )}
+
+          ${box(
+            'Strumento',
+            x.collaudo?.strumento
+          )}
+
+          ${box(
+            'Esito collaudo',
+            x.collaudo?.esito
+          )}
+
+          ${box(
+            'Anomalia',
+            x.anomalia?.presente
+              ? 'SÌ'
+              : 'NO'
+          )}
+
+          ${box(
+            'Descrizione',
+            x.anomalia?.descrizione
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>EVIDENZE / AUDIT</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Evidenze totali',
+            data.evidenze.totale
+          )}
+
+          ${box(
+            'Fotografie',
+            data.evidenze.foto
+          )}
+
+          ${box(
+            'Documenti',
+            data.evidenze.documenti
+          )}
+
+          ${box(
+            'Eventi Audit',
+            data.audit.eventi
+          )}
+
+          ${box(
+            'Integrità catena',
+            data.audit.integrita_catena
+              ? 'OK'
+              : 'VERIFICA',
+            data.audit.integrita_catena
+              ? 'green'
+              : 'red'
+          )}
+
+          ${box(
+            'Ultimo hash',
+            data.audit.ultimo_hash
+              ? data.audit.ultimo_hash
+                  .slice(0,24)+'…'
+              : '',
+            'hash'
+          )}
+
+        </div>
+      </div>
+
+      <div class="section">
+
+        <h2>VALIDAZIONE</h2>
+
+        <div class="grid">
+
+          ${box(
+            'Esito',
+            x.validazione?.esito
+          )}
+
+          ${box(
+            'Validato da',
+            x.validazione?.validato_da
+          )}
+
+          ${box(
+            'Data validazione',
+            x.validazione?.validato_il
+              ? new Date(
+                  x.validazione.validato_il
+                ).toLocaleString()
+              : ''
+          )}
+
+          ${box(
+            'Note',
+            x.validazione?.note
+          )}
+
+        </div>
+      </div>
+
+    `;
+
+  }catch(e){
+
+    document.getElementById(
+      'system'
+    ).textContent=
+      '● ERRORE PASSAPORTO';
+
+    document.getElementById(
+      'content'
+    ).innerHTML=
+      '<div class="section">'+
+      esc(e.message)+
+      '</div>';
+  }
+}
+
+carica();
+
+</script>
+
+</body>
+</html>

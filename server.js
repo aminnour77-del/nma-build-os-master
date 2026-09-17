@@ -741,6 +741,84 @@ const InterventoCampoSchema = new mongoose.Schema({
         type: String
     }],
 
+    // ========================================================
+    // NMA BUILD OS — PASSAPORTO INFRASTRUTTURA v1
+    // ========================================================
+
+    scavo: {
+
+        tipo: {
+            type: String,
+            default: ''
+        },
+
+        profondita_cm: {
+            type: Number,
+            default: 0
+        },
+
+        larghezza_cm: {
+            type: Number,
+            default: 0
+        },
+
+        terreno: {
+            type: String,
+            default: ''
+        },
+
+        ripristino: {
+            type: String,
+            default: ''
+        }
+    },
+
+    posa: {
+
+        profondita_cm: {
+            type: Number,
+            default: 0
+        },
+
+        letto_posa: {
+            type: String,
+            default: ''
+        },
+
+        nastro_segnalatore: {
+            type: Boolean,
+            default: false
+        },
+
+        protezione_meccanica: {
+            type: String,
+            default: ''
+        }
+    },
+
+    misure: {
+
+        quota_inizio_cm: {
+            type: Number,
+            default: 0
+        },
+
+        quota_fine_cm: {
+            type: Number,
+            default: 0
+        },
+
+        distanza_riferimento_cm: {
+            type: Number,
+            default: 0
+        },
+
+        riferimento: {
+            type: String,
+            default: ''
+        }
+    },
+
     anomalia: {
         presente: {
             type: Boolean,
@@ -913,6 +991,84 @@ app.post(
                     numero(body.raccordi, 0),
 
                 componenti,
+
+                scavo: {
+
+                    tipo:
+                        String(
+                            body.scavo?.tipo || ''
+                        ).trim(),
+
+                    profondita_cm:
+                        numero(
+                            body.scavo?.profondita_cm,
+                            0
+                        ),
+
+                    larghezza_cm:
+                        numero(
+                            body.scavo?.larghezza_cm,
+                            0
+                        ),
+
+                    terreno:
+                        String(
+                            body.scavo?.terreno || ''
+                        ).trim(),
+
+                    ripristino:
+                        String(
+                            body.scavo?.ripristino || ''
+                        ).trim()
+                },
+
+                posa: {
+
+                    profondita_cm:
+                        numero(
+                            body.posa?.profondita_cm,
+                            0
+                        ),
+
+                    letto_posa:
+                        String(
+                            body.posa?.letto_posa || ''
+                        ).trim(),
+
+                    nastro_segnalatore:
+                        body.posa?.nastro_segnalatore === true,
+
+                    protezione_meccanica:
+                        String(
+                            body.posa?.protezione_meccanica || ''
+                        ).trim()
+                },
+
+                misure: {
+
+                    quota_inizio_cm:
+                        numero(
+                            body.misure?.quota_inizio_cm,
+                            0
+                        ),
+
+                    quota_fine_cm:
+                        numero(
+                            body.misure?.quota_fine_cm,
+                            0
+                        ),
+
+                    distanza_riferimento_cm:
+                        numero(
+                            body.misure?.distanza_riferimento_cm,
+                            0
+                        ),
+
+                    riferimento:
+                        String(
+                            body.misure?.riferimento || ''
+                        ).trim()
+                },
 
                 anomalia: {
                     presente:
@@ -2371,6 +2527,344 @@ app.post(
                     'Errore salvataggio tracciato'
             });
         }
+    }
+);
+
+
+// ============================================================
+// NMA BUILD OS — PASSAPORTO INFRASTRUTTURA v1
+// ============================================================
+
+app.get(
+    '/api/interventi/:id/passaporto',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const id =
+                String(
+                    req.params.id || ''
+                ).trim();
+
+            const intervento =
+                await InterventoCampo
+                    .findOne({
+                        id_intervento: id
+                    })
+                    .lean();
+
+            if (!intervento) {
+
+                return res.status(404).json({
+                    ok: false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+            const [
+                evidenze,
+                audit,
+                tratto
+            ] = await Promise.all([
+
+                Evidenza
+                    .find({
+                        id_intervento: id
+                    })
+                    .sort({
+                        creato_il: 1
+                    })
+                    .lean(),
+
+                AuditLog
+                    .find({
+                        id_intervento: id
+                    })
+                    .sort({
+                        data_ora: 1
+                    })
+                    .lean(),
+
+                TrattoRete
+                    .findOne({
+                        id_tratto:
+                            'ASB-' + id
+                    })
+                    .lean()
+            ]);
+
+            // ------------------------------------------------
+            // VERIFICA TECNICA CATENA AUDIT
+            // ------------------------------------------------
+
+            let hashPrecedente='';
+            let integrita=true;
+
+            for (const evento of audit) {
+
+                const baseHash={
+
+                    evento:
+                        String(
+                            evento.evento || ''
+                        ),
+
+                    id_intervento:
+                        String(
+                            evento.id_intervento || ''
+                        ),
+
+                    id_cantiere:
+                        String(
+                            evento.id_cantiere || ''
+                        ),
+
+                    ruolo:
+                        String(
+                            evento.ruolo || ''
+                        ),
+
+                    operatore:
+                        String(
+                            evento.operatore || ''
+                        ),
+
+                    squadra:
+                        String(
+                            evento.squadra || ''
+                        ),
+
+                    origine:
+                        String(
+                            evento.origine || ''
+                        ),
+
+                    stato:
+                        String(
+                            evento.stato || ''
+                        ),
+
+                    note:
+                        String(
+                            evento.note || ''
+                        ),
+
+                    hash_precedente:
+                        hashPrecedente,
+
+                    data_ora:
+                        new Date(
+                            evento.data_ora
+                        ).toISOString()
+                };
+
+                const ricalcolato=
+                    crypto
+                        .createHash('sha256')
+                        .update(
+                            JSON.stringify(
+                                baseHash
+                            )
+                        )
+                        .digest('hex');
+
+                if (
+                    String(
+                        evento.hash_precedente || ''
+                    ) !== hashPrecedente ||
+                    String(
+                        evento.hash_evento || ''
+                    ) !== ricalcolato
+                ) {
+                    integrita=false;
+                    break;
+                }
+
+                hashPrecedente=
+                    String(
+                        evento.hash_evento || ''
+                    );
+            }
+
+            // ------------------------------------------------
+            // LUNGHEZZA GEOMETRICA AS-BUILT
+            // ------------------------------------------------
+
+            function distanza(a,b){
+
+                const R=6371000;
+                const rad=
+                    v=>v*Math.PI/180;
+
+                const lat1=rad(a[1]);
+                const lat2=rad(b[1]);
+
+                const dLat=
+                    rad(b[1]-a[1]);
+
+                const dLng=
+                    rad(b[0]-a[0]);
+
+                const q=
+                    Math.sin(dLat/2)*
+                    Math.sin(dLat/2)+
+                    Math.cos(lat1)*
+                    Math.cos(lat2)*
+                    Math.sin(dLng/2)*
+                    Math.sin(dLng/2);
+
+                return (
+                    2*R*
+                    Math.atan2(
+                        Math.sqrt(q),
+                        Math.sqrt(1-q)
+                    )
+                );
+            }
+
+            let lunghezzaAsBuilt=0;
+
+            const coords=
+                tratto?.geometry?.coordinates;
+
+            if (
+                Array.isArray(coords) &&
+                coords.length >= 2
+            ) {
+
+                for (
+                    let i=1;
+                    i<coords.length;
+                    i++
+                ) {
+
+                    lunghezzaAsBuilt +=
+                        distanza(
+                            coords[i-1],
+                            coords[i]
+                        );
+                }
+            }
+
+            return res.json({
+
+                ok: true,
+
+                tipo:
+                    'PASSAPORTO_INFRASTRUTTURA',
+
+                intervento,
+
+                as_built: tratto
+                    ? {
+                        presente: true,
+
+                        id_tratto:
+                            tratto.id_tratto,
+
+                        punti:
+                            Array.isArray(coords)
+                                ? coords.length
+                                : 0,
+
+                        lunghezza_m:
+                            Number(
+                                lunghezzaAsBuilt
+                                    .toFixed(2)
+                            ),
+
+                        geometry:
+                            tratto.geometry
+                    }
+                    : {
+                        presente: false,
+                        punti: 0,
+                        lunghezza_m: 0
+                    },
+
+                evidenze: {
+
+                    totale:
+                        evidenze.length,
+
+                    foto:
+                        evidenze.filter(
+                            e =>
+                                e.tipo === 'foto'
+                        ).length,
+
+                    documenti:
+                        evidenze.filter(
+                            e =>
+                                e.tipo === 'documento'
+                        ).length,
+
+                    files:
+                        evidenze.map(
+                            e => ({
+                                id_evidenza:
+                                    e.id_evidenza,
+
+                                nome_file:
+                                    e.nome_file,
+
+                                tipo:
+                                    e.tipo,
+
+                                sha256:
+                                    e.sha256,
+
+                                creato_il:
+                                    e.creato_il
+                            })
+                        )
+                },
+
+                audit: {
+
+                    eventi:
+                        audit.length,
+
+                    integrita_catena:
+                        integrita,
+
+                    ultimo_hash:
+                        hashPrecedente || null
+                },
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        } catch (error) {
+
+            console.error(
+                'Errore Passaporto:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore generazione passaporto'
+            });
+        }
+    }
+);
+
+app.get(
+    '/passaporto/:id',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    (req, res) => {
+
+        res.sendFile(
+            __dirname +
+            '/passaporto_v1.html'
+        );
     }
 );
 
