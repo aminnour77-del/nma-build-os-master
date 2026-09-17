@@ -690,6 +690,123 @@ function evidenceBucket() {
     );
 }
 
+
+// ============================================================
+// NMA BUILD OS — PROGETTO ASBUILT CONFRONTO v1
+// ============================================================
+
+const ProgettoRiferimentoSchema =
+    new mongoose.Schema({
+
+        id_intervento: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true
+        },
+
+        id_cantiere: {
+            type: String,
+            required: true,
+            index: true
+        },
+
+        geometry: {
+            type: {
+                type: String,
+                enum: ['LineString'],
+                required: true
+            },
+
+            coordinates: {
+                type: [[Number]],
+                required: true
+            }
+        },
+
+        materiale: {
+            type: String,
+            default: ''
+        },
+
+        diametro_mm: {
+            type: Number,
+            default: 0
+        },
+
+        fonte: {
+            type: String,
+            default: ''
+        },
+
+        note: {
+            type: String,
+            default: ''
+        },
+
+        creato_da: {
+            type: String,
+            default: ''
+        },
+
+        aggiornato_il: {
+            type: Date,
+            default: Date.now
+        }
+
+    }, {
+        collection: 'progetti_riferimento'
+    });
+
+const ProgettoRiferimento =
+    mongoose.models.ProgettoRiferimento ||
+    mongoose.model(
+        'ProgettoRiferimento',
+        ProgettoRiferimentoSchema,
+        'progetti_riferimento'
+    );
+
+function nmaDistanzaMetri(a,b){
+
+    const R=6371000;
+    const rad=v=>v*Math.PI/180;
+
+    const lat1=rad(a[1]);
+    const lat2=rad(b[1]);
+
+    const dLat=rad(b[1]-a[1]);
+    const dLng=rad(b[0]-a[0]);
+
+    const q=
+        Math.sin(dLat/2)**2 +
+        Math.cos(lat1) *
+        Math.cos(lat2) *
+        Math.sin(dLng/2)**2;
+
+    return 2*R*Math.atan2(
+        Math.sqrt(q),
+        Math.sqrt(1-q)
+    );
+}
+
+function nmaLunghezzaLinea(coords){
+
+    if(!Array.isArray(coords) || coords.length<2){
+        return 0;
+    }
+
+    let totale=0;
+
+    for(let i=1;i<coords.length;i++){
+        totale+=nmaDistanzaMetri(
+            coords[i-1],
+            coords[i]
+        );
+    }
+
+    return totale;
+}
+
 const InterventoCampoSchema = new mongoose.Schema({
     id_intervento: {
         type: String,
@@ -875,6 +992,26 @@ const InterventoCampoSchema = new mongoose.Schema({
         ricevuto_il: {
             type: Date,
             default: Date.now
+        }
+    },
+
+    dossier_chiusura: {
+
+        chiuso: {
+            type: Boolean,
+            default: false
+        },
+
+        chiuso_da: {
+            type: String,
+            default: ''
+        },
+
+        chiuso_il: Date,
+
+        hash_snapshot: {
+            type: String,
+            default: ''
         }
     },
 
@@ -2864,6 +3001,730 @@ app.get(
         res.sendFile(
             __dirname +
             '/passaporto_v1.html'
+        );
+    }
+);
+
+
+// ------------------------------------------------------------
+// CARICA / AGGIORNA PROGETTO DI RIFERIMENTO
+// ------------------------------------------------------------
+
+app.post(
+    '/api/interventi/:id/progetto-riferimento',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(req.params.id || '').trim();
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean();
+
+            if(!intervento){
+                return res.status(404).json({
+                    ok:false,
+                    error:'Intervento non trovato'
+                });
+            }
+
+            if(intervento.dossier_chiusura?.chiuso){
+                return res.status(409).json({
+                    ok:false,
+                    error:'Dossier già chiuso'
+                });
+            }
+
+            let geometry=req.body?.geometry;
+
+            if(
+                geometry?.type==='Feature'
+            ){
+                geometry=geometry.geometry;
+            }
+
+            if(
+                !geometry ||
+                geometry.type!=='LineString' ||
+                !Array.isArray(geometry.coordinates) ||
+                geometry.coordinates.length<2
+            ){
+                return res.status(400).json({
+                    ok:false,
+                    error:'GeoJSON LineString non valido'
+                });
+            }
+
+            const coords=
+                geometry.coordinates
+                    .map(p=>{
+
+                        if(!Array.isArray(p) || p.length<2){
+                            return null;
+                        }
+
+                        const lng=Number(p[0]);
+                        const lat=Number(p[1]);
+                        const alt=Number(p[2]);
+
+                        if(
+                            !Number.isFinite(lng) ||
+                            !Number.isFinite(lat) ||
+                            lng < -180 ||
+                            lng > 180 ||
+                            lat < -90 ||
+                            lat > 90
+                        ){
+                            return null;
+                        }
+
+                        return Number.isFinite(alt)
+                            ? [lng,lat,alt]
+                            : [lng,lat];
+                    })
+                    .filter(Boolean);
+
+            if(coords.length<2){
+                return res.status(400).json({
+                    ok:false,
+                    error:'Coordinate progetto non valide'
+                });
+            }
+
+            const progetto=
+                await ProgettoRiferimento
+                    .findOneAndUpdate(
+                        {
+                            id_intervento:id
+                        },
+                        {
+                            $set:{
+                                id_cantiere:
+                                    intervento.id_cantiere,
+
+                                geometry:{
+                                    type:'LineString',
+                                    coordinates:coords
+                                },
+
+                                materiale:
+                                    String(
+                                        req.body?.materiale || ''
+                                    ).trim(),
+
+                                diametro_mm:
+                                    Number(
+                                        req.body?.diametro_mm || 0
+                                    ),
+
+                                fonte:
+                                    String(
+                                        req.body?.fonte || ''
+                                    ).trim(),
+
+                                note:
+                                    String(
+                                        req.body?.note || ''
+                                    ).trim(),
+
+                                creato_da:
+                                    String(
+                                        req.session.role || ''
+                                    ),
+
+                                aggiornato_il:
+                                    new Date()
+                            }
+                        },
+                        {
+                            upsert:true,
+                            new:true,
+                            runValidators:true
+                        }
+                    )
+                    .lean();
+
+            await registraAudit({
+
+                evento:
+                    'PROGETTO_RIFERIMENTO_CARICATO',
+
+                intervento,
+
+                ruolo:
+                    String(req.session.role || ''),
+
+                origine:
+                    'progetto',
+
+                stato:
+                    String(intervento.stato || ''),
+
+                note:
+                    coords.length+
+                    ' punti · '+
+                    nmaLunghezzaLinea(coords)
+                        .toFixed(2)+
+                    ' m'
+            });
+
+            return res.json({
+                ok:true,
+                progetto,
+                lunghezza_m:
+                    Number(
+                        nmaLunghezzaLinea(coords)
+                            .toFixed(2)
+                    )
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore progetto riferimento:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:'Errore progetto riferimento'
+            });
+        }
+    }
+);
+
+// ------------------------------------------------------------
+// CONFRONTO
+// ------------------------------------------------------------
+
+app.get(
+    '/api/interventi/:id/confronto-asbuilt',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(req.params.id || '').trim();
+
+            const [
+                intervento,
+                progetto,
+                asbuilt
+            ]=await Promise.all([
+
+                InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean(),
+
+                ProgettoRiferimento
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean(),
+
+                TrattoRete
+                    .findOne({
+                        id_tratto:'ASB-'+id
+                    })
+                    .lean()
+            ]);
+
+            if(!intervento){
+                return res.status(404).json({
+                    ok:false,
+                    error:'Intervento non trovato'
+                });
+            }
+
+            if(!progetto || !asbuilt){
+
+                return res.json({
+
+                    ok:true,
+                    disponibile:false,
+
+                    progetto_presente:
+                        Boolean(progetto),
+
+                    asbuilt_presente:
+                        Boolean(asbuilt),
+
+                    intervento:{
+                        id_intervento:
+                            intervento.id_intervento,
+
+                        id_cantiere:
+                            intervento.id_cantiere,
+
+                        stato:
+                            intervento.stato,
+
+                        dossier_chiusura:
+                            intervento.dossier_chiusura || {}
+                    }
+                });
+            }
+
+            const pc=
+                progetto.geometry.coordinates;
+
+            const ac=
+                asbuilt.geometry.coordinates;
+
+            const lp=
+                nmaLunghezzaLinea(pc);
+
+            const la=
+                nmaLunghezzaLinea(ac);
+
+            const delta=
+                la-lp;
+
+            const deltaPct=
+                lp>0
+                    ? (delta/lp)*100
+                    : null;
+
+            const startOffset=
+                nmaDistanzaMetri(
+                    pc[0],
+                    ac[0]
+                );
+
+            const endOffset=
+                nmaDistanzaMetri(
+                    pc[pc.length-1],
+                    ac[ac.length-1]
+                );
+
+            const materialeReale=
+                String(
+                    intervento.tubazione?.materiale || ''
+                );
+
+            const materialeProgetto=
+                String(
+                    progetto.materiale || ''
+                );
+
+            const diametroReale=
+                Number(
+                    intervento.tubazione?.diametro_mm || 0
+                );
+
+            const diametroProgetto=
+                Number(
+                    progetto.diametro_mm || 0
+                );
+
+            return res.json({
+
+                ok:true,
+                disponibile:true,
+
+                intervento:{
+                    id_intervento:
+                        intervento.id_intervento,
+
+                    id_cantiere:
+                        intervento.id_cantiere,
+
+                    stato:
+                        intervento.stato,
+
+                    dossier_chiusura:
+                        intervento.dossier_chiusura || {}
+                },
+
+                progetto:{
+                    punti:pc.length,
+                    lunghezza_m:
+                        Number(lp.toFixed(2)),
+                    materiale:
+                        materialeProgetto,
+                    diametro_mm:
+                        diametroProgetto,
+                    fonte:
+                        progetto.fonte,
+                    note:
+                        progetto.note
+                },
+
+                as_built:{
+                    punti:ac.length,
+                    lunghezza_m:
+                        Number(la.toFixed(2)),
+                    materiale:
+                        materialeReale,
+                    diametro_mm:
+                        diametroReale
+                },
+
+                differenze:{
+
+                    lunghezza_m:
+                        Number(delta.toFixed(2)),
+
+                    lunghezza_percento:
+                        deltaPct===null
+                            ? null
+                            : Number(
+                                deltaPct.toFixed(2)
+                            ),
+
+                    scostamento_inizio_m:
+                        Number(
+                            startOffset.toFixed(2)
+                        ),
+
+                    scostamento_fine_m:
+                        Number(
+                            endOffset.toFixed(2)
+                        ),
+
+                    materiale_differente:
+                        Boolean(
+                            materialeProgetto &&
+                            materialeReale &&
+                            materialeProgetto !==
+                            materialeReale
+                        ),
+
+                    diametro_differente:
+                        Boolean(
+                            diametroProgetto &&
+                            diametroReale &&
+                            diametroProgetto !==
+                            diametroReale
+                        )
+                }
+            });
+
+        }catch(error){
+
+            return res.status(500).json({
+                ok:false,
+                error:'Errore confronto As-Built'
+            });
+        }
+    }
+);
+
+// ------------------------------------------------------------
+// SNAPSHOT DI CHIUSURA DOSSIER
+// ------------------------------------------------------------
+
+app.post(
+    '/api/interventi/:id/chiusura-dossier',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(req.params.id || '').trim();
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean();
+
+            if(!intervento){
+                return res.status(404).json({
+                    ok:false,
+                    error:'Intervento non trovato'
+                });
+            }
+
+            if(intervento.dossier_chiusura?.chiuso){
+
+                return res.json({
+                    ok:true,
+                    idempotente:true,
+                    dossier_chiusura:
+                        intervento.dossier_chiusura
+                });
+            }
+
+            if(intervento.stato!=='validato'){
+
+                return res.status(409).json({
+                    ok:false,
+                    error:
+                        'Intervento non ancora validato'
+                });
+            }
+
+            const [
+                progetto,
+                asbuilt,
+                evidenze,
+                audit
+            ]=await Promise.all([
+
+                ProgettoRiferimento
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean(),
+
+                TrattoRete
+                    .findOne({
+                        id_tratto:'ASB-'+id
+                    })
+                    .lean(),
+
+                Evidenza
+                    .find({
+                        id_intervento:id
+                    })
+                    .select({
+                        _id:0,
+                        id_evidenza:1,
+                        sha256:1
+                    })
+                    .lean(),
+
+                AuditLog
+                    .find({
+                        id_intervento:id
+                    })
+                    .sort({
+                        data_ora:1
+                    })
+                    .lean()
+            ]);
+
+            if(!progetto || !asbuilt){
+
+                return res.status(409).json({
+                    ok:false,
+                    error:
+                        'Progetto e As-Built sono necessari per la chiusura'
+                });
+            }
+
+            let precedente='';
+            let integrita=true;
+
+            for(const e of audit){
+
+                const baseHash={
+
+                    evento:
+                        String(e.evento || ''),
+
+                    id_intervento:
+                        String(e.id_intervento || ''),
+
+                    id_cantiere:
+                        String(e.id_cantiere || ''),
+
+                    ruolo:
+                        String(e.ruolo || ''),
+
+                    operatore:
+                        String(e.operatore || ''),
+
+                    squadra:
+                        String(e.squadra || ''),
+
+                    origine:
+                        String(e.origine || ''),
+
+                    stato:
+                        String(e.stato || ''),
+
+                    note:
+                        String(e.note || ''),
+
+                    hash_precedente:
+                        precedente,
+
+                    data_ora:
+                        new Date(
+                            e.data_ora
+                        ).toISOString()
+                };
+
+                const hash=
+                    crypto
+                        .createHash('sha256')
+                        .update(
+                            JSON.stringify(baseHash)
+                        )
+                        .digest('hex');
+
+                if(
+                    String(e.hash_precedente || '') !==
+                        precedente ||
+                    String(e.hash_evento || '') !==
+                        hash
+                ){
+                    integrita=false;
+                    break;
+                }
+
+                precedente=
+                    String(e.hash_evento || '');
+            }
+
+            if(!integrita){
+
+                return res.status(409).json({
+                    ok:false,
+                    error:
+                        'Integrità catena Audit non verificata'
+                });
+            }
+
+            const chiusoIl=
+                new Date();
+
+            const snapshot={
+
+                id_intervento:id,
+
+                id_cantiere:
+                    intervento.id_cantiere,
+
+                stato:
+                    intervento.stato,
+
+                progetto:
+                    progetto.geometry,
+
+                as_built:
+                    asbuilt.geometry,
+
+                materiale:
+                    intervento.tubazione?.materiale || '',
+
+                diametro_mm:
+                    Number(
+                        intervento.tubazione?.diametro_mm || 0
+                    ),
+
+                metri:
+                    Number(
+                        intervento.tubazione?.metri || 0
+                    ),
+
+                evidenze_sha256:
+                    evidenze
+                        .map(e=>e.sha256)
+                        .sort(),
+
+                audit_ultimo_hash:
+                    precedente,
+
+                chiuso_il:
+                    chiusoIl.toISOString()
+            };
+
+            const hashSnapshot=
+                crypto
+                    .createHash('sha256')
+                    .update(
+                        JSON.stringify(snapshot)
+                    )
+                    .digest('hex');
+
+            const aggiornato=
+                await InterventoCampo
+                    .findOneAndUpdate(
+                        {
+                            id_intervento:id
+                        },
+                        {
+                            $set:{
+                                dossier_chiusura:{
+                                    chiuso:true,
+                                    chiuso_da:
+                                        String(
+                                            req.session.role || ''
+                                        ),
+                                    chiuso_il:
+                                        chiusoIl,
+                                    hash_snapshot:
+                                        hashSnapshot
+                                }
+                            }
+                        },
+                        {
+                            new:true
+                        }
+                    )
+                    .lean();
+
+            await registraAudit({
+
+                evento:
+                    'DOSSIER_TECNICO_CHIUSO',
+
+                intervento:
+                    aggiornato,
+
+                ruolo:
+                    String(req.session.role || ''),
+
+                origine:
+                    'dossier',
+
+                stato:
+                    aggiornato.stato,
+
+                note:
+                    'Snapshot SHA-256: '+
+                    hashSnapshot
+            });
+
+            return res.json({
+
+                ok:true,
+                idempotente:false,
+
+                dossier_chiusura:
+                    aggiornato.dossier_chiusura
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore chiusura dossier:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:'Errore chiusura dossier'
+            });
+        }
+    }
+);
+
+app.get(
+    '/confronto/:id',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    (req,res)=>{
+        res.sendFile(
+            __dirname+
+            '/confronto_asbuilt_v1.html'
         );
     }
 );

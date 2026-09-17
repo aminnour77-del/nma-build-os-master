@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NMA BUILD OS — Progetto vs As-Built</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#061015;color:#eef7f8;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+header{
+ padding:18px;background:#09171d;border-bottom:1px solid #244650;
+}
+.brand{font-weight:900;letter-spacing:.07em;font-size:18px}
+.live{color:#20e88b;font-size:12px;margin-top:5px}
+main{width:min(1050px,100%);margin:auto;padding:16px 16px 80px}
+.card{
+ background:#0d1b22;border:1px solid #244650;
+ border-radius:12px;padding:14px;margin-bottom:12px;
+}
+h2{font-size:13px;color:#23d8ff}
+.grid{
+ display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+label{display:block;color:#78959c;font-size:11px;margin-bottom:4px}
+input,textarea{
+ width:100%;background:#08161c;border:1px solid #31515a;
+ color:white;padding:10px;border-radius:8px;
+}
+textarea{min-height:70px}
+button{
+ border:0;border-radius:8px;padding:11px 14px;
+ font-weight:800;cursor:pointer;margin:4px;
+}
+.primary{background:#23d8ff;color:#031419}
+.green{background:#20e88b;color:#032016}
+.secondary{background:#183039;color:white}
+.metric{
+ background:#08161c;padding:10px;border-radius:8px;
+}
+.metric small{display:block;color:#78959c}
+.metric strong{display:block;margin-top:5px;font-size:18px}
+.warn{color:#ff9d21}
+.ok{color:#20e88b}
+#message{margin-top:10px;font-size:12px}
+@media(max-width:700px){
+ .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="brand">NMA BUILD OS — PROGETTO ↔ AS-BUILT</div>
+ <div class="live">● CONFRONTO TECNICO BASATO SU DATI REALI</div>
+</header>
+
+<main>
+
+<div class="card">
+ <h2>PROGETTO DI RIFERIMENTO</h2>
+
+ <div class="grid">
+  <div>
+   <label>File GeoJSON LineString</label>
+   <input id="geojson" type="file"
+          accept=".json,.geojson,application/json">
+  </div>
+
+  <div>
+   <label>Materiale previsto</label>
+   <input id="materiale">
+  </div>
+
+  <div>
+   <label>Diametro previsto mm</label>
+   <input id="diametro" type="number" min="0">
+  </div>
+
+  <div>
+   <label>Fonte progetto</label>
+   <input id="fonte"
+          placeholder="es. elaborato tecnico / rilievo">
+  </div>
+
+  <div>
+   <label>Note</label>
+   <input id="note">
+  </div>
+ </div>
+
+ <button class="primary" onclick="caricaProgetto()">
+  CARICA PROGETTO
+ </button>
+
+ <div id="message"></div>
+</div>
+
+<div class="card">
+ <h2>CONFRONTO</h2>
+ <div id="comparison">
+  Caricamento...
+ </div>
+</div>
+
+<div class="card">
+ <h2>CHIUSURA DOSSIER</h2>
+
+ <div style="font-size:12px;color:#78959c;margin-bottom:8px">
+  La chiusura crea uno snapshot tecnico SHA-256.
+  Non costituisce automaticamente certificazione normativa o legale.
+ </div>
+
+ <button class="green" onclick="chiudiDossier()">
+  CHIUDI DOSSIER TECNICO
+ </button>
+
+ <button class="secondary" onclick="vaiPassaporto()">
+  PASSAPORTO
+ </button>
+
+ <button class="secondary" onclick="location.href='/supervisore'">
+  SUPERVISORE
+ </button>
+</div>
+
+</main>
+
+<script>
+
+const id=
+ decodeURIComponent(
+  location.pathname.split('/').filter(Boolean).pop()
+ );
+
+const esc=v=>
+ String(v??'')
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;');
+
+function vaiPassaporto(){
+ location.href='/passaporto/'+encodeURIComponent(id);
+}
+
+async function aggiorna(){
+
+ const box=document.getElementById('comparison');
+
+ try{
+
+  const r=await fetch(
+   '/api/interventi/'+
+   encodeURIComponent(id)+
+   '/confronto-asbuilt'
+  );
+
+  const data=await r.json();
+
+  if(!r.ok || !data.ok)
+   throw new Error(data.error || 'Errore confronto');
+
+  if(!data.disponibile){
+
+   box.innerHTML=`
+    <div class="grid">
+     <div class="metric">
+      <small>Progetto</small>
+      <strong class="${data.progetto_presente?'ok':'warn'}">
+       ${data.progetto_presente?'CARICATO':'NON CARICATO'}
+      </strong>
+     </div>
+     <div class="metric">
+      <small>As-Built</small>
+      <strong class="${data.asbuilt_presente?'ok':'warn'}">
+       ${data.asbuilt_presente?'PRESENTE':'NON PRESENTE'}
+      </strong>
+     </div>
+    </div>
+   `;
+
+   return;
+  }
+
+  const d=data.differenze;
+  const closed=
+   data.intervento.dossier_chiusura?.chiuso===true;
+
+  box.innerHTML=`
+   <div class="grid">
+
+    <div class="metric">
+     <small>Lunghezza progetto</small>
+     <strong>${data.progetto.lunghezza_m.toFixed(2)} m</strong>
+    </div>
+
+    <div class="metric">
+     <small>Lunghezza As-Built</small>
+     <strong>${data.as_built.lunghezza_m.toFixed(2)} m</strong>
+    </div>
+
+    <div class="metric">
+     <small>Differenza lunghezza</small>
+     <strong>${d.lunghezza_m.toFixed(2)} m</strong>
+    </div>
+
+    <div class="metric">
+     <small>Differenza percentuale</small>
+     <strong>
+      ${d.lunghezza_percento===null
+       ? '—'
+       : d.lunghezza_percento.toFixed(2)+' %'}
+     </strong>
+    </div>
+
+    <div class="metric">
+     <small>Scostamento punto iniziale</small>
+     <strong>${d.scostamento_inizio_m.toFixed(2)} m</strong>
+    </div>
+
+    <div class="metric">
+     <small>Scostamento punto finale</small>
+     <strong>${d.scostamento_fine_m.toFixed(2)} m</strong>
+    </div>
+
+    <div class="metric">
+     <small>Materiale progetto / reale</small>
+     <strong>
+      ${esc(data.progetto.materiale || '—')} /
+      ${esc(data.as_built.materiale || '—')}
+     </strong>
+    </div>
+
+    <div class="metric">
+     <small>Diametro progetto / reale</small>
+     <strong>
+      ${data.progetto.diametro_mm || '—'} /
+      ${data.as_built.diametro_mm || '—'} mm
+     </strong>
+    </div>
+
+    <div class="metric">
+     <small>Dossier</small>
+     <strong class="${closed?'ok':'warn'}">
+      ${closed?'CHIUSO':'APERTO'}
+     </strong>
+    </div>
+
+   </div>
+  `;
+
+ }catch(e){
+  box.textContent=e.message;
+ }
+}
+
+async function caricaProgetto(){
+
+ const file=
+  document.getElementById('geojson').files[0];
+
+ if(!file){
+  document.getElementById('message').textContent=
+   'Seleziona un file GeoJSON.';
+  return;
+ }
+
+ try{
+
+  const json=JSON.parse(await file.text());
+
+  let geometry=null;
+
+  if(json.type==='LineString'){
+   geometry=json;
+  }else if(json.type==='Feature'){
+   geometry=json.geometry;
+  }else if(
+   json.type==='FeatureCollection' &&
+   Array.isArray(json.features)
+  ){
+   geometry=
+    json.features.find(
+     f=>f?.geometry?.type==='LineString'
+    )?.geometry;
+  }
+
+  if(!geometry || geometry.type!=='LineString')
+   throw new Error('GeoJSON LineString non trovato');
+
+  const r=await fetch(
+   '/api/interventi/'+
+   encodeURIComponent(id)+
+   '/progetto-riferimento',
+   {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+     geometry,
+     materiale:
+      document.getElementById('materiale').value,
+     diametro_mm:
+      Number(document.getElementById('diametro').value || 0),
+     fonte:
+      document.getElementById('fonte').value,
+     note:
+      document.getElementById('note').value
+    })
+   }
+  );
+
+  const data=await r.json();
+
+  if(!r.ok || !data.ok)
+   throw new Error(data.error || 'Upload fallito');
+
+  document.getElementById('message').textContent=
+   '✓ Progetto caricato — '+
+   Number(data.lunghezza_m).toFixed(2)+' m';
+
+  await aggiorna();
+
+ }catch(e){
+
+  document.getElementById('message').textContent=
+   'Errore: '+e.message;
+ }
+}
+
+async function chiudiDossier(){
+
+ if(!confirm(
+  'Creare lo snapshot tecnico di chiusura del dossier?'
+ )) return;
+
+ try{
+
+  const r=await fetch(
+   '/api/interventi/'+
+   encodeURIComponent(id)+
+   '/chiusura-dossier',
+   {method:'POST'}
+  );
+
+  const data=await r.json();
+
+  if(!r.ok || !data.ok)
+   throw new Error(data.error || 'Chiusura non riuscita');
+
+  alert(
+   data.idempotente
+    ? 'Dossier già chiuso.'
+    : 'Dossier tecnico chiuso e snapshot SHA-256 creato.'
+  );
+
+  await aggiorna();
+
+ }catch(e){
+  alert(e.message);
+ }
+}
+
+aggiorna();
+
+</script>
+</body>
+</html>

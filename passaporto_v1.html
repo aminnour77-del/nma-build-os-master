@@ -185,6 +185,12 @@ button{
 
   <button
     class="back"
+    onclick="vaiConfronto()">
+    PROGETTO ↔ AS-BUILT
+  </button>
+
+  <button
+    class="back"
     onclick="location.href='/supervisore'">
     SUPERVISORE
   </button>
@@ -222,6 +228,21 @@ function box(label,value,cls=''){
       </div>
     </div>
   `;
+}
+
+function vaiConfronto(){
+
+  const id=
+    decodeURIComponent(
+      location.pathname
+        .split('/')
+        .filter(Boolean)
+        .pop()
+    );
+
+  location.href=
+    '/confronto/'+
+    encodeURIComponent(id);
 }
 
 async function carica(){
