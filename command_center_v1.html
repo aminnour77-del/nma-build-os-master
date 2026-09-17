@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+ name="viewport"
+ content="width=device-width,initial-scale=1">
+
+<title>
+ NMA BUILD OS — Command Center
+</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ background:#050d12;
+ color:#edf7f8;
+ font-family:
+ -apple-system,
+ BlinkMacSystemFont,
+ "Segoe UI",
+ sans-serif;
+}
+
+header{
+ position:sticky;
+ top:0;
+ z-index:20;
+ padding:16px;
+ background:#071319;
+ border-bottom:1px solid #21434e;
+}
+
+.head{
+ width:min(1200px,100%);
+ margin:auto;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+}
+
+.brand{
+ font-weight:900;
+ letter-spacing:.08em;
+}
+
+.sub{
+ color:#20e88b;
+ font-size:12px;
+ margin-top:5px;
+}
+
+button{
+ border:0;
+ border-radius:9px;
+ padding:10px 14px;
+ font-weight:900;
+ cursor:pointer;
+}
+
+.back{
+ background:#17303a;
+ color:white;
+}
+
+main{
+ width:min(1200px,100%);
+ margin:auto;
+ padding:16px 16px 70px;
+}
+
+.hero{
+ border:1px solid #27515d;
+ background:#0a1b22;
+ border-radius:16px;
+ padding:18px;
+ margin-bottom:14px;
+}
+
+.hero-title{
+ font-size:12px;
+ color:#7e9ba3;
+ letter-spacing:.08em;
+}
+
+.hero-status{
+ margin-top:8px;
+ font-size:24px;
+ font-weight:900;
+}
+
+.operational{
+ color:#20e88b;
+}
+
+.waiting{
+ color:#ffd166;
+}
+
+.error{
+ color:#ff7777;
+}
+
+.hero-note{
+ margin-top:9px;
+ color:#96acb2;
+ font-size:12px;
+ line-height:1.5;
+}
+
+.modules{
+ display:grid;
+ grid-template-columns:
+ repeat(4,1fr);
+ gap:8px;
+ margin-bottom:14px;
+}
+
+.module{
+ padding:13px;
+ border-radius:11px;
+ background:#0d1b22;
+ border:1px solid #244650;
+}
+
+.module small{
+ display:block;
+ color:#819aa1;
+ text-transform:uppercase;
+ font-size:9px;
+}
+
+.module strong{
+ display:block;
+ margin-top:6px;
+ font-size:14px;
+}
+
+.green{
+ color:#20e88b;
+}
+
+.yellow{
+ color:#ffd166;
+}
+
+.red{
+ color:#ff7777;
+}
+
+.stats{
+ display:grid;
+ grid-template-columns:
+ repeat(6,1fr);
+ gap:8px;
+ margin-bottom:14px;
+}
+
+.stat{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:11px;
+ padding:12px;
+}
+
+.stat small{
+ display:block;
+ color:#80979e;
+ font-size:9px;
+ text-transform:uppercase;
+}
+
+.stat strong{
+ display:block;
+ margin-top:5px;
+ font-size:22px;
+}
+
+.section{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:14px;
+ padding:15px;
+ margin-bottom:12px;
+}
+
+.section h2{
+ margin:0 0 12px;
+ color:#23d8ff;
+ font-size:14px;
+ letter-spacing:.06em;
+}
+
+.row{
+ display:flex;
+ justify-content:space-between;
+ gap:14px;
+ padding:9px 0;
+ border-bottom:1px solid #18313a;
+ font-size:12px;
+}
+
+.row:last-child{
+ border-bottom:0;
+}
+
+.value{
+ text-align:right;
+ font-weight:800;
+}
+
+.actions{
+ display:grid;
+ grid-template-columns:
+ repeat(4,1fr);
+ gap:8px;
+}
+
+.actions button{
+ background:#13303a;
+ color:white;
+ padding:13px;
+}
+
+.pilot{
+ background:#33270d;
+ border-color:#6b561c;
+}
+
+.pilot h2{
+ color:#ffd166;
+}
+
+#updated{
+ font-size:10px;
+ color:#718b92;
+ margin-bottom:10px;
+}
+
+@media(max-width:800px){
+
+ .modules{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .stats{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .actions{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .row{
+  display:block;
+ }
+
+ .value{
+  text-align:left;
+  margin-top:4px;
+ }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- NMA_COMMAND_CENTER_V1 -->
+
+<header>
+
+<div class="head">
+
+ <div>
+
+  <div class="brand">
+   NMA BUILD OS — COMMAND CENTER
+  </div>
+
+  <div class="sub">
+   ● CONTROLLO PIATTAFORMA
+  </div>
+
+ </div>
+
+ <button
+  class="back"
+  onclick="location.href='/supervisore'">
+  SUPERVISORE
+ </button>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="hero">
+
+ <div class="hero-title">
+  STATO TECNICO PIATTAFORMA
+ </div>
+
+ <div
+  id="platformStatus"
+  class="hero-status waiting">
+  VERIFICA IN CORSO...
+ </div>
+
+ <div
+  id="platformNote"
+  class="hero-note">
+  Controllo dei moduli online.
+ </div>
+
+</div>
+
+<div class="modules">
+
+ <div class="module">
+  <small>Server / MongoDB</small>
+  <strong id="mHealth">
+   VERIFICA...
+  </strong>
+ </div>
+
+ <div class="module">
+  <small>Interventi / Workflow</small>
+  <strong id="mInterventi">
+   VERIFICA...
+  </strong>
+ </div>
+
+ <div class="module">
+  <small>Quality Gate</small>
+  <strong id="mQuality">
+   VERIFICA...
+  </strong>
+ </div>
+
+ <div class="module">
+  <small>Asset Memory</small>
+  <strong id="mAsset">
+   VERIFICA...
+  </strong>
+ </div>
+
+</div>
+
+<div class="stats">
+
+ <div class="stat">
+  <small>Interventi</small>
+  <strong id="totInterventi">—</strong>
+ </div>
+
+ <div class="stat">
+  <small>Da validare</small>
+  <strong id="daValidare">—</strong>
+ </div>
+
+ <div class="stat">
+  <small>Validati</small>
+  <strong id="validati">—</strong>
+ </div>
+
+ <div class="stat">
+  <small>Da correggere</small>
+  <strong id="correggere">—</strong>
+ </div>
+
+ <div class="stat">
+  <small>Asset memory</small>
+  <strong id="totAsset">—</strong>
+ </div>
+
+ <div class="stat">
+  <small>Metri validati</small>
+  <strong id="metriAsset">—</strong>
+ </div>
+
+</div>
+
+<div id="updated"></div>
+
+<div class="section">
+
+ <h2>READINESS SOFTWARE</h2>
+
+ <div class="row">
+  <span>Autenticazione / RBAC</span>
+  <span class="value green">
+   ATTIVO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Campo Operatore</span>
+  <span class="value green">
+   ONLINE
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Offline / Sync</span>
+  <span class="value green">
+   INSTALLATO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Bozza / Autosave</span>
+  <span class="value green">
+   INSTALLATO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Server Guard</span>
+  <span class="value green">
+   ATTIVO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Supervisione / Correzioni</span>
+  <span class="value green">
+   ATTIVO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Audit / Evidenze / Passaporto</span>
+  <span class="value green">
+   ATTIVO
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Quality Gate</span>
+  <span
+   id="qualityRow"
+   class="value">
+   VERIFICA...
+  </span>
+ </div>
+
+ <div class="row">
+  <span>Asset Memory</span>
+  <span
+   id="assetRow"
+   class="value">
+   VERIFICA...
+  </span>
+ </div>
+
+</div>
+
+<div class="section pilot">
+
+ <h2>PILOT SUL TERRENO</h2>
+
+ <div class="row">
+
+  <span>
+   Intervento reale autorizzato
+  </span>
+
+  <span class="value yellow">
+   DA ESEGUIRE
+  </span>
+
+ </div>
+
+ <div class="row">
+
+  <span>
+   GPS smartphone
+  </span>
+
+  <span class="value yellow">
+   POSIZIONE INDICATIVA
+  </span>
+
+ </div>
+
+ <div class="row">
+
+  <span>
+   Metri posati
+  </span>
+
+  <span class="value">
+   MISURA REALE SEPARATA DAL GPS
+  </span>
+
+ </div>
+
+ <div class="row">
+
+  <span>
+   GNSS / RTK
+  </span>
+
+  <span class="value">
+   SUPPORTO PREVISTO — NON VALIDATO SUL TERRENO
+  </span>
+
+ </div>
+
+ <div class="row">
+
+  <span>
+   Collaudo end-to-end con dati reali
+  </span>
+
+  <span class="value yellow">
+   IN ATTESA DEL CANTIERE
+  </span>
+
+ </div>
+
+</div>
+
+<div class="section">
+
+ <h2>ACCESSO MODULI</h2>
+
+ <div class="actions">
+
+  <button
+   onclick="location.href='/workflow'">
+   WORKFLOW
+  </button>
+
+  <button
+   onclick="location.href='/quality'">
+   QUALITY
+  </button>
+
+  <button
+   onclick="location.href='/asset-memory'">
+   ASSET MEMORY
+  </button>
+
+  <button
+   onclick="location.href='/audit'">
+   AUDIT
+  </button>
+
+  <button
+   onclick="location.href='/sal'">
+   SAL
+  </button>
+
+  <button
+   onclick="location.href='/cantiere'">
+   CAMPO
+  </button>
+
+ </div>
+
+</div>
+
+</main>
+
+<script>
+
+function setModule(
+ id,
+ ok,
+ textOk='ONLINE',
+ textKo='NON DISPONIBILE'
+){
+
+ const el=
+  document.getElementById(id);
+
+ el.textContent=
+  ok
+   ? textOk
+   : textKo;
+
+ el.className=
+  ok
+   ? 'green'
+   : 'red';
+}
+
+function workflowState(x){
+
+ if(
+  x?.dossier_chiusura?.chiuso===true
+ ){
+  return 'chiuso';
+ }
+
+ const stato=
+  String(
+   x?.stato || ''
+  )
+  .trim()
+  .toLowerCase();
+
+ const esito=
+  String(
+   x?.validazione?.esito || ''
+  )
+  .trim()
+  .toLowerCase();
+
+ if(
+  stato==='validato' ||
+  esito==='validato'
+ ){
+  return 'validato';
+ }
+
+ if(
+  stato.includes('correg') ||
+  esito.includes('correg')
+ ){
+  return 'correzione';
+ }
+
+ return 'da_validare';
+}
+
+async function safeJson(url){
+
+ try{
+
+  const response=
+   await fetch(
+    url,
+    {
+     cache:'no-store'
+    }
+   );
+
+  const json=
+   await response.json();
+
+  return {
+   ok:
+    response.ok &&
+    json.ok===true,
+   status:
+    response.status,
+   data:
+    json
+  };
+
+ }catch(error){
+
+  return {
+   ok:false,
+   status:0,
+   data:null
+  };
+ }
+}
+
+async function carica(){
+
+ const [
+  health,
+  interventi,
+  quality,
+  asset
+ ]=
+  await Promise.all([
+   safeJson('/api/health'),
+   safeJson('/api/interventi'),
+   safeJson('/api/quality-gate'),
+   safeJson('/api/asset-memory')
+  ]);
+
+ setModule(
+  'mHealth',
+  health.ok,
+  'ONLINE'
+ );
+
+ setModule(
+  'mInterventi',
+  interventi.ok,
+  'ONLINE'
+ );
+
+ setModule(
+  'mQuality',
+  quality.ok,
+  'ONLINE'
+ );
+
+ setModule(
+  'mAsset',
+  asset.ok,
+  'ONLINE'
+ );
+
+ const modulesOk=
+  [
+   health,
+   interventi,
+   quality,
+   asset
+  ].every(
+   x=>x.ok
+  );
+
+ const status=
+  document.getElementById(
+   'platformStatus'
+  );
+
+ const note=
+  document.getElementById(
+   'platformNote'
+  );
+
+ if(modulesOk){
+
+  status.textContent=
+   'BASE SOFTWARE OPERATIVA';
+
+  status.className=
+   'hero-status operational';
+
+  note.textContent=
+   'I servizi principali rispondono online. '+
+   'La validazione definitiva sul terreno resta separata.';
+
+ }else{
+
+  status.textContent=
+   'ATTENZIONE — MODULO NON DISPONIBILE';
+
+  status.className=
+   'hero-status error';
+
+  note.textContent=
+   'Almeno uno dei servizi principali non ha risposto correttamente.';
+ }
+
+ if(
+  interventi.ok &&
+  Array.isArray(
+   interventi.data.interventi
+  )
+ ){
+
+  const rows=
+   interventi.data.interventi;
+
+  const states=
+   rows.map(
+    workflowState
+   );
+
+  document.getElementById(
+   'totInterventi'
+  ).textContent=
+   rows.length;
+
+  document.getElementById(
+   'daValidare'
+  ).textContent=
+   states.filter(
+    x=>x==='da_validare'
+   ).length;
+
+  document.getElementById(
+   'validati'
+  ).textContent=
+   states.filter(
+    x=>x==='validato'
+   ).length;
+
+  document.getElementById(
+   'correggere'
+  ).textContent=
+   states.filter(
+    x=>x==='correzione'
+   ).length;
+ }
+
+ if(asset.ok){
+
+  document.getElementById(
+   'totAsset'
+  ).textContent=
+   asset.data.totale_asset ?? 0;
+
+  document.getElementById(
+   'metriAsset'
+  ).textContent=
+   Number(
+    asset.data.metri_misurati || 0
+   ).toFixed(2);
+ }
+
+ const qualityRow=
+  document.getElementById(
+   'qualityRow'
+  );
+
+ qualityRow.textContent=
+  quality.ok
+   ? 'ONLINE'
+   : 'NON DISPONIBILE';
+
+ qualityRow.className=
+  'value '+
+  (
+   quality.ok
+    ? 'green'
+    : 'red'
+  );
+
+ const assetRow=
+  document.getElementById(
+   'assetRow'
+  );
+
+ assetRow.textContent=
+  asset.ok
+   ? 'ONLINE'
+   : 'NON DISPONIBILE';
+
+ assetRow.className=
+  'value '+
+  (
+   asset.ok
+    ? 'green'
+    : 'red'
+  );
+
+ document.getElementById(
+  'updated'
+ ).textContent=
+  'Ultimo controllo: '+
+  new Date().toLocaleString();
+}
+
+carica();
+
+setInterval(
+ carica,
+ 30000
+);
+
+</script>
+
+</body>
+</html>

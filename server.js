@@ -5603,6 +5603,29 @@ app.get(
     }
 );
 
+
+// ============================================================
+// NMA BUILD OS — COMMAND CENTER v1
+// Pilot Readiness — sola lettura.
+// Nessuna scrittura MongoDB.
+// ============================================================
+
+app.get(
+    '/command-center',
+    requireAuth,
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/command_center_v1.html'
+        );
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
