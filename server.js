@@ -340,6 +340,210 @@ function generaHashImmutabile(dati) {
 // Scheda digitale intervento di campo
 // ============================================================
 
+
+// ============================================================
+// NMA BUILD OS — AUDIT TRACCIABILITA v1
+// Registro append-only con concatenazione hash SHA-256
+// ============================================================
+
+const AuditLogSchema = new mongoose.Schema({
+
+    id_evento: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
+
+    evento: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    id_intervento: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    id_cantiere: {
+        type: String,
+        default: '',
+        index: true
+    },
+
+    ruolo: {
+        type: String,
+        default: ''
+    },
+
+    operatore: {
+        type: String,
+        default: ''
+    },
+
+    squadra: {
+        type: String,
+        default: ''
+    },
+
+    origine: {
+        type: String,
+        default: 'online'
+    },
+
+    stato: {
+        type: String,
+        default: ''
+    },
+
+    note: {
+        type: String,
+        default: ''
+    },
+
+    hash_precedente: {
+        type: String,
+        default: ''
+    },
+
+    hash_evento: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    data_ora: {
+        type: Date,
+        default: Date.now,
+        index: true
+    }
+
+}, {
+    collection: 'audit_logs'
+});
+
+const AuditLog =
+    mongoose.models.AuditLog ||
+    mongoose.model(
+        'AuditLog',
+        AuditLogSchema,
+        'audit_logs'
+    );
+
+async function registraAudit({
+    evento,
+    intervento,
+    ruolo = '',
+    origine = 'online',
+    stato = '',
+    note = ''
+}) {
+
+    try {
+
+        const idIntervento =
+            String(
+                intervento?.id_intervento || ''
+            );
+
+        if (!idIntervento || !evento) {
+            return null;
+        }
+
+        const precedente =
+            await AuditLog
+                .findOne({
+                    id_intervento: idIntervento
+                })
+                .sort({
+                    data_ora: -1
+                })
+                .lean();
+
+        const dataOra =
+            new Date();
+
+        const hashPrecedente =
+            String(
+                precedente?.hash_evento || ''
+            );
+
+        const baseHash = {
+            evento:
+                String(evento),
+
+            id_intervento:
+                idIntervento,
+
+            id_cantiere:
+                String(
+                    intervento?.id_cantiere || ''
+                ),
+
+            ruolo:
+                String(ruolo || ''),
+
+            operatore:
+                String(
+                    intervento?.operatore || ''
+                ),
+
+            squadra:
+                String(
+                    intervento?.squadra || ''
+                ),
+
+            origine:
+                String(origine || 'online'),
+
+            stato:
+                String(stato || ''),
+
+            note:
+                String(note || ''),
+
+            hash_precedente:
+                hashPrecedente,
+
+            data_ora:
+                dataOra.toISOString()
+        };
+
+        const hashEvento =
+            crypto
+                .createHash('sha256')
+                .update(
+                    JSON.stringify(baseHash)
+                )
+                .digest('hex');
+
+        return await AuditLog.create({
+
+            id_evento:
+                crypto.randomUUID(),
+
+            ...baseHash,
+
+            hash_evento:
+                hashEvento,
+
+            data_ora:
+                dataOra
+        });
+
+    } catch (error) {
+
+        console.error(
+            'Errore registrazione audit:',
+            error
+        );
+
+        return null;
+    }
+}
+
 const InterventoCampoSchema = new mongoose.Schema({
     id_intervento: {
         type: String,
@@ -433,6 +637,21 @@ const InterventoCampoSchema = new mongoose.Schema({
             default: ''
         },
         validato_il: Date
+    },
+
+    sincronizzazione: {
+        origine: {
+            type: String,
+            default: 'online'
+        },
+        accodato_il: {
+            type: String,
+            default: ''
+        },
+        ricevuto_il: {
+            type: Date,
+            default: Date.now
+        }
     },
 
     creato_il: {
@@ -582,7 +801,46 @@ app.post(
 
                 stato: 'registrato',
 
+                sincronizzazione: {
+                    origine:
+                        body.accodato_il
+                            ? 'offline_sync'
+                            : 'online',
+
+                    accodato_il:
+                        body.accodato_il
+                            ? String(body.accodato_il)
+                            : '',
+
+                    ricevuto_il:
+                        new Date()
+                },
+
                 aggiornato_il: new Date()
+            });
+
+            await registraAudit({
+                evento:
+                    'INTERVENTO_REGISTRATO',
+
+                intervento:
+                    doc,
+
+                ruolo:
+                    String(req.session.role || ''),
+
+                origine:
+                    body.accodato_il
+                        ? 'offline_sync'
+                        : 'online',
+
+                stato:
+                    'registrato',
+
+                note:
+                    body.accodato_il
+                        ? 'Intervento sincronizzato da coda offline'
+                        : 'Intervento registrato online'
             });
 
             return res.status(201).json({
@@ -706,6 +964,28 @@ app.patch(
                 });
             }
 
+            await registraAudit({
+                evento:
+                    esito === 'validato'
+                        ? 'INTERVENTO_VALIDATO'
+                        : 'CORREZIONE_RICHIESTA',
+
+                intervento:
+                    intervento,
+
+                ruolo:
+                    String(req.session.role || ''),
+
+                origine:
+                    'supervisione',
+
+                stato:
+                    esito,
+
+                note:
+                    note
+            });
+
             return res.json({
                 ok: true,
                 intervento
@@ -722,6 +1002,68 @@ app.patch(
                 error: 'Errore validazione intervento'
             });
         }
+    }
+);
+
+
+app.get(
+    '/api/audit',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const filtro = {};
+
+            if (req.query.intervento) {
+                filtro.id_intervento =
+                    String(req.query.intervento);
+            }
+
+            if (req.query.cantiere) {
+                filtro.id_cantiere =
+                    String(req.query.cantiere);
+            }
+
+            const eventi =
+                await AuditLog
+                    .find(filtro)
+                    .sort({
+                        data_ora: -1
+                    })
+                    .limit(200)
+                    .lean();
+
+            return res.json({
+                ok: true,
+                totale: eventi.length,
+                eventi
+            });
+
+        } catch (error) {
+
+            console.error(
+                'Errore lettura audit:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error: 'Errore lettura audit'
+            });
+        }
+    }
+);
+
+app.get(
+    '/audit',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    (req, res) => {
+        res.sendFile(
+            __dirname + '/audit_v1.html'
+        );
     }
 );
 

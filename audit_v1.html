@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>NMA BUILD OS — Audit</title>
+
+<style>
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  background:#061015;
+  color:#eef7f8;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  padding:16px;
+  background:#09171d;
+  border-bottom:1px solid #244650;
+}
+
+.brand{
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.live{
+  color:#20e88b;
+  font-size:12px;
+  margin-top:5px;
+}
+
+main{
+  width:min(1100px,100%);
+  margin:auto;
+  padding:16px 16px 80px;
+}
+
+.toolbar{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+
+button{
+  border:0;
+  border-radius:9px;
+  padding:11px 15px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.refresh{
+  background:#23d8ff;
+  color:#03151a;
+}
+
+.back{
+  background:#1a3038;
+  color:white;
+}
+
+.event{
+  background:#0d1b22;
+  border:1px solid #244650;
+  border-radius:13px;
+  padding:14px;
+  margin-bottom:10px;
+}
+
+.eventTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.tipo{
+  color:#20e88b;
+  font-weight:900;
+}
+
+.time{
+  color:#78959c;
+  font-size:12px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:12px;
+}
+
+.box{
+  background:#08161c;
+  padding:9px;
+  border-radius:8px;
+}
+
+.label{
+  font-size:10px;
+  color:#78959c;
+  text-transform:uppercase;
+}
+
+.value{
+  margin-top:4px;
+  font-size:13px;
+  word-break:break-word;
+}
+
+.hash{
+  font-family:monospace;
+  color:#23d8ff;
+}
+
+.note{
+  margin-top:10px;
+  color:#cadbdd;
+}
+
+.empty{
+  text-align:center;
+  color:#78959c;
+  padding:50px;
+}
+
+@media(max-width:700px){
+  .grid{
+    grid-template-columns:1fr;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+  <div class="brand">NMA BUILD OS</div>
+  <div class="live">
+    ● AUDIT / TRACCIABILITÀ — ONLINE
+  </div>
+</header>
+
+<main>
+
+<div class="toolbar">
+
+  <button class="refresh"
+          onclick="carica()">
+    AGGIORNA
+  </button>
+
+  <button class="back"
+          onclick="location.href='/supervisore'">
+    SUPERVISORE
+  </button>
+
+</div>
+
+<div id="lista">
+
+  <div class="empty">
+    Caricamento registro audit...
+  </div>
+
+</div>
+
+</main>
+
+<script>
+
+const esc = value =>
+  String(value ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+
+function corto(hash){
+
+  const h=String(hash || '');
+
+  if(!h){
+    return '—';
+  }
+
+  return h.slice(0,16)+'…';
+}
+
+async function carica(){
+
+  const lista=
+    document.getElementById('lista');
+
+  try{
+
+    const r=
+      await fetch('/api/audit');
+
+    const data=
+      await r.json();
+
+    if(!r.ok || !data.ok){
+      throw new Error();
+    }
+
+    if(!data.eventi.length){
+
+      lista.innerHTML=
+        '<div class="empty">'+
+        'Registro audit pronto. '+
+        'I nuovi eventi compariranno qui.'+
+        '</div>';
+
+      return;
+    }
+
+    lista.innerHTML=
+      data.eventi
+        .map(e=>`
+
+        <div class="event">
+
+          <div class="eventTop">
+
+            <div class="tipo">
+              ${esc(e.evento)}
+            </div>
+
+            <div class="time">
+              ${esc(
+                new Date(
+                  e.data_ora
+                ).toLocaleString()
+              )}
+            </div>
+
+          </div>
+
+          <div class="grid">
+
+            <div class="box">
+              <div class="label">
+                Intervento
+              </div>
+              <div class="value">
+                ${esc(e.id_intervento)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Cantiere
+              </div>
+              <div class="value">
+                ${esc(e.id_cantiere)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Ruolo
+              </div>
+              <div class="value">
+                ${esc(e.ruolo)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Operatore
+              </div>
+              <div class="value">
+                ${esc(e.operatore)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Origine
+              </div>
+              <div class="value">
+                ${esc(e.origine)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Stato
+              </div>
+              <div class="value">
+                ${esc(e.stato)}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Hash evento
+              </div>
+              <div class="value hash"
+                   title="${esc(e.hash_evento)}">
+                ${esc(corto(e.hash_evento))}
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="label">
+                Hash precedente
+              </div>
+              <div class="value hash"
+                   title="${esc(e.hash_precedente)}">
+                ${esc(corto(e.hash_precedente))}
+              </div>
+            </div>
+
+          </div>
+
+          ${
+            e.note
+              ? '<div class="note">'+
+                esc(e.note)+
+                '</div>'
+              : ''
+          }
+
+        </div>
+
+      `)
+      .join('');
+
+  }catch{
+
+    lista.innerHTML=
+      '<div class="empty">'+
+      'Errore caricamento registro audit.'+
+      '</div>';
+  }
+}
+
+carica();
+
+</script>
+
+</body>
+</html>
