@@ -3919,6 +3919,26 @@ app.get(
     }
 );
 
+
+// ============================================================
+// NMA BUILD OS — WORKFLOW BOARD v1
+// Dashboard di sola lettura.
+// Gli stati reali restano quelli dell'intervento MongoDB.
+// ============================================================
+
+app.get(
+    '/workflow',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname +
+            '/workflow_v1.html'
+        );
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;

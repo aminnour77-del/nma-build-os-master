@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>NMA BUILD OS — Workflow</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ background:#061015;
+ color:#eef7f8;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+header{
+ position:sticky;
+ top:0;
+ z-index:10;
+ background:#08141a;
+ border-bottom:1px solid #244650;
+ padding:16px;
+}
+
+.head{
+ width:min(1200px,100%);
+ margin:auto;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+}
+
+.brand{
+ font-weight:900;
+ letter-spacing:.07em;
+}
+
+.live{
+ font-size:12px;
+ color:#20e88b;
+ margin-top:5px;
+}
+
+button{
+ border:0;
+ border-radius:8px;
+ padding:10px 14px;
+ font-weight:800;
+ cursor:pointer;
+}
+
+.back{
+ background:#17303a;
+ color:white;
+}
+
+main{
+ width:min(1200px,100%);
+ margin:auto;
+ padding:16px 16px 70px;
+}
+
+.stats{
+ display:grid;
+ grid-template-columns:repeat(5,1fr);
+ gap:8px;
+ margin-bottom:15px;
+}
+
+.stat{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:10px;
+ padding:12px;
+}
+
+.stat small{
+ color:#829ba2;
+ display:block;
+ font-size:10px;
+ text-transform:uppercase;
+}
+
+.stat strong{
+ display:block;
+ margin-top:6px;
+ font-size:24px;
+}
+
+.filters{
+ display:flex;
+ gap:8px;
+ flex-wrap:wrap;
+ margin-bottom:14px;
+}
+
+input,select{
+ background:#0d1b22;
+ color:white;
+ border:1px solid #31515a;
+ border-radius:8px;
+ padding:10px;
+ min-width:180px;
+}
+
+.card{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:12px;
+ padding:14px;
+ margin-bottom:9px;
+}
+
+.top{
+ display:flex;
+ justify-content:space-between;
+ gap:12px;
+ align-items:flex-start;
+}
+
+.id{
+ font-weight:900;
+ color:#23d8ff;
+ word-break:break-word;
+}
+
+.meta{
+ color:#91a7ad;
+ font-size:12px;
+ margin-top:7px;
+ line-height:1.5;
+}
+
+.badge{
+ display:inline-block;
+ padding:6px 9px;
+ border-radius:20px;
+ font-size:10px;
+ font-weight:900;
+ white-space:nowrap;
+}
+
+.da-validare{
+ background:#3d310c;
+ color:#ffd45c;
+}
+
+.validato{
+ background:#0b3a26;
+ color:#20e88b;
+}
+
+.correzione{
+ background:#461d18;
+ color:#ff856f;
+}
+
+.chiuso{
+ background:#123044;
+ color:#57d5ff;
+}
+
+.altro{
+ background:#27343a;
+ color:#d6e0e3;
+}
+
+.actions{
+ margin-top:11px;
+ display:flex;
+ gap:7px;
+ flex-wrap:wrap;
+}
+
+.actions button{
+ background:#17303a;
+ color:white;
+ font-size:11px;
+}
+
+.empty{
+ text-align:center;
+ color:#78959c;
+ padding:50px 10px;
+}
+
+#updated{
+ color:#78959c;
+ font-size:10px;
+ margin-bottom:10px;
+}
+
+@media(max-width:750px){
+
+ .stats{
+  grid-template-columns:repeat(2,1fr);
+ }
+
+ .head{
+  align-items:flex-start;
+ }
+
+ .top{
+  flex-direction:column;
+ }
+
+ input,select{
+  width:100%;
+ }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- NMA_WORKFLOW_BOARD_V1 -->
+
+<header>
+
+<div class="head">
+
+ <div>
+  <div class="brand">
+   NMA BUILD OS — WORKFLOW
+  </div>
+
+  <div class="live">
+   ● SUPERVISIONE OPERATIVA
+  </div>
+ </div>
+
+ <button
+  class="back"
+  onclick="location.href='/supervisore'">
+  SUPERVISORE
+ </button>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="stats">
+
+ <div class="stat">
+  <small>Totali</small>
+  <strong id="totale">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Da validare</small>
+  <strong id="daValidare">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Validati</small>
+  <strong id="validati">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Da correggere</small>
+  <strong id="correzioni">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Dossier chiusi</small>
+  <strong id="chiusi">0</strong>
+ </div>
+
+</div>
+
+<div class="filters">
+
+ <input
+  id="search"
+  placeholder="Cerca intervento, cantiere, operatore...">
+
+ <select id="filter">
+
+  <option value="tutti">
+   Tutti gli stati
+  </option>
+
+  <option value="DA VALIDARE">
+   Da validare
+  </option>
+
+  <option value="VALIDATO">
+   Validato
+  </option>
+
+  <option value="DA CORREGGERE">
+   Da correggere
+  </option>
+
+  <option value="DOSSIER CHIUSO">
+   Dossier chiuso
+  </option>
+
+ </select>
+
+</div>
+
+<div id="updated"></div>
+
+<div id="board">
+ <div class="empty">
+  Caricamento workflow...
+ </div>
+</div>
+
+</main>
+
+<script>
+
+let interventi=[];
+
+function esc(v){
+
+ return String(v??'')
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;');
+}
+
+function statoWorkflow(x){
+
+ if(
+  x?.dossier_chiusura?.chiuso===true
+ ){
+  return 'DOSSIER CHIUSO';
+ }
+
+ const stato=
+  String(
+   x?.stato || ''
+  )
+  .trim()
+  .toLowerCase();
+
+ const esito=
+  String(
+   x?.validazione?.esito || ''
+  )
+  .trim()
+  .toLowerCase();
+
+ if(
+  stato==='validato' ||
+  esito==='validato'
+ ){
+  return 'VALIDATO';
+ }
+
+ if(
+  stato.includes('correg') ||
+  esito.includes('correg') ||
+  stato==='rifiutato'
+ ){
+  return 'DA CORREGGERE';
+ }
+
+ return 'DA VALIDARE';
+}
+
+function classe(stato){
+
+ if(stato==='VALIDATO')
+  return 'validato';
+
+ if(stato==='DA CORREGGERE')
+  return 'correzione';
+
+ if(stato==='DOSSIER CHIUSO')
+  return 'chiuso';
+
+ if(stato==='DA VALIDARE')
+  return 'da-validare';
+
+ return 'altro';
+}
+
+function aggiornaStatistiche(){
+
+ const stati=
+  interventi.map(
+   statoWorkflow
+  );
+
+ document.getElementById(
+  'totale'
+ ).textContent=
+  interventi.length;
+
+ document.getElementById(
+  'daValidare'
+ ).textContent=
+  stati.filter(
+   x=>x==='DA VALIDARE'
+  ).length;
+
+ document.getElementById(
+  'validati'
+ ).textContent=
+  stati.filter(
+   x=>x==='VALIDATO'
+  ).length;
+
+ document.getElementById(
+  'correzioni'
+ ).textContent=
+  stati.filter(
+   x=>x==='DA CORREGGERE'
+  ).length;
+
+ document.getElementById(
+  'chiusi'
+ ).textContent=
+  stati.filter(
+   x=>x==='DOSSIER CHIUSO'
+  ).length;
+}
+
+function render(){
+
+ const board=
+  document.getElementById(
+   'board'
+  );
+
+ const query=
+  document.getElementById(
+   'search'
+  )
+  .value
+  .trim()
+  .toLowerCase();
+
+ const filtro=
+  document.getElementById(
+   'filter'
+  ).value;
+
+ const rows=
+  interventi.filter(x=>{
+
+   const stato=
+    statoWorkflow(x);
+
+   if(
+    filtro!=='tutti' &&
+    stato!==filtro
+   ){
+    return false;
+   }
+
+   if(!query){
+    return true;
+   }
+
+   const text=[
+    x.id_intervento,
+    x.id_cantiere,
+    x.operatore,
+    x.squadra,
+    x.stato
+   ]
+   .join(' ')
+   .toLowerCase();
+
+   return text.includes(query);
+  });
+
+ if(!rows.length){
+
+  board.innerHTML=
+   '<div class="empty">'+
+   'Nessun intervento corrispondente.'+
+   '</div>';
+
+  return;
+ }
+
+ board.innerHTML=
+  rows.map(x=>{
+
+   const stato=
+    statoWorkflow(x);
+
+   const data=
+    x.creato_il
+     ? new Date(
+        x.creato_il
+       ).toLocaleString()
+     : '—';
+
+   const id=
+    encodeURIComponent(
+     x.id_intervento || ''
+    );
+
+   return `
+    <div class="card">
+
+     <div class="top">
+
+      <div>
+
+       <div class="id">
+        ${esc(
+         x.id_intervento ||
+         'ID non disponibile'
+        )}
+       </div>
+
+       <div class="meta">
+        Cantiere:
+        <strong>${esc(x.id_cantiere || '—')}</strong>
+        <br>
+        Operatore:
+        ${esc(x.operatore || '—')}
+        · Squadra:
+        ${esc(x.squadra || '—')}
+        <br>
+        Registrato:
+        ${esc(data)}
+       </div>
+
+      </div>
+
+      <span class="badge ${classe(stato)}">
+       ${stato}
+      </span>
+
+     </div>
+
+     <div class="actions">
+
+      <button
+       onclick="location.href='/passaporto/${id}'">
+       PASSAPORTO
+      </button>
+
+      <button
+       onclick="location.href='/confronto/${id}'">
+       PROGETTO ↔ AS-BUILT
+      </button>
+
+     </div>
+
+    </div>
+   `;
+  }).join('');
+}
+
+async function carica(){
+
+ try{
+
+  const r=
+   await fetch(
+    '/api/interventi'
+   );
+
+  const data=
+   await r.json();
+
+  if(
+   !r.ok ||
+   !data.ok ||
+   !Array.isArray(
+    data.interventi
+   )
+  ){
+   throw new Error(
+    data.error ||
+    'Interventi non disponibili'
+   );
+  }
+
+  interventi=
+   data.interventi;
+
+  /*
+   * Ordine temporale senza modificare
+   * alcun dato operativo.
+   */
+  interventi.sort(
+   (a,b)=>
+    new Date(
+     b.creato_il || 0
+    ) -
+    new Date(
+     a.creato_il || 0
+    )
+  );
+
+  aggiornaStatistiche();
+  render();
+
+  document.getElementById(
+   'updated'
+  ).textContent=
+   'Ultimo aggiornamento: '+
+   new Date()
+    .toLocaleTimeString();
+
+ }catch(e){
+
+  document.getElementById(
+   'board'
+  ).innerHTML=
+   '<div class="empty">'+
+   esc(e.message)+
+   '</div>';
+ }
+}
+
+document.getElementById(
+ 'search'
+).addEventListener(
+ 'input',
+ render
+);
+
+document.getElementById(
+ 'filter'
+).addEventListener(
+ 'change',
+ render
+);
+
+carica();
+
+/*
+ * Aggiornamento leggero della dashboard.
+ * Sola lettura: nessuna scrittura MongoDB.
+ */
+setInterval(
+ carica,
+ 30000
+);
+
+</script>
+
+</body>
+</html>
