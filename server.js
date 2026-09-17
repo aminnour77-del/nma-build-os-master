@@ -1645,6 +1645,542 @@ app.get(
 
 
 
+
+// ============================================================
+// NMA BUILD OS — ASSET MEMORY v1
+//
+// La memoria infrastrutturale deriva dai dati già validati.
+// Nessuna duplicazione del dato operativo.
+// Nessuna scrittura MongoDB.
+// ============================================================
+
+app.get(
+    '/api/asset-memory',
+    requireAuth,
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+    async (req,res)=>{
+
+        try{
+
+            const filtro={
+                $or:[
+                    {
+                        stato:'validato'
+                    },
+                    {
+                        'dossier_chiusura.chiuso':
+                            true
+                    }
+                ]
+            };
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                ).trim();
+
+            if(cantiere){
+                filtro.id_cantiere=
+                    cantiere;
+            }
+
+            const interventi=
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(500)
+                    .lean();
+
+            const ids=
+                interventi
+                    .map(
+                        x=>String(
+                            x.id_intervento ||
+                            ''
+                        )
+                    )
+                    .filter(Boolean);
+
+            // ================================================
+            // EVIDENZE
+            // ================================================
+
+            const evidenzeAgg=
+                ids.length
+                    ? await Evidenza.aggregate([
+                        {
+                            $match:{
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            }
+                        },
+                        {
+                            $group:{
+                                _id:
+                                    '$id_intervento',
+
+                                totale:{
+                                    $sum:1
+                                }
+                            }
+                        }
+                    ])
+                    : [];
+
+            const evidenzeMap=
+                new Map(
+                    evidenzeAgg.map(
+                        x=>[
+                            String(x._id),
+                            Number(
+                                x.totale || 0
+                            )
+                        ]
+                    )
+                );
+
+            // ================================================
+            // AUDIT
+            // ================================================
+
+            const auditAgg=
+                ids.length
+                    ? await AuditLog.aggregate([
+                        {
+                            $match:{
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            }
+                        },
+                        {
+                            $group:{
+                                _id:
+                                    '$id_intervento',
+
+                                totale:{
+                                    $sum:1
+                                },
+
+                                ultimo_evento:{
+                                    $max:
+                                        '$data_ora'
+                                }
+                            }
+                        }
+                    ])
+                    : [];
+
+            const auditMap=
+                new Map(
+                    auditAgg.map(
+                        x=>[
+                            String(x._id),
+                            x
+                        ]
+                    )
+                );
+
+            // ================================================
+            // AS-BUILT
+            // ================================================
+
+            const tratti=
+                ids.length
+                    ? await TrattoRete
+                        .find({
+                            id_tratto:{
+                                $in:
+                                    ids.map(
+                                        id=>
+                                            'ASB-'+id
+                                    )
+                            }
+                        })
+                        .lean()
+                    : [];
+
+            const trattiMap=
+                new Map(
+                    tratti.map(
+                        x=>[
+                            String(
+                                x.id_tratto ||
+                                ''
+                            ).replace(
+                                /^ASB-/,
+                                ''
+                            ),
+                            x
+                        ]
+                    )
+                );
+
+            // ================================================
+            // PROGETTO DI RIFERIMENTO
+            // ================================================
+
+            const progetti=
+                ids.length
+                    ? await ProgettoRiferimento
+                        .find({
+                            id_intervento:{
+                                $in:ids
+                            }
+                        })
+                        .lean()
+                    : [];
+
+            const progettoMap=
+                new Map(
+                    progetti.map(
+                        x=>[
+                            String(
+                                x.id_intervento ||
+                                ''
+                            ),
+                            x
+                        ]
+                    )
+                );
+
+            // ================================================
+            // COSTRUZIONE MEMORIA
+            // ================================================
+
+            const assets=
+                interventi.map(
+                    x=>{
+
+                        const id=
+                            String(
+                                x.id_intervento ||
+                                ''
+                            );
+
+                        const audit=
+                            auditMap.get(id);
+
+                        const asbuilt=
+                            trattiMap.get(id);
+
+                        const progetto=
+                            progettoMap.get(id);
+
+                        return {
+
+                            id_asset:
+                                id,
+
+                            id_intervento:
+                                id,
+
+                            id_cantiere:
+                                x.id_cantiere ||
+                                '',
+
+                            stato:
+                                x.stato ||
+                                '',
+
+                            dossier_chiuso:
+                                x.dossier_chiusura
+                                    ?.chiuso ===
+                                    true,
+
+                            operatore:
+                                x.operatore ||
+                                '',
+
+                            squadra:
+                                x.squadra ||
+                                '',
+
+                            tubazione:{
+                                materiale:
+                                    x.tubazione
+                                        ?.materiale ||
+                                    '',
+
+                                diametro_mm:
+                                    Number(
+                                        x.tubazione
+                                            ?.diametro_mm ||
+                                        0
+                                    ),
+
+                                metri_misurati:
+                                    Number(
+                                        x.tubazione
+                                            ?.metri ||
+                                        0
+                                    )
+                            },
+
+                            raccordi:
+                                Number(
+                                    x.raccordi ||
+                                    0
+                                ),
+
+                            componenti:
+                                Array.isArray(
+                                    x.componenti
+                                )
+                                    ? x.componenti
+                                    : [],
+
+                            scavo:
+                                x.scavo ||
+                                {},
+
+                            posa:
+                                x.posa ||
+                                {},
+
+                            misure:
+                                x.misure ||
+                                {},
+
+                            anomalia:
+                                x.anomalia ||
+                                {
+                                    presente:false,
+                                    descrizione:''
+                                },
+
+                            collaudo:
+                                x.collaudo ||
+                                {},
+
+                            asbuilt:
+                                asbuilt
+                                    ? {
+                                        presente:
+                                            true,
+
+                                        sorgente_gps:
+                                            asbuilt
+                                                .sorgente_gps ||
+                                            '',
+
+                                        qualita_gps:
+                                            asbuilt
+                                                .qualita_gps ||
+                                            '',
+
+                                        lunghezza_gps_m:
+                                            Number(
+                                                asbuilt
+                                                    .lunghezza_gps_m ||
+                                                0
+                                            ),
+
+                                        lunghezza_misurata_m:
+                                            Number(
+                                                asbuilt
+                                                    .lunghezza_misurata_m ||
+                                                0
+                                            ),
+
+                                        geometry:
+                                            asbuilt
+                                                .geometry ||
+                                            null
+                                    }
+                                    : {
+                                        presente:false
+                                    },
+
+                            progetto_riferimento:
+                                progetto
+                                    ? {
+                                        presente:true,
+                                        materiale:
+                                            progetto.materiale ||
+                                            '',
+                                        diametro_mm:
+                                            Number(
+                                                progetto
+                                                    .diametro_mm ||
+                                                0
+                                            ),
+                                        fonte:
+                                            progetto.fonte ||
+                                            ''
+                                    }
+                                    : {
+                                        presente:false
+                                    },
+
+                            evidenze:
+                                evidenzeMap.get(id) ||
+                                0,
+
+                            audit:{
+                                eventi:
+                                    Number(
+                                        audit
+                                            ?.totale ||
+                                        0
+                                    ),
+
+                                ultimo_evento:
+                                    audit
+                                        ?.ultimo_evento ||
+                                    null
+                            },
+
+                            validazione:
+                                x.validazione ||
+                                {},
+
+                            creato_il:
+                                x.creato_il ||
+                                null,
+
+                            aggiornato_il:
+                                x.aggiornato_il ||
+                                null
+                        };
+                    }
+                );
+
+            const cantieri=
+                [
+                    ...new Set(
+                        assets
+                            .map(
+                                x=>
+                                    x.id_cantiere
+                            )
+                            .filter(Boolean)
+                    )
+                ];
+
+            const metri=
+                assets.reduce(
+                    (
+                        totale,
+                        x
+                    )=>
+                        totale+
+                        Number(
+                            x.tubazione
+                                ?.metri_misurati ||
+                            0
+                        ),
+                    0
+                );
+
+            const raccordi=
+                assets.reduce(
+                    (
+                        totale,
+                        x
+                    )=>
+                        totale+
+                        Number(
+                            x.raccordi ||
+                            0
+                        ),
+                    0
+                );
+
+            const anomalie=
+                assets.filter(
+                    x=>
+                        x.anomalia
+                            ?.presente ===
+                        true
+                ).length;
+
+            const evidenzeTotali=
+                assets.reduce(
+                    (
+                        totale,
+                        x
+                    )=>
+                        totale+
+                        Number(
+                            x.evidenze ||
+                            0
+                        ),
+                    0
+                );
+
+            return res.json({
+
+                ok:true,
+
+                fonte:
+                    'interventi_validati',
+
+                scrittura_database:
+                    false,
+
+                totale_asset:
+                    assets.length,
+
+                cantieri:
+                    cantieri.length,
+
+                metri_misurati:
+                    Number(
+                        metri.toFixed(2)
+                    ),
+
+                raccordi,
+
+                anomalie,
+
+                evidenze:
+                    evidenzeTotali,
+
+                assets
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Asset Memory:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Asset Memory'
+            });
+        }
+    }
+);
+
+
+app.get(
+    '/asset-memory',
+    requireAuth,
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/asset_memory_v1.html'
+        );
+    }
+);
+
+
 // ============================================================
 // NMA BUILD OS — QUALITY GATE v1
 //

@@ -1,0 +1,709 @@
+<!doctype html>
+
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+ name="viewport"
+ content="width=device-width,initial-scale=1">
+
+<title>
+ NMA BUILD OS — Asset Memory
+</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ background:#061015;
+ color:#eef7f8;
+ font-family:
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  sans-serif;
+}
+
+header{
+ position:sticky;
+ top:0;
+ z-index:20;
+ padding:16px;
+ background:#08141a;
+ border-bottom:1px solid #244650;
+}
+
+.head{
+ width:min(1150px,100%);
+ margin:auto;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+}
+
+.brand{
+ font-weight:900;
+ letter-spacing:.07em;
+}
+
+.live{
+ margin-top:5px;
+ color:#20e88b;
+ font-size:12px;
+}
+
+button{
+ border:0;
+ border-radius:9px;
+ padding:10px 13px;
+ font-weight:900;
+ cursor:pointer;
+}
+
+.back{
+ background:#17303a;
+ color:white;
+}
+
+main{
+ width:min(1150px,100%);
+ margin:auto;
+ padding:16px 16px 70px;
+}
+
+.info{
+ padding:13px;
+ margin-bottom:14px;
+ background:#09232b;
+ border:1px solid #1f5665;
+ border-radius:10px;
+ color:#9edbe7;
+ font-size:12px;
+ line-height:1.5;
+}
+
+.stats{
+ display:grid;
+ grid-template-columns:
+  repeat(6,1fr);
+ gap:8px;
+ margin-bottom:14px;
+}
+
+.stat{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:10px;
+ padding:11px;
+}
+
+.stat small{
+ display:block;
+ color:#839aa1;
+ text-transform:uppercase;
+ font-size:9px;
+}
+
+.stat strong{
+ display:block;
+ margin-top:5px;
+ font-size:21px;
+}
+
+.filters{
+ display:flex;
+ gap:8px;
+ margin-bottom:13px;
+ flex-wrap:wrap;
+}
+
+input,select{
+ padding:10px;
+ border-radius:8px;
+ border:1px solid #31515a;
+ background:#0d1b22;
+ color:white;
+}
+
+input{
+ flex:1;
+ min-width:230px;
+}
+
+.card{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:13px;
+ padding:14px;
+ margin-bottom:10px;
+}
+
+.top{
+ display:flex;
+ justify-content:space-between;
+ gap:12px;
+}
+
+.id{
+ color:#23d8ff;
+ font-weight:900;
+ font-family:monospace;
+ word-break:break-word;
+}
+
+.badge{
+ display:inline-block;
+ padding:6px 9px;
+ border-radius:18px;
+ background:#0b3a26;
+ color:#20e88b;
+ font-size:10px;
+ font-weight:900;
+}
+
+.meta{
+ margin-top:7px;
+ color:#91a7ad;
+ font-size:12px;
+ line-height:1.5;
+}
+
+.grid{
+ margin-top:12px;
+ display:grid;
+ grid-template-columns:
+  repeat(4,1fr);
+ gap:7px;
+}
+
+.box{
+ padding:9px;
+ border-radius:8px;
+ background:#071419;
+ border:1px solid #193640;
+}
+
+.box small{
+ display:block;
+ color:#769198;
+ font-size:9px;
+ text-transform:uppercase;
+}
+
+.box strong{
+ display:block;
+ margin-top:4px;
+ font-size:13px;
+}
+
+.alert{
+ margin-top:10px;
+ padding:9px;
+ border-radius:8px;
+ background:#402217;
+ color:#ff9d72;
+ font-size:11px;
+}
+
+.actions{
+ display:flex;
+ gap:7px;
+ flex-wrap:wrap;
+ margin-top:11px;
+}
+
+.actions button{
+ background:#17303a;
+ color:white;
+ font-size:10px;
+}
+
+.empty{
+ text-align:center;
+ color:#78959c;
+ padding:50px 10px;
+}
+
+#updated{
+ color:#718b92;
+ font-size:10px;
+ margin-bottom:8px;
+}
+
+@media(max-width:800px){
+
+ .stats{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .grid{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .top{
+  flex-direction:column;
+ }
+
+ input,select{
+  width:100%;
+ }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- NMA_ASSET_MEMORY_V1 -->
+
+<header>
+
+<div class="head">
+
+ <div>
+
+  <div class="brand">
+   NMA BUILD OS — ASSET MEMORY
+  </div>
+
+  <div class="live">
+   ● MEMORIA INFRASTRUTTURA
+  </div>
+
+ </div>
+
+ <button
+  class="back"
+  onclick="location.href='/supervisore'">
+  SUPERVISORE
+ </button>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="info">
+
+ <strong>SOURCE OF TRUTH</strong>
+ <br>
+ Asset Memory legge gli interventi validati e i dossier chiusi.
+ Non crea una seconda copia dei dati: intervento, Audit,
+ evidenze, As-Built e Passaporto restano collegati allo stesso
+ identificativo.
+
+</div>
+
+<div class="stats">
+
+ <div class="stat">
+  <small>Asset</small>
+  <strong id="totale">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Cantieri</small>
+  <strong id="cantieri">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Metri reali</small>
+  <strong id="metri">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Raccordi</small>
+  <strong id="raccordi">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Anomalie</small>
+  <strong id="anomalie">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Evidenze</small>
+  <strong id="evidenze">0</strong>
+ </div>
+
+</div>
+
+<div class="filters">
+
+ <input
+  id="search"
+  placeholder="Cerca asset, cantiere, operatore, squadra...">
+
+ <select id="cantiere">
+  <option value="">
+   Tutti i cantieri
+  </option>
+ </select>
+
+</div>
+
+<div id="updated"></div>
+
+<div id="board">
+
+ <div class="empty">
+  Caricamento Asset Memory...
+ </div>
+
+</div>
+
+</main>
+
+<script>
+
+let assets=[];
+
+const esc=v=>
+ String(v??'')
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;');
+
+function render(){
+
+ const q=
+  document.getElementById(
+   'search'
+  )
+  .value
+  .trim()
+  .toLowerCase();
+
+ const cantiere=
+  document.getElementById(
+   'cantiere'
+  ).value;
+
+ const rows=
+  assets.filter(x=>{
+
+   if(
+    cantiere &&
+    x.id_cantiere!==cantiere
+   ){
+    return false;
+   }
+
+   if(!q){
+    return true;
+   }
+
+   return [
+    x.id_asset,
+    x.id_cantiere,
+    x.operatore,
+    x.squadra,
+    x.tubazione?.materiale
+   ]
+   .join(' ')
+   .toLowerCase()
+   .includes(q);
+  });
+
+ const board=
+  document.getElementById(
+   'board'
+  );
+
+ if(!rows.length){
+
+  board.innerHTML=
+   '<div class="empty">'+
+   'Nessun asset validato disponibile.'+
+   '</div>';
+
+  return;
+ }
+
+ board.innerHTML=
+  rows.map(x=>{
+
+   const t=
+    x.tubazione || {};
+
+   const a=
+    x.asbuilt || {};
+
+   const audit=
+    x.audit || {};
+
+   const anomaly=
+    x.anomalia || {};
+
+   const id=
+    encodeURIComponent(
+     x.id_intervento || ''
+    );
+
+   return `
+    <div class="card">
+
+     <div class="top">
+
+      <div>
+
+       <div class="id">
+        ${esc(x.id_asset)}
+       </div>
+
+       <div class="meta">
+        Cantiere:
+        <strong>${esc(x.id_cantiere || '—')}</strong>
+        <br>
+        Operatore:
+        ${esc(x.operatore || '—')}
+        · Squadra:
+        ${esc(x.squadra || '—')}
+       </div>
+
+      </div>
+
+      <span class="badge">
+       ${
+        x.dossier_chiuso
+         ? 'DOSSIER CHIUSO'
+         : 'VALIDATO'
+       }
+      </span>
+
+     </div>
+
+     <div class="grid">
+
+      <div class="box">
+       <small>Materiale</small>
+       <strong>${esc(t.materiale || '—')}</strong>
+      </div>
+
+      <div class="box">
+       <small>Diametro</small>
+       <strong>${Number(t.diametro_mm || 0)} mm</strong>
+      </div>
+
+      <div class="box">
+       <small>Metri misurati</small>
+       <strong>${Number(t.metri_misurati || 0).toFixed(2)} m</strong>
+      </div>
+
+      <div class="box">
+       <small>Raccordi</small>
+       <strong>${Number(x.raccordi || 0)}</strong>
+      </div>
+
+      <div class="box">
+       <small>Evidenze</small>
+       <strong>${Number(x.evidenze || 0)}</strong>
+      </div>
+
+      <div class="box">
+       <small>Audit</small>
+       <strong>${Number(audit.eventi || 0)} eventi</strong>
+      </div>
+
+      <div class="box">
+       <small>As-Built</small>
+       <strong>${a.presente ? 'PRESENTE' : 'NON PRESENTE'}</strong>
+      </div>
+
+      <div class="box">
+       <small>Sorgente posizione</small>
+       <strong>${esc(a.sorgente_gps || '—')}</strong>
+      </div>
+
+     </div>
+
+     ${
+      anomaly.presente
+       ? `
+        <div class="alert">
+         <strong>ANOMALIA REGISTRATA</strong><br>
+         ${esc(anomaly.descrizione || 'Senza descrizione')}
+        </div>
+       `
+       : ''
+     }
+
+     <div class="actions">
+
+      <button
+       onclick="location.href='/passaporto/${id}'">
+       PASSAPORTO
+      </button>
+
+      <button
+       onclick="location.href='/confronto/${id}'">
+       PROGETTO ↔ AS-BUILT
+      </button>
+
+      <button
+       onclick="location.href='/audit?intervento=${id}'">
+       AUDIT
+      </button>
+
+     </div>
+
+    </div>
+   `;
+
+  }).join('');
+}
+
+async function carica(){
+
+ try{
+
+  const r=
+   await fetch(
+    '/api/asset-memory',
+    {
+     cache:'no-store'
+    }
+   );
+
+  const data=
+   await r.json();
+
+  if(
+   !r.ok ||
+   !data.ok ||
+   !Array.isArray(data.assets)
+  ){
+   throw new Error(
+    data.error ||
+    'Asset Memory non disponibile'
+   );
+  }
+
+  assets=
+   data.assets;
+
+  document.getElementById(
+   'totale'
+  ).textContent=
+   data.totale_asset || 0;
+
+  document.getElementById(
+   'cantieri'
+  ).textContent=
+   data.cantieri || 0;
+
+  document.getElementById(
+   'metri'
+  ).textContent=
+   Number(
+    data.metri_misurati || 0
+   ).toFixed(2);
+
+  document.getElementById(
+   'raccordi'
+  ).textContent=
+   data.raccordi || 0;
+
+  document.getElementById(
+   'anomalie'
+  ).textContent=
+   data.anomalie || 0;
+
+  document.getElementById(
+   'evidenze'
+  ).textContent=
+   data.evidenze || 0;
+
+  const select=
+   document.getElementById(
+    'cantiere'
+   );
+
+  const current=
+   select.value;
+
+  const cantieri=
+   [
+    ...new Set(
+     assets
+      .map(x=>x.id_cantiere)
+      .filter(Boolean)
+    )
+   ]
+   .sort();
+
+  select.innerHTML=
+   '<option value="">Tutti i cantieri</option>'+
+   cantieri
+    .map(
+     x=>
+      '<option value="'+
+      esc(x)+
+      '">'+
+      esc(x)+
+      '</option>'
+    )
+    .join('');
+
+  if(
+   cantieri.includes(current)
+  ){
+   select.value=current;
+  }
+
+  document.getElementById(
+   'updated'
+  ).textContent=
+   'Memoria aggiornata: '+
+   new Date()
+    .toLocaleTimeString();
+
+  render();
+
+ }catch(e){
+
+  document.getElementById(
+   'board'
+  ).innerHTML=
+   '<div class="empty">'+
+   esc(e.message)+
+   '</div>';
+ }
+}
+
+document.getElementById(
+ 'search'
+).addEventListener(
+ 'input',
+ render
+);
+
+document.getElementById(
+ 'cantiere'
+).addEventListener(
+ 'change',
+ render
+);
+
+carica();
+
+setInterval(
+ carica,
+ 30000
+);
+
+</script>
+
+</body>
+
+</html>
