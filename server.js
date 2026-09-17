@@ -1018,6 +1018,46 @@ const InterventoCampoSchema = new mongoose.Schema({
         default: 'registrato'
     },
 
+    // ========================================================
+    // NMA BUILD OS — CORREZIONI CONTROLLATE v1
+    // ========================================================
+
+    correzioni: [{
+        id_correzione: {
+            type: String,
+            default: ''
+        },
+
+        richiesta_da: {
+            type: String,
+            default: ''
+        },
+
+        richiesta_il: Date,
+
+        note: {
+            type: String,
+            default: ''
+        },
+
+        risolta: {
+            type: Boolean,
+            default: false
+        },
+
+        risolta_da: {
+            type: String,
+            default: ''
+        },
+
+        risolta_il: Date,
+
+        note_operatore: {
+            type: String,
+            default: ''
+        }
+    }],
+
     validazione: {
         esito: {
             type: String,
@@ -1619,6 +1659,18 @@ app.patch(
             const esito = String(req.body?.esito || '').trim();
             const note = String(req.body?.note || '').trim();
 
+            if (
+                esito === 'da_correggere' &&
+                !note
+            ) {
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'Inserire una nota con la correzione richiesta'
+                });
+            }
+
+
             if (!['validato', 'da_correggere'].includes(esito)) {
                 return res.status(400).json({
                     ok: false,
@@ -1653,6 +1705,43 @@ app.patch(
                     ok: false,
                     error: 'Intervento non trovato'
                 });
+            }
+
+
+            /*
+             * La validazione corrente rimane compatibile
+             * con il sistema esistente.
+             * In parallelo conserviamo la cronologia
+             * delle richieste di correzione.
+             */
+            if (esito === 'da_correggere') {
+
+                await InterventoCampo.updateOne(
+                    {
+                        id_intervento: id
+                    },
+                    {
+                        $push: {
+                            correzioni: {
+                                id_correzione:
+                                    crypto.randomUUID(),
+
+                                richiesta_da:
+                                    String(
+                                        req.session.role || ''
+                                    ),
+
+                                richiesta_il:
+                                    new Date(),
+
+                                note,
+
+                                risolta:
+                                    false
+                            }
+                        }
+                    }
+                );
             }
 
             await registraAudit({
@@ -1693,6 +1782,387 @@ app.patch(
                 error: 'Errore validazione intervento'
             });
         }
+    }
+);
+
+
+
+// ============================================================
+// NMA BUILD OS — CORREZIONI CONTROLLATE v1
+// ============================================================
+
+app.get(
+    '/api/correzioni',
+    requireAuth,
+    requireRole(
+        'operatore',
+        'supervisore',
+        'admin'
+    ),
+    async (req,res)=>{
+
+        try{
+
+            const interventi=
+                await InterventoCampo
+                    .find({
+                        stato:
+                            'da_correggere'
+                    })
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(100)
+                    .lean();
+
+            return res.json({
+                ok:true,
+                totale:
+                    interventi.length,
+                interventi
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore lettura correzioni:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore lettura correzioni'
+            });
+        }
+    }
+);
+
+
+/*
+ * L'Operatore modifica SOLO un intervento
+ * che il Supervisore ha realmente marcato
+ * DA CORREGGERE.
+ *
+ * Lo stesso ID intervento viene preservato.
+ */
+app.patch(
+    '/api/interventi/:id/correzione-operatore',
+    requireAuth,
+    requireRole(
+        'operatore',
+        'supervisore',
+        'admin'
+    ),
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(
+                    req.params.id || ''
+                ).trim();
+
+            const body=
+                req.body || {};
+
+            const noteOperatore=
+                String(
+                    body.note_operatore || ''
+                ).trim();
+
+            if(!noteOperatore){
+
+                return res.status(400).json({
+                    ok:false,
+                    error:
+                        'Descrivere la correzione effettuata'
+                });
+            }
+
+            const doc=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    });
+
+            if(!doc){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+            if(
+                doc.dossier_chiusura?.chiuso === true
+            ){
+
+                return res.status(409).json({
+                    ok:false,
+                    error:
+                        'Dossier già chiuso: intervento non modificabile'
+                });
+            }
+
+            if(
+                doc.stato !== 'da_correggere'
+            ){
+
+                return res.status(409).json({
+                    ok:false,
+                    error:
+                        'Intervento non nello stato DA CORREGGERE'
+                });
+            }
+
+            // ----------------------------------------------
+            // CAMPI CORREGGIBILI
+            // ----------------------------------------------
+
+            const numero=(value,current)=>{
+
+                if(
+                    value === null ||
+                    value === undefined ||
+                    value === ''
+                ){
+                    return current;
+                }
+
+                const n=
+                    Number(value);
+
+                return Number.isFinite(n)
+                    ? n
+                    : current;
+            };
+
+            if(
+                body.tubazione &&
+                typeof body.tubazione === 'object'
+            ){
+
+                if(
+                    body.tubazione.materiale !== undefined
+                ){
+                    doc.tubazione.materiale=
+                        String(
+                            body.tubazione.materiale
+                        ).trim();
+                }
+
+                doc.tubazione.diametro_mm=
+                    numero(
+                        body.tubazione.diametro_mm,
+                        doc.tubazione.diametro_mm
+                    );
+
+                doc.tubazione.metri=
+                    numero(
+                        body.tubazione.metri,
+                        doc.tubazione.metri
+                    );
+            }
+
+            doc.raccordi=
+                numero(
+                    body.raccordi,
+                    doc.raccordi
+                );
+
+            if(
+                body.anomalia &&
+                typeof body.anomalia === 'object'
+            ){
+
+                if(
+                    body.anomalia.presente !== undefined
+                ){
+                    doc.anomalia.presente=
+                        body.anomalia.presente === true;
+                }
+
+                if(
+                    body.anomalia.descrizione !== undefined
+                ){
+                    doc.anomalia.descrizione=
+                        String(
+                            body.anomalia.descrizione
+                        ).trim();
+                }
+            }
+
+            if(body.note !== undefined){
+
+                doc.note=
+                    String(
+                        body.note
+                    ).trim();
+            }
+
+            // ----------------------------------------------
+            // SERVER GUARD SUL DOCUMENTO CORRETTO
+            // ----------------------------------------------
+
+            const controllo=
+                nmaValidaInterventoCampoServer(
+                    doc.toObject()
+                );
+
+            if(!controllo.ok){
+
+                return res.status(422).json({
+                    ok:false,
+                    code:
+                        'CAMPO_GUARD_SERVER',
+
+                    error:
+                        'Correzione ancora incompleta',
+
+                    errori:
+                        controllo.errori,
+
+                    avvisi:
+                        controllo.avvisi
+                });
+            }
+
+            // ----------------------------------------------
+            // CHIUSURA ULTIMA RICHIESTA APERTA
+            // ----------------------------------------------
+
+            let ultima=null;
+
+            if(
+                Array.isArray(
+                    doc.correzioni
+                )
+            ){
+
+                for(
+                    let i=
+                        doc.correzioni.length-1;
+                    i>=0;
+                    i--
+                ){
+
+                    if(
+                        doc.correzioni[i]
+                            .risolta !== true
+                    ){
+                        ultima=
+                            doc.correzioni[i];
+
+                        break;
+                    }
+                }
+            }
+
+            if(ultima){
+
+                ultima.risolta=true;
+
+                ultima.risolta_da=
+                    String(
+                        req.session.role || ''
+                    );
+
+                ultima.risolta_il=
+                    new Date();
+
+                ultima.note_operatore=
+                    noteOperatore;
+            }
+
+            /*
+             * Torna in coda al Supervisore.
+             * Non viene auto-validato.
+             */
+            doc.stato=
+                'registrato';
+
+            doc.set(
+                'validazione',
+                {
+                    esito:'',
+                    note:'',
+                    validato_da:'',
+                    validato_il:null
+                }
+            );
+
+            doc.aggiornato_il=
+                new Date();
+
+            await doc.save();
+
+            await registraAudit({
+                evento:
+                    'CORREZIONE_REINVIATA',
+
+                intervento:
+                    doc,
+
+                ruolo:
+                    String(
+                        req.session.role || ''
+                    ),
+
+                origine:
+                    'correzione_operatore',
+
+                stato:
+                    'registrato',
+
+                note:
+                    noteOperatore
+            });
+
+            return res.json({
+                ok:true,
+                stato:
+                    doc.stato,
+
+                intervento:
+                    doc.toObject(),
+
+                avvisi:
+                    controllo.avvisi
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore reinvio correzione:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore reinvio correzione'
+            });
+        }
+    }
+);
+
+
+app.get(
+    '/correzioni',
+    requireAuth,
+    requireRole(
+        'operatore',
+        'supervisore',
+        'admin'
+    ),
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/correzioni_v1.html'
+        );
     }
 );
 

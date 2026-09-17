@@ -371,6 +371,17 @@ async function valida(id,esito){
   const note=
     document.getElementById('note-'+id)?.value || '';
 
+  // NMA_CORREZIONE_NOTE_GUARD_V1
+  if(
+    esito==='da_correggere' &&
+    !note.trim()
+  ){
+    alert(
+      'Inserisci prima la correzione richiesta nelle note.'
+    );
+    return;
+  }
+
   const r=await fetch(
     '/api/interventi/'+encodeURIComponent(id)+'/validazione',
     {
