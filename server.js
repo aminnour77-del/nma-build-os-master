@@ -218,6 +218,11 @@ app.get('/api/health', async (req, res) => {
         ok: mongoOk,
         status: mongoOk ? 'OPERATIONAL' : 'DEGRADED',
         server: 'ONLINE',
+
+        // NMA_SERVER_GUARD_CAPABILITY_V1
+        capabilities: {
+            server_guard_v1: true
+        },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
     };
