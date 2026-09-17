@@ -247,6 +247,91 @@ button{
 
 <div id="status" class="status"></div>
 
+<!-- NMA_DRAFT_AUTOSAVE_V1 -->
+
+<div
+ id="nmaDraftPanel"
+ class="card"
+ style="
+  border-color:#31515a;
+  padding:12px 16px;
+ ">
+
+ <div style="
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+ ">
+
+  <div>
+
+   <div style="
+    font-weight:900;
+    color:#23d8ff;
+    font-size:13px;
+   ">
+    BOZZA OPERATORE
+   </div>
+
+   <div
+    id="nmaDraftStatus"
+    style="
+     margin-top:5px;
+     color:#87a3aa;
+     font-size:11px;
+    ">
+    Autosalvataggio pronto
+   </div>
+
+  </div>
+
+  <div style="
+   display:flex;
+   gap:7px;
+   flex-wrap:wrap;
+  ">
+
+   <button
+    type="button"
+    onclick="nmaSalvaBozza(true)"
+    style="
+     padding:9px 12px;
+     background:#14343d;
+     color:#23d8ff;
+    ">
+    SALVA BOZZA
+   </button>
+
+   <button
+    type="button"
+    onclick="nmaCancellaBozza(true)"
+    style="
+     padding:9px 12px;
+     background:#2a3439;
+     color:#fff;
+    ">
+    ELIMINA BOZZA
+   </button>
+
+  </div>
+
+ </div>
+
+ <div style="
+  margin-top:8px;
+  font-size:10px;
+  line-height:1.4;
+  color:#78959c;
+ ">
+  Salvata solo su questo dispositivo/browser.
+  Foto e documenti non vengono copiati nella bozza.
+ </div>
+
+</div>
+
+
 <div class="card">
   <h2>IDENTIFICAZIONE INTERVENTO</h2>
 
@@ -1191,6 +1276,12 @@ function aggiornaTracciatoUI(){
 
   el.textContent=testo;
 
+  if(
+    typeof nmaSalvaBozzaDebounced==='function'
+  ){
+    nmaSalvaBozzaDebounced();
+  }
+
   const warning=
     document.getElementById(
       'gpsQualityWarning'
@@ -1673,6 +1764,426 @@ async function caricaEvidenze(interventoId){
   input.value='';
 
   return completati;
+}
+
+
+
+// ============================================================
+// NMA BUILD OS — DRAFT / AUTOSAVE v1
+// Bozza locale del lavoro in compilazione.
+// Non scrive MongoDB.
+// Non sostituisce la coda offline.
+// ============================================================
+
+const NMA_DRAFT_KEY =
+  'nma_build_os_campo_draft_v1';
+
+let nmaDraftTimer=null;
+let nmaDraftRestoring=false;
+
+const NMA_DRAFT_FIELDS=[
+
+  'cantiere',
+  'operatore',
+  'squadra',
+
+  'lat',
+  'lng',
+  'accuracy',
+
+  'sorgenteGps',
+
+  'materiale',
+  'diametro',
+  'metri',
+  'raccordi',
+  'componenti',
+
+  'scavoTipo',
+  'terreno',
+  'profonditaScavo',
+  'larghezzaScavo',
+
+  'profonditaPosa',
+  'lettoPosa',
+  'nastroSegnalatore',
+  'protezioneMeccanica',
+
+  'quotaInizio',
+  'quotaFine',
+  'distanzaRiferimento',
+  'riferimento',
+  'ripristino',
+
+  'anomaliaPresente',
+  'anomaliaDescrizione',
+
+  'pressione',
+  'strumento',
+  'esito',
+
+  'note'
+];
+
+function nmaDraftStatus(
+  message,
+  color='#87a3aa'
+){
+
+  const el=
+    document.getElementById(
+      'nmaDraftStatus'
+    );
+
+  if(!el){
+    return;
+  }
+
+  el.textContent=message;
+  el.style.color=color;
+}
+
+function nmaLeggiCampiBozza(){
+
+  const fields={};
+
+  for(
+    const id of NMA_DRAFT_FIELDS
+  ){
+
+    const el=
+      document.getElementById(id);
+
+    if(!el){
+      continue;
+    }
+
+    fields[id]=el.value;
+  }
+
+  return fields;
+}
+
+function nmaCreaBozza(){
+
+  return {
+
+    version:1,
+
+    salvata_il:
+      new Date().toISOString(),
+
+    id_intervento:
+      idIntervento,
+
+    offline_id:
+      offlineId,
+
+    fields:
+      nmaLeggiCampiBozza(),
+
+    tracciato:
+      Array.isArray(tracciatoPunti)
+        ? tracciatoPunti.map(
+            p=>({...p})
+          )
+        : []
+  };
+}
+
+function nmaSalvaBozza(
+  manuale=false
+){
+
+  if(nmaDraftRestoring){
+    return;
+  }
+
+  try{
+
+    const draft=
+      nmaCreaBozza();
+
+    localStorage.setItem(
+      NMA_DRAFT_KEY,
+      JSON.stringify(draft)
+    );
+
+    const ora=
+      new Date(
+        draft.salvata_il
+      ).toLocaleTimeString(
+        [],
+        {
+          hour:'2-digit',
+          minute:'2-digit',
+          second:'2-digit'
+        }
+      );
+
+    nmaDraftStatus(
+      (
+        manuale
+          ? '✓ Bozza salvata manualmente — '
+          : '✓ Autosalvata — '
+      )+
+      ora,
+      '#20e88b'
+    );
+
+  }catch(e){
+
+    nmaDraftStatus(
+      '⚠ Impossibile salvare la bozza locale',
+      '#ff9d21'
+    );
+  }
+}
+
+function nmaSalvaBozzaDebounced(){
+
+  if(nmaDraftRestoring){
+    return;
+  }
+
+  clearTimeout(
+    nmaDraftTimer
+  );
+
+  nmaDraftTimer=
+    setTimeout(
+      ()=>nmaSalvaBozza(false),
+      800
+    );
+}
+
+function nmaCancellaBozza(
+  chiedi=false
+){
+
+  if(
+    chiedi &&
+    !confirm(
+      'Eliminare la bozza salvata su questo dispositivo?'
+    )
+  ){
+    return;
+  }
+
+  localStorage.removeItem(
+    NMA_DRAFT_KEY
+  );
+
+  nmaDraftStatus(
+    'Nessuna bozza salvata',
+    '#87a3aa'
+  );
+}
+
+function nmaRipristinaBozza(){
+
+  const raw=
+    localStorage.getItem(
+      NMA_DRAFT_KEY
+    );
+
+  if(!raw){
+
+    nmaDraftStatus(
+      'Autosalvataggio attivo',
+      '#87a3aa'
+    );
+
+    return false;
+  }
+
+  try{
+
+    const draft=
+      JSON.parse(raw);
+
+    if(
+      !draft ||
+      draft.version!==1 ||
+      !draft.fields
+    ){
+      throw new Error(
+        'Formato bozza non valido'
+      );
+    }
+
+    nmaDraftRestoring=true;
+
+    if(draft.id_intervento){
+
+      idIntervento=
+        String(
+          draft.id_intervento
+        );
+
+      const idBox=
+        document.getElementById(
+          'idIntervento'
+        );
+
+      if(idBox){
+        idBox.textContent=
+          idIntervento;
+      }
+    }
+
+    if(draft.offline_id){
+
+      offlineId=
+        String(
+          draft.offline_id
+        );
+    }
+
+    for(
+      const [
+        id,
+        value
+      ] of Object.entries(
+        draft.fields
+      )
+    ){
+
+      const el=
+        document.getElementById(id);
+
+      if(!el){
+        continue;
+      }
+
+      el.value=
+        value ?? '';
+    }
+
+    if(
+      Array.isArray(
+        draft.tracciato
+      )
+    ){
+
+      tracciatoPunti=
+        draft.tracciato
+          .filter(
+            p=>
+              Number.isFinite(
+                Number(p?.lat)
+              ) &&
+              Number.isFinite(
+                Number(p?.lng)
+              )
+          )
+          .map(
+            p=>({...p})
+          );
+
+      aggiornaTracciatoUI();
+    }
+
+    const quando=
+      draft.salvata_il
+        ? new Date(
+            draft.salvata_il
+          ).toLocaleString()
+        : 'ora precedente';
+
+    nmaDraftStatus(
+      '↻ Bozza ripristinata — '+quando,
+      '#23d8ff'
+    );
+
+    /*
+     * File input volutamente escluso:
+     * il browser non permette di ripristinare
+     * automaticamente foto/documenti selezionati.
+     */
+
+    return true;
+
+  }catch(e){
+
+    localStorage.removeItem(
+      NMA_DRAFT_KEY
+    );
+
+    nmaDraftStatus(
+      '⚠ Bozza non valida eliminata',
+      '#ff9d21'
+    );
+
+    return false;
+
+  }finally{
+
+    nmaDraftRestoring=false;
+  }
+}
+
+function nmaAttivaAutosave(){
+
+  const main=
+    document.querySelector(
+      'main'
+    );
+
+  if(!main){
+    return;
+  }
+
+  main.addEventListener(
+    'input',
+    event=>{
+
+      if(
+        event.target.matches(
+          'input:not([type="file"]), textarea'
+        )
+      ){
+        nmaSalvaBozzaDebounced();
+      }
+    }
+  );
+
+  main.addEventListener(
+    'change',
+    event=>{
+
+      if(
+        event.target.matches(
+          'select, input:not([type="file"]), textarea'
+        )
+      ){
+        nmaSalvaBozzaDebounced();
+      }
+    }
+  );
+
+  window.addEventListener(
+    'pagehide',
+    ()=>{
+      nmaSalvaBozza(false);
+    }
+  );
+
+  document.addEventListener(
+    'visibilitychange',
+    ()=>{
+
+      if(document.hidden){
+        nmaSalvaBozza(false);
+      }
+    }
+  );
+}
+
+function nmaInitBozza(){
+
+  nmaRipristinaBozza();
+  nmaAttivaAutosave();
 }
 
 
@@ -2162,6 +2673,8 @@ async function registraIntervento(){
         'ok'
       );
 
+      nmaCancellaBozza(false);
+
       nuovoIdentificativo();
       resetTracciato(false);
 
@@ -2180,6 +2693,14 @@ async function registraIntervento(){
   }catch(e){
 
     accodaOffline(payload);
+
+    /*
+     * Da questo momento il payload è già nella
+     * coda offline persistente: la bozza può
+     * essere rimossa senza perdere il lavoro.
+     */
+    nmaCancellaBozza(false);
+
     nuovoIdentificativo();
       resetTracciato(false);
 
@@ -2206,7 +2727,10 @@ document
     aggiornaTracciatoUI
   );
 
-caricaCantieri();
+caricaCantieri()
+  .then(
+    ()=>nmaInitBozza()
+  );
 
 aggiornaContatoreCoda();
 
