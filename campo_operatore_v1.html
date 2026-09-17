@@ -1675,7 +1675,326 @@ async function caricaEvidenze(interventoId){
   return completati;
 }
 
+
+// ============================================================
+// NMA_CAMPO_GUARD_V1
+// Controllo preliminare dell'intervento prima della registrazione.
+// Il GPS smartphone NON viene trattato come misura metrica.
+// ============================================================
+
+function nmaValue(ids){
+
+  for(const id of ids){
+
+    const el=
+      document.getElementById(id);
+
+    if(!el){
+      continue;
+    }
+
+    const value=
+      String(el.value ?? '').trim();
+
+    if(value){
+      return value;
+    }
+  }
+
+  return '';
+}
+
+function nmaNumber(ids){
+
+  const value=
+    nmaValue(ids);
+
+  if(!value){
+    return 0;
+  }
+
+  const n=
+    Number(
+      String(value)
+        .replace(',','.')
+    );
+
+  return Number.isFinite(n)
+    ? n
+    : 0;
+}
+
+function validaInterventoCampo(){
+
+  const errori=[];
+  const avvisi=[];
+
+  const cantiere=
+    nmaValue([
+      'cantiere',
+      'idCantiere',
+      'id_cantiere'
+    ]);
+
+  const operatore=
+    nmaValue([
+      'operatore',
+      'nomeOperatore'
+    ]);
+
+  const squadra=
+    nmaValue([
+      'squadra',
+      'nomeSquadra'
+    ]);
+
+  const materiale=
+    nmaValue([
+      'materiale'
+    ]);
+
+  const diametro=
+    nmaNumber([
+      'diametro',
+      'diametroMm',
+      'diametro_mm'
+    ]);
+
+  const metri=
+    nmaNumber([
+      'metri',
+      'metriPosati',
+      'metri_tubo'
+    ]);
+
+  const lat=
+    nmaNumber([
+      'lat',
+      'latitude'
+    ]);
+
+  const lng=
+    nmaNumber([
+      'lng',
+      'longitude'
+    ]);
+
+  const accuracy=
+    nmaNumber([
+      'accuracy',
+      'accuratezza'
+    ]);
+
+  if(!cantiere){
+    errori.push(
+      'Selezionare il cantiere'
+    );
+  }
+
+  if(!operatore){
+    errori.push(
+      'Inserire il nome operatore'
+    );
+  }
+
+  if(!squadra){
+    errori.push(
+      'Inserire la squadra'
+    );
+  }
+
+  if(!materiale){
+    errori.push(
+      'Indicare il materiale della tubazione'
+    );
+  }
+
+  if(!(diametro>0)){
+    errori.push(
+      'Inserire un diametro valido'
+    );
+  }
+
+  if(!(metri>0)){
+    errori.push(
+      'Inserire i metri posati misurati realmente'
+    );
+  }
+
+  if(
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat===0 ||
+    lng===0
+  ){
+    avvisi.push(
+      'Posizione GPS non acquisita'
+    );
+  }
+
+  if(accuracy>10){
+
+    avvisi.push(
+      'GPS smartphone con accuratezza scarsa ('+
+      Math.round(accuracy)+
+      ' m): posizione solo indicativa'
+    );
+  }
+
+  const q=
+    typeof qualitaGpsCorrente==='function'
+      ? qualitaGpsCorrente()
+      : null;
+
+  if(
+    q &&
+    q.livello==='SCARSA'
+  ){
+    avvisi.push(
+      'Tracciato GPS classificato SCARSO: non usarlo come misura metrica'
+    );
+  }
+
+  return {
+    ok:errori.length===0,
+    errori,
+    avvisi
+  };
+}
+
+function mostraControlloCampo(c){
+
+  const old=
+    document.getElementById(
+      'nmaCampoGuardPanel'
+    );
+
+  if(old){
+    old.remove();
+  }
+
+  const panel=
+    document.createElement('div');
+
+  panel.id=
+    'nmaCampoGuardPanel';
+
+  panel.style.cssText=
+    'margin:14px 0;'+
+    'padding:14px;'+
+    'border-radius:10px;'+
+    'font-size:13px;'+
+    'line-height:1.55;';
+
+  if(!c.ok){
+
+    panel.style.background=
+      '#401818';
+
+    panel.style.border=
+      '1px solid #ff6262';
+
+    panel.style.color=
+      '#ffd3d3';
+
+    panel.innerHTML=
+      '<strong>INTERVENTO NON PRONTO</strong><br>'+
+      c.errori
+        .map(
+          x=>'• '+x
+        )
+        .join('<br>');
+
+  }else{
+
+    panel.style.background=
+      '#0b3a26';
+
+    panel.style.border=
+      '1px solid #20e88b';
+
+    panel.style.color=
+      '#d7ffee';
+
+    panel.innerHTML=
+      '<strong>✓ DATI ESSENZIALI VERIFICATI</strong>';
+
+    if(c.avvisi.length){
+
+      panel.innerHTML+=
+        '<br><br>'+
+        '<span style="color:#ffd166">'+
+        c.avvisi
+          .map(
+            x=>'⚠ '+x
+          )
+          .join('<br>')+
+        '</span>';
+    }
+  }
+
+  const buttons=[
+    ...document.querySelectorAll(
+      'button'
+    )
+  ];
+
+  const register=
+    buttons.find(
+      b=>
+        String(
+          b.textContent || ''
+        )
+        .toUpperCase()
+        .includes(
+          'REGISTRA INTERVENTO'
+        )
+    );
+
+  if(register){
+
+    register.parentNode
+      .insertBefore(
+        panel,
+        register
+      );
+
+    panel.scrollIntoView({
+      behavior:'smooth',
+      block:'center'
+    });
+
+  }else{
+
+    document.body.appendChild(
+      panel
+    );
+  }
+}
+
 async function registraIntervento(){
+
+  const controlloCampo=
+    validaInterventoCampo();
+
+  mostraControlloCampo(
+    controlloCampo
+  );
+
+  if(!controlloCampo.ok){
+
+    if(
+      typeof status==='function'
+    ){
+      status(
+        'Intervento incompleto: correggere i campi evidenziati nel controllo.',
+        'warn'
+      );
+    }
+
+    return;
+  }
+
 
   const cantiere =
     document.getElementById('cantiere').value;
@@ -1904,6 +2223,80 @@ setInterval(
 setTimeout(
   ()=>sincronizzaCoda(true),
   1500
+);
+</script>
+
+
+<script>
+// NMA Campo Guard — protezione tap ripetuti.
+// Non modifica i dati e non sostituisce l'idempotenza server.
+
+document.addEventListener(
+  'click',
+  function(event){
+
+    const button=
+      event.target.closest(
+        'button'
+      );
+
+    if(!button){
+      return;
+    }
+
+    if(
+      !String(
+        button.textContent || ''
+      )
+      .toUpperCase()
+      .includes(
+        'REGISTRA INTERVENTO'
+      )
+    ){
+      return;
+    }
+
+    if(
+      button.dataset.nmaBusy==='1'
+    ){
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+
+    const controllo=
+      typeof validaInterventoCampo==='function'
+        ? validaInterventoCampo()
+        : {ok:true};
+
+    if(!controllo.ok){
+      return;
+    }
+
+    button.dataset.nmaBusy='1';
+
+    const testoOriginale=
+      button.textContent;
+
+    button.textContent=
+      'REGISTRAZIONE IN CORSO...';
+
+    button.style.opacity=
+      '0.75';
+
+    setTimeout(
+      ()=>{
+        button.dataset.nmaBusy='0';
+        button.textContent=
+          testoOriginale;
+        button.style.opacity='';
+      },
+      8000
+    );
+
+  },
+  true
 );
 </script>
 
