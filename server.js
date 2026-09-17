@@ -1590,6 +1590,174 @@ app.get(
     }
 );
 
+
+// ============================================================
+// NMA BUILD OS — CONTROL ROOM OPERATIVA v2
+// Aggregazione reale, sola lettura
+// ============================================================
+
+app.get(
+    '/api/operations-summary',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const [
+                totale,
+                registrati,
+                validati,
+                correzioni,
+                aggregati,
+                anomalie,
+                evidenze,
+                audit,
+                ultimi
+            ] = await Promise.all([
+
+                InterventoCampo.countDocuments(),
+
+                InterventoCampo.countDocuments({
+                    stato: 'registrato'
+                }),
+
+                InterventoCampo.countDocuments({
+                    stato: 'validato'
+                }),
+
+                InterventoCampo.countDocuments({
+                    stato: 'da_correggere'
+                }),
+
+                InterventoCampo.aggregate([
+                    {
+                        $group: {
+                            _id: null,
+
+                            metri: {
+                                $sum:
+                                    '$tubazione.metri'
+                            },
+
+                            raccordi: {
+                                $sum:
+                                    '$raccordi'
+                            }
+                        }
+                    }
+                ]),
+
+                InterventoCampo.countDocuments({
+                    'anomalia.presente': true
+                }),
+
+                Evidenza.countDocuments(),
+
+                AuditLog.countDocuments(),
+
+                InterventoCampo
+                    .find()
+                    .sort({
+                        aggiornato_il: -1
+                    })
+                    .limit(10)
+                    .select({
+                        _id: 0,
+                        id_intervento: 1,
+                        id_cantiere: 1,
+                        operatore: 1,
+                        squadra: 1,
+                        stato: 1,
+                        'tubazione.metri': 1,
+                        'anomalia.presente': 1,
+                        aggiornato_il: 1
+                    })
+                    .lean()
+            ]);
+
+            const valori =
+                aggregati[0] || {
+                    metri: 0,
+                    raccordi: 0
+                };
+
+            const cantieri =
+                await InterventoCampo.distinct(
+                    'id_cantiere'
+                );
+
+            return res.json({
+                ok: true,
+
+                status:
+                    mongoose.connection.readyState === 1
+                        ? 'OPERATIONAL'
+                        : 'DEGRADED',
+
+                kpi: {
+                    interventi_totali:
+                        totale,
+
+                    registrati,
+
+                    validati,
+
+                    da_correggere:
+                        correzioni,
+
+                    metri:
+                        Number(valori.metri || 0),
+
+                    raccordi:
+                        Number(valori.raccordi || 0),
+
+                    anomalie,
+
+                    evidenze,
+
+                    eventi_audit:
+                        audit,
+
+                    cantieri:
+                        cantieri.length
+                },
+
+                ultimi_interventi:
+                    ultimi,
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        } catch (error) {
+
+            console.error(
+                'Errore operations-summary:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore Control Room'
+            });
+        }
+    }
+);
+
+app.get(
+    '/direzione',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    (req, res) => {
+        res.sendFile(
+            __dirname +
+            '/control_room_v2.html'
+        );
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
