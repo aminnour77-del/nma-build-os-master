@@ -2057,6 +2057,323 @@ app.get(
     }
 );
 
+
+// ============================================================
+// NMA BUILD OS — ASBUILT TRACCIATO v1
+// GPS multipunto -> GeoJSON LineString -> tratti_rete
+// ============================================================
+
+app.post(
+    '/api/tratti-rete',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const idIntervento =
+                String(
+                    req.body?.id_intervento || ''
+                ).trim();
+
+            const idCantiere =
+                String(
+                    req.body?.id_cantiere || ''
+                ).trim();
+
+            const puntiRaw =
+                Array.isArray(req.body?.coordinates)
+                    ? req.body.coordinates
+                    : [];
+
+            if (
+                !idIntervento ||
+                !idCantiere
+            ) {
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'Intervento e cantiere obbligatori'
+                });
+            }
+
+            if (
+                puntiRaw.length < 2 ||
+                puntiRaw.length > 2000
+            ) {
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'Il tracciato richiede da 2 a 2000 punti GPS'
+                });
+            }
+
+            const punti =
+                puntiRaw
+                    .map(p => {
+
+                        const lat =
+                            Number(p?.lat);
+
+                        const lng =
+                            Number(p?.lng);
+
+                        const altitude =
+                            Number(p?.altitude);
+
+                        if (
+                            !Number.isFinite(lat) ||
+                            !Number.isFinite(lng) ||
+                            lat < -90 ||
+                            lat > 90 ||
+                            lng < -180 ||
+                            lng > 180
+                        ) {
+                            return null;
+                        }
+
+                        return [
+                            lng,
+                            lat,
+                            Number.isFinite(altitude)
+                                ? altitude
+                                : 0
+                        ];
+                    })
+                    .filter(Boolean);
+
+            if (punti.length < 2) {
+
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'Coordinate GPS non valide'
+                });
+            }
+
+            const distinti =
+                new Set(
+                    punti.map(
+                        p =>
+                            p[0].toFixed(7) +
+                            ',' +
+                            p[1].toFixed(7)
+                    )
+                );
+
+            if (distinti.size < 2) {
+
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'Servono almeno due posizioni differenti'
+                });
+            }
+
+            const intervento =
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            idIntervento
+                    })
+                    .lean();
+
+            if (!intervento) {
+
+                return res.status(404).json({
+                    ok: false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+            const idTratto =
+                'ASB-' + idIntervento;
+
+            const esistente =
+                await TrattoRete
+                    .findOne({
+                        id_tratto:
+                            idTratto
+                    })
+                    .lean();
+
+            if (esistente) {
+
+                return res.status(200).json({
+                    ok: true,
+                    idempotente: true,
+                    tratto: esistente
+                });
+            }
+
+            function distanza(a, b) {
+
+                const R=6371000;
+
+                const rad =
+                    v => v*Math.PI/180;
+
+                const lat1=rad(a[1]);
+                const lat2=rad(b[1]);
+
+                const dLat=
+                    rad(b[1]-a[1]);
+
+                const dLng=
+                    rad(b[0]-a[0]);
+
+                const q=
+                    Math.sin(dLat/2) *
+                    Math.sin(dLat/2) +
+                    Math.cos(lat1) *
+                    Math.cos(lat2) *
+                    Math.sin(dLng/2) *
+                    Math.sin(dLng/2);
+
+                return (
+                    2 *
+                    R *
+                    Math.atan2(
+                        Math.sqrt(q),
+                        Math.sqrt(1-q)
+                    )
+                );
+            }
+
+            let lunghezza=0;
+
+            for (
+                let i=1;
+                i<punti.length;
+                i++
+            ) {
+                lunghezza +=
+                    distanza(
+                        punti[i-1],
+                        punti[i]
+                    );
+            }
+
+            const pressione =
+                Number(
+                    req.body?.pressione
+                );
+
+            const tratto =
+                await TrattoRete.create({
+
+                    id_tratto:
+                        idTratto,
+
+                    id_cantiere:
+                        idCantiere,
+
+                    geometry: {
+                        type:
+                            'LineString',
+
+                        coordinates:
+                            punti
+                    },
+
+                    pressione:
+                        Number.isFinite(
+                            pressione
+                        )
+                            ? pressione
+                            : 0,
+
+                    operatore:
+                        String(
+                            intervento.operatore ||
+                            req.body?.operatore ||
+                            ''
+                        ),
+
+                    descrizione:
+                        'AS-BUILT intervento ' +
+                        idIntervento +
+                        ' · ' +
+                        punti.length +
+                        ' punti GPS · ' +
+                        lunghezza.toFixed(2) +
+                        ' m',
+
+                    ultimo_aggiornamento:
+                        new Date()
+                });
+
+            await registraAudit({
+
+                evento:
+                    'TRACCIATO_AS_BUILT_SALVATO',
+
+                intervento,
+
+                ruolo:
+                    String(
+                        req.session.role ||
+                        ''
+                    ),
+
+                origine:
+                    String(
+                        req.body?.origine ||
+                        'online'
+                    ),
+
+                stato:
+                    String(
+                        intervento.stato ||
+                        ''
+                    ),
+
+                note:
+                    idTratto +
+                    ' · ' +
+                    punti.length +
+                    ' punti GPS · ' +
+                    lunghezza.toFixed(2) +
+                    ' m'
+            });
+
+            return res.status(201).json({
+
+                ok: true,
+
+                idempotente: false,
+
+                id_tratto:
+                    idTratto,
+
+                punti:
+                    punti.length,
+
+                lunghezza_m:
+                    Number(
+                        lunghezza.toFixed(2)
+                    ),
+
+                tratto
+            });
+
+        } catch (error) {
+
+            console.error(
+                'Errore AS-BUILT:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore salvataggio tracciato'
+            });
+        }
+    }
+);
+
 app.post('/api/collaudo', async (req, res) => {
   try {
     const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;

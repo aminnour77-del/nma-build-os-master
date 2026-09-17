@@ -113,6 +113,54 @@ button{
   cursor:pointer;
 }
 
+
+/* NMA_ASBUILT_V1 */
+
+.traceActions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:10px;
+}
+
+.traceStart{
+  background:#20e88b;
+  color:#032016;
+}
+
+.tracePoint{
+  background:#23d8ff;
+  color:#031419;
+}
+
+.traceStop{
+  background:#ff9d21;
+  color:#201000;
+}
+
+.traceReset{
+  width:100%;
+  margin-top:8px;
+  background:#2a3439;
+  color:white;
+}
+
+.traceStatus{
+  margin-top:12px;
+  padding:11px;
+  background:#08161c;
+  border:1px solid #284c56;
+  border-radius:9px;
+  font-family:monospace;
+  font-size:12px;
+}
+
+@media(max-width:650px){
+  .traceActions{
+    grid-template-columns:1fr;
+  }
+}
+
 .gps{
   width:100%;
   background:#14343d;
@@ -257,6 +305,56 @@ button{
   <button class="gps" onclick="acquisisciGPS()">
     📍 ACQUISISCI POSIZIONE GPS
   </button>
+</div>
+
+<!-- NMA_ASBUILT_V1 -->
+<div class="card">
+
+  <h2>TRACCIATO AS-BUILT GPS</h2>
+
+  <div style="font-size:12px;color:#87a3aa">
+    Registra il percorso reale della tubazione come
+    sequenza di coordinate GPS.
+  </div>
+
+  <div class="traceActions">
+
+    <button
+      class="traceStart"
+      type="button"
+      onclick="avviaTracciato()">
+      ▶ AVVIA
+    </button>
+
+    <button
+      class="tracePoint"
+      type="button"
+      onclick="aggiungiPuntoManuale()">
+      + PUNTO GPS
+    </button>
+
+    <button
+      class="traceStop"
+      type="button"
+      onclick="fermaTracciato()">
+      ■ TERMINA
+    </button>
+
+  </div>
+
+  <button
+    class="traceReset"
+    type="button"
+    onclick="resetTracciato(true)">
+    AZZERA TRACCIATO
+  </button>
+
+  <div
+    id="traceStatus"
+    class="traceStatus">
+    Punti: 0 · Lunghezza GPS: 0.00 m
+  </div>
+
 </div>
 
 <div class="card">
@@ -590,6 +688,61 @@ async function inviaPayloadCampo(payload){
     );
   }
 
+
+  if(
+    Array.isArray(payload.tracciato) &&
+    payload.tracciato.length >= 2
+  ){
+
+    const rt=
+      await fetch(
+        '/api/tratti-rete',
+        {
+          method:'POST',
+          headers:{
+            'Content-Type':
+              'application/json'
+          },
+          body:JSON.stringify({
+
+            id_intervento:
+              payload.id_intervento,
+
+            id_cantiere:
+              payload.id_cantiere,
+
+            operatore:
+              payload.operatore,
+
+            pressione:
+              payload.collaudo?.pressione,
+
+            origine:
+              payload.accodato_il
+                ? 'offline_sync'
+                : 'online',
+
+            coordinates:
+              payload.tracciato
+          })
+        }
+      );
+
+    let tj={};
+
+    try{
+      tj=await rt.json();
+    }catch{}
+
+    if(!rt.ok || !tj.ok){
+
+      throw new Error(
+        tj.error ||
+        'Sincronizzazione AS-BUILT non riuscita'
+      );
+    }
+  }
+
   return true;
 }
 
@@ -675,6 +828,322 @@ function nuovoIdentificativo(){
   ).textContent=idIntervento;
 }
 
+
+
+let tracciatoPunti=[];
+let gpsWatchId=null;
+
+function distanzaGPS(a,b){
+
+  const R=6371000;
+  const rad=v=>v*Math.PI/180;
+
+  const lat1=rad(a.lat);
+  const lat2=rad(b.lat);
+
+  const dLat=rad(b.lat-a.lat);
+  const dLng=rad(b.lng-a.lng);
+
+  const x=
+    Math.sin(dLat/2) *
+    Math.sin(dLat/2) +
+    Math.cos(lat1) *
+    Math.cos(lat2) *
+    Math.sin(dLng/2) *
+    Math.sin(dLng/2);
+
+  return (
+    2 *
+    R *
+    Math.atan2(
+      Math.sqrt(x),
+      Math.sqrt(1-x)
+    )
+  );
+}
+
+function lunghezzaTracciato(){
+
+  let totale=0;
+
+  for(
+    let i=1;
+    i<tracciatoPunti.length;
+    i++
+  ){
+    totale+=
+      distanzaGPS(
+        tracciatoPunti[i-1],
+        tracciatoPunti[i]
+      );
+  }
+
+  return totale;
+}
+
+function aggiornaTracciatoUI(){
+
+  const el=
+    document.getElementById(
+      'traceStatus'
+    );
+
+  if(!el){
+    return;
+  }
+
+  const ultimo=
+    tracciatoPunti[
+      tracciatoPunti.length-1
+    ];
+
+  let testo=
+    'Punti: '+
+    tracciatoPunti.length+
+    ' · Lunghezza GPS: '+
+    lunghezzaTracciato().toFixed(2)+
+    ' m';
+
+  if(ultimo){
+    testo+=
+      ' · Accuratezza ultimo: '+
+      Math.round(
+        ultimo.accuracy || 0
+      )+
+      ' m';
+  }
+
+  el.textContent=testo;
+}
+
+function registraCoordinate(
+  coords,
+  forza=false
+){
+
+  const punto={
+
+    lat:
+      Number(coords.latitude),
+
+    lng:
+      Number(coords.longitude),
+
+    altitude:
+      Number.isFinite(
+        Number(coords.altitude)
+      )
+        ? Number(coords.altitude)
+        : 0,
+
+    accuracy:
+      Number(coords.accuracy || 0),
+
+    timestamp:
+      new Date().toISOString()
+  };
+
+  if(
+    !Number.isFinite(punto.lat) ||
+    !Number.isFinite(punto.lng)
+  ){
+    return;
+  }
+
+  const ultimo=
+    tracciatoPunti[
+      tracciatoPunti.length-1
+    ];
+
+  if(
+    ultimo &&
+    !forza &&
+    distanzaGPS(
+      ultimo,
+      punto
+    ) < 2
+  ){
+    return;
+  }
+
+  tracciatoPunti.push(
+    punto
+  );
+
+  // Protezione da tracciati eccessivi
+  if(tracciatoPunti.length>2000){
+    tracciatoPunti.shift();
+  }
+
+  // Manteniamo aggiornato anche il GPS puntuale
+  document.getElementById('lat').value=
+    punto.lat.toFixed(7);
+
+  document.getElementById('lng').value=
+    punto.lng.toFixed(7);
+
+  document.getElementById('accuracy').value=
+    Math.round(
+      punto.accuracy
+    );
+
+  aggiornaTracciatoUI();
+}
+
+function avviaTracciato(){
+
+  if(!navigator.geolocation){
+
+    status(
+      'GPS non disponibile',
+      'err'
+    );
+
+    return;
+  }
+
+  if(gpsWatchId!==null){
+
+    status(
+      'Tracciamento già attivo',
+      'warn'
+    );
+
+    return;
+  }
+
+  status(
+    'Tracciamento AS-BUILT GPS attivo',
+    'ok'
+  );
+
+  gpsWatchId=
+    navigator.geolocation.watchPosition(
+
+      pos=>{
+        registraCoordinate(
+          pos.coords,
+          false
+        );
+      },
+
+      err=>{
+        status(
+          'GPS: '+err.message,
+          'err'
+        );
+      },
+
+      {
+        enableHighAccuracy:true,
+        maximumAge:0,
+        timeout:15000
+      }
+    );
+}
+
+function aggiungiPuntoManuale(){
+
+  if(!navigator.geolocation){
+
+    status(
+      'GPS non disponibile',
+      'err'
+    );
+
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+
+    pos=>{
+
+      registraCoordinate(
+        pos.coords,
+        true
+      );
+
+      status(
+        'Punto GPS acquisito',
+        'ok'
+      );
+    },
+
+    err=>{
+
+      status(
+        'GPS: '+err.message,
+        'err'
+      );
+    },
+
+    {
+      enableHighAccuracy:true,
+      maximumAge:0,
+      timeout:15000
+    }
+  );
+}
+
+function fermaTracciato(){
+
+  if(
+    gpsWatchId!==null &&
+    navigator.geolocation
+  ){
+
+    navigator.geolocation.clearWatch(
+      gpsWatchId
+    );
+
+    gpsWatchId=null;
+  }
+
+  status(
+    'Tracciamento terminato: '+
+    tracciatoPunti.length+
+    ' punti · '+
+    lunghezzaTracciato().toFixed(2)+
+    ' m',
+    'ok'
+  );
+}
+
+function resetTracciato(chiedi=true){
+
+  if(
+    chiedi &&
+    tracciatoPunti.length &&
+    !confirm(
+      'Azzerare il tracciato GPS corrente?'
+    )
+  ){
+    return;
+  }
+
+  if(
+    gpsWatchId!==null &&
+    navigator.geolocation
+  ){
+
+    navigator.geolocation.clearWatch(
+      gpsWatchId
+    );
+
+    gpsWatchId=null;
+  }
+
+  tracciatoPunti=[];
+
+  aggiornaTracciatoUI();
+}
+
+function leggiTracciatoAttuale(){
+
+  return tracciatoPunti.map(
+    p=>({...p})
+  );
+}
 
 async function caricaEvidenze(interventoId){
 
@@ -817,7 +1286,10 @@ async function registraIntervento(){
     },
 
     note:
-      document.getElementById('note').value.trim()
+      document.getElementById('note').value.trim(),
+
+    tracciato:
+      leggiTracciatoAttuale()
   };
 
   status('Registrazione intervento...','warn');
@@ -848,6 +1320,7 @@ async function registraIntervento(){
       );
 
       nuovoIdentificativo();
+      resetTracciato(false);
 
     }catch(uploadError){
 
@@ -865,6 +1338,7 @@ async function registraIntervento(){
 
     accodaOffline(payload);
     nuovoIdentificativo();
+      resetTracciato(false);
 
     status(
       '✓ INTERVENTO SALVATO OFFLINE — '+
