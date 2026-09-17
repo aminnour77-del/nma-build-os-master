@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>NMA BUILD OS — Supervisore</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#071015;
+  color:#eef7f8;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  padding:16px;
+  background:#09171d;
+  border-bottom:1px solid #21424b;
+}
+.brand{font-weight:900;letter-spacing:.08em}
+.live{color:#20e88b;font-size:12px;margin-top:5px}
+main{max-width:1050px;margin:auto;padding:16px 16px 80px}
+.toolbar{
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
+}
+button{
+  border:0;
+  border-radius:9px;
+  padding:11px 15px;
+  font-weight:800;
+  cursor:pointer;
+}
+.refresh{background:#23d8ff;color:#03151a}
+.logout{background:#273942;color:white;margin-left:auto}
+.card{
+  background:#0d1b22;
+  border:1px solid #244650;
+  border-radius:14px;
+  padding:15px;
+  margin-bottom:13px;
+}
+.top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+.id{font-family:monospace;color:#23d8ff;font-size:12px}
+.badge{
+  padding:5px 8px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:800;
+}
+.registrato{background:#4d3810;color:#ffd166}
+.validato{background:#103c29;color:#20e88b}
+.da_correggere{background:#481b1b;color:#ff7777}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin:13px 0;
+}
+.info{
+  background:#09171d;
+  border-radius:8px;
+  padding:9px;
+}
+.label{
+  color:#77949b;
+  font-size:10px;
+  text-transform:uppercase;
+}
+.value{margin-top:4px;font-size:13px}
+textarea{
+  width:100%;
+  background:#071419;
+  border:1px solid #31515a;
+  color:white;
+  padding:10px;
+  border-radius:8px;
+  min-height:65px;
+}
+.actions{
+  display:flex;
+  gap:8px;
+  margin-top:9px;
+}
+.approve{background:#20e88b;color:#032016}
+.correct{background:#ff9d21;color:#201000}
+.empty{text-align:center;color:#78959c;padding:50px}
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .actions{flex-direction:column}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">NMA BUILD OS</div>
+  <div class="live">● SUPERVISORE / VALIDAZIONE — ONLINE</div>
+</header>
+
+<main>
+
+<div class="toolbar">
+  <button class="refresh" onclick="carica()">AGGIORNA</button>
+  <button class="logout" onclick="logout()">ESCI</button>
+</div>
+
+<div id="lista">
+  <div class="empty">Caricamento interventi...</div>
+</div>
+
+</main>
+
+<script>
+const esc = value =>
+  String(value ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+
+async function carica(){
+
+  const box=document.getElementById('lista');
+
+  try{
+
+    const r=await fetch('/api/interventi');
+    const data=await r.json();
+
+    if(!r.ok || !data.ok)
+      throw new Error('Errore lettura interventi');
+
+    if(!data.interventi.length){
+      box.innerHTML=
+        '<div class="empty">Nessun intervento registrato.</div>';
+      return;
+    }
+
+    box.innerHTML=data.interventi.map(x=>{
+
+      const id=esc(x.id_intervento);
+      const stato=esc(x.stato || 'registrato');
+
+      return `
+      <div class="card">
+        <div class="top">
+          <div>
+            <div class="id">${id}</div>
+            <strong>${esc(x.id_cantiere)}</strong>
+          </div>
+          <div class="badge ${stato}">
+            ${stato.toUpperCase().replace('_',' ')}
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="info">
+            <div class="label">Operatore</div>
+            <div class="value">${esc(x.operatore)}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Squadra</div>
+            <div class="value">${esc(x.squadra)}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Metri</div>
+            <div class="value">${esc(x.tubazione?.metri || 0)} m</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Materiale</div>
+            <div class="value">${esc(x.tubazione?.materiale)}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Pressione</div>
+            <div class="value">${esc(x.collaudo?.pressione || 0)}</div>
+          </div>
+
+          <div class="info">
+            <div class="label">Anomalia</div>
+            <div class="value">
+              ${x.anomalia?.presente ? 'SÌ' : 'NO'}
+            </div>
+          </div>
+        </div>
+
+        <textarea
+          id="note-${id}"
+          placeholder="Note del supervisore..."
+        >${esc(x.validazione?.note || '')}</textarea>
+
+        <div class="actions">
+          <button class="approve"
+            onclick="valida('${id}','validato')">
+            ✓ VALIDA
+          </button>
+
+          <button class="correct"
+            onclick="valida('${id}','da_correggere')">
+            ↩ RICHIEDI CORREZIONE
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+
+  }catch(e){
+    box.innerHTML=
+      '<div class="empty">Errore caricamento interventi.</div>';
+  }
+}
+
+async function valida(id,esito){
+
+  const note=
+    document.getElementById('note-'+id)?.value || '';
+
+  const r=await fetch(
+    '/api/interventi/'+encodeURIComponent(id)+'/validazione',
+    {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({esito,note})
+    }
+  );
+
+  const data=await r.json();
+
+  if(!r.ok || !data.ok){
+    alert(data.error || 'Validazione fallita');
+    return;
+  }
+
+  await carica();
+}
+
+async function logout(){
+  try{
+    await fetch('/api/logout',{method:'POST'});
+  }finally{
+    location.href='/';
+  }
+}
+
+carica();
+</script>
+
+</body>
+</html>

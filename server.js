@@ -415,8 +415,24 @@ const InterventoCampoSchema = new mongoose.Schema({
 
     stato: {
         type: String,
-        enum: ['bozza', 'registrato', 'validato'],
+        enum: ['bozza', 'registrato', 'validato', 'da_correggere'],
         default: 'registrato'
+    },
+
+    validazione: {
+        esito: {
+            type: String,
+            default: ''
+        },
+        note: {
+            type: String,
+            default: ''
+        },
+        validato_da: {
+            type: String,
+            default: ''
+        },
+        validato_il: Date
     },
 
     creato_il: {
@@ -635,6 +651,88 @@ app.get(
                 error: 'Errore lettura interventi'
             });
         }
+    }
+);
+
+
+// ============================================================
+// NMA BUILD OS — SUPERVISORE VALIDAZIONE v1
+// ============================================================
+
+app.patch(
+    '/api/interventi/:id/validazione',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+            const id = String(req.params.id || '').trim();
+            const esito = String(req.body?.esito || '').trim();
+            const note = String(req.body?.note || '').trim();
+
+            if (!['validato', 'da_correggere'].includes(esito)) {
+                return res.status(400).json({
+                    ok: false,
+                    error: 'Esito validazione non valido'
+                });
+            }
+
+            const intervento =
+                await InterventoCampo.findOneAndUpdate(
+                    { id_intervento: id },
+                    {
+                        $set: {
+                            stato: esito,
+                            validazione: {
+                                esito,
+                                note,
+                                validato_da:
+                                    String(req.session.role || ''),
+                                validato_il: new Date()
+                            },
+                            aggiornato_il: new Date()
+                        }
+                    },
+                    {
+                        new: true,
+                        runValidators: true
+                    }
+                ).lean();
+
+            if (!intervento) {
+                return res.status(404).json({
+                    ok: false,
+                    error: 'Intervento non trovato'
+                });
+            }
+
+            return res.json({
+                ok: true,
+                intervento
+            });
+
+        } catch (error) {
+            console.error(
+                'Errore validazione intervento:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error: 'Errore validazione intervento'
+            });
+        }
+    }
+);
+
+app.get(
+    '/supervisore',
+    requireAuth,
+    requireRole('supervisore', 'admin'),
+    (req, res) => {
+        res.sendFile(
+            __dirname + '/supervisore_v1.html'
+        );
     }
 );
 
