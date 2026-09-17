@@ -1085,6 +1085,172 @@ const InterventoCampo =
         'interventi_campo'
     );
 
+
+// ============================================================
+// NMA BUILD OS — SERVER GUARD v1
+// Integrità minima dei nuovi interventi.
+// Il GPS smartphone resta informativo e NON determina
+// la validità della misura dei metri posati.
+// ============================================================
+
+function nmaValidaInterventoCampoServer(body = {}) {
+
+    const errori = [];
+    const avvisi = [];
+
+    const testo = value =>
+        String(value ?? '').trim();
+
+    const numero = value => {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ''
+        ) {
+            return null;
+        }
+
+        const n = Number(value);
+
+        return Number.isFinite(n)
+            ? n
+            : null;
+    };
+
+    const idCantiere =
+        testo(body.id_cantiere);
+
+    const idIntervento =
+        testo(body.id_intervento);
+
+    const offlineId =
+        testo(body.offline_id);
+
+    const operatore =
+        testo(body.operatore);
+
+    const squadra =
+        testo(body.squadra);
+
+    const materiale =
+        testo(
+            body.tubazione?.materiale
+        );
+
+    const diametro =
+        numero(
+            body.tubazione?.diametro_mm
+        );
+
+    const metri =
+        numero(
+            body.tubazione?.metri
+        );
+
+    if (!idCantiere) {
+        errori.push(
+            'Cantiere obbligatorio'
+        );
+    }
+
+    if (!idIntervento) {
+        errori.push(
+            'ID intervento obbligatorio'
+        );
+    }
+
+    if (!offlineId) {
+        errori.push(
+            'offline_id obbligatorio'
+        );
+    }
+
+    if (!operatore) {
+        errori.push(
+            'Operatore obbligatorio'
+        );
+    }
+
+    if (!squadra) {
+        errori.push(
+            'Squadra obbligatoria'
+        );
+    }
+
+    if (!materiale) {
+        errori.push(
+            'Materiale tubazione obbligatorio'
+        );
+    }
+
+    if (
+        diametro === null ||
+        diametro <= 0
+    ) {
+        errori.push(
+            'Diametro tubazione non valido'
+        );
+    }
+
+    if (
+        metri === null ||
+        metri <= 0
+    ) {
+        errori.push(
+            'Metri posati misurati non validi'
+        );
+    }
+
+    if (
+        body.anomalia?.presente === true &&
+        !testo(body.anomalia?.descrizione)
+    ) {
+        errori.push(
+            'Descrizione anomalia obbligatoria quando è presente un’anomalia'
+        );
+    }
+
+    const lat =
+        numero(body.gps?.lat);
+
+    const lng =
+        numero(body.gps?.lng);
+
+    const accuracy =
+        numero(
+            body.gps?.accuratezza
+        );
+
+    if (
+        lat === null ||
+        lng === null ||
+        lat === 0 ||
+        lng === 0
+    ) {
+        avvisi.push(
+            'Posizione GPS non disponibile'
+        );
+    }
+
+    if (
+        accuracy !== null &&
+        accuracy > 10
+    ) {
+        avvisi.push(
+            'GPS con accuratezza scarsa: posizione solo indicativa'
+        );
+    }
+
+    return {
+        ok:
+            errori.length === 0,
+
+        errori,
+        avvisi
+    };
+}
+
 app.post(
     '/api/interventi',
     requireAuth,
@@ -1121,6 +1287,35 @@ app.post(
                     ok: true,
                     idempotente: true,
                     intervento: esistente
+                });
+            }
+
+
+            // =================================================
+            // SERVER GUARD v1
+            // Il controllo avviene dopo la verifica idempotente.
+            // =================================================
+
+            const controlloCampo =
+                nmaValidaInterventoCampoServer(
+                    body
+                );
+
+            if (!controlloCampo.ok) {
+
+                return res.status(422).json({
+                    ok: false,
+                    code:
+                        'CAMPO_GUARD_SERVER',
+
+                    error:
+                        'Intervento incompleto o non valido',
+
+                    errori:
+                        controlloCampo.errori,
+
+                    avvisi:
+                        controlloCampo.avvisi
                 });
             }
 
@@ -1334,7 +1529,10 @@ app.post(
             return res.status(201).json({
                 ok: true,
                 idempotente: false,
-                intervento: doc
+                intervento: doc,
+
+                avvisi:
+                    controlloCampo.avvisi
             });
 
         } catch (error) {
