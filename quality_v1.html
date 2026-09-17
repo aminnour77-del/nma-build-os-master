@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+ name="viewport"
+ content="width=device-width,initial-scale=1">
+
+<title>
+ NMA BUILD OS — Quality Gate
+</title>
+
+<style>
+
+*{
+ box-sizing:border-box;
+}
+
+body{
+ margin:0;
+ background:#061015;
+ color:#eef7f8;
+ font-family:
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  sans-serif;
+}
+
+header{
+ position:sticky;
+ top:0;
+ z-index:10;
+ background:#08141a;
+ border-bottom:1px solid #244650;
+ padding:16px;
+}
+
+.head{
+ width:min(1100px,100%);
+ margin:auto;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+}
+
+.brand{
+ font-weight:900;
+ letter-spacing:.06em;
+}
+
+.live{
+ color:#20e88b;
+ margin-top:5px;
+ font-size:12px;
+}
+
+button{
+ border:0;
+ border-radius:8px;
+ padding:10px 14px;
+ font-weight:900;
+ cursor:pointer;
+}
+
+.back{
+ background:#17303a;
+ color:white;
+}
+
+main{
+ width:min(1100px,100%);
+ margin:auto;
+ padding:16px 16px 70px;
+}
+
+.notice{
+ padding:13px;
+ border-radius:10px;
+ background:#33270d;
+ border:1px solid #725b1d;
+ color:#ffd166;
+ font-size:12px;
+ line-height:1.55;
+ margin-bottom:14px;
+}
+
+.stats{
+ display:grid;
+ grid-template-columns:
+  repeat(4,1fr);
+ gap:8px;
+ margin-bottom:15px;
+}
+
+.stat{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:10px;
+ padding:12px;
+}
+
+.stat small{
+ display:block;
+ color:#849da4;
+ font-size:10px;
+ text-transform:uppercase;
+}
+
+.stat strong{
+ display:block;
+ font-size:24px;
+ margin-top:5px;
+}
+
+.controls{
+ display:flex;
+ gap:8px;
+ margin-bottom:14px;
+ flex-wrap:wrap;
+}
+
+input,select{
+ background:#0d1b22;
+ color:white;
+ border:1px solid #31515a;
+ border-radius:8px;
+ padding:10px;
+}
+
+input{
+ flex:1;
+ min-width:230px;
+}
+
+.card{
+ background:#0d1b22;
+ border:1px solid #244650;
+ border-radius:12px;
+ padding:14px;
+ margin-bottom:10px;
+}
+
+.top{
+ display:flex;
+ justify-content:space-between;
+ gap:12px;
+ align-items:flex-start;
+}
+
+.id{
+ color:#23d8ff;
+ font-family:monospace;
+ font-weight:900;
+ word-break:break-word;
+}
+
+.meta{
+ margin-top:7px;
+ color:#8fa5ab;
+ font-size:12px;
+ line-height:1.5;
+}
+
+.badge{
+ padding:6px 9px;
+ border-radius:20px;
+ font-size:10px;
+ font-weight:900;
+ white-space:nowrap;
+}
+
+.ready{
+ background:#0b3a26;
+ color:#20e88b;
+}
+
+.warn{
+ background:#3d310c;
+ color:#ffd166;
+}
+
+.block{
+ background:#461d18;
+ color:#ff856f;
+}
+
+.closed{
+ background:#123044;
+ color:#57d5ff;
+}
+
+.section{
+ margin-top:12px;
+ padding-top:10px;
+ border-top:1px solid #19343d;
+}
+
+.item{
+ margin:5px 0;
+ font-size:12px;
+ line-height:1.45;
+}
+
+.ok{
+ color:#20e88b;
+}
+
+.warning{
+ color:#ffd166;
+}
+
+.error{
+ color:#ff856f;
+}
+
+.hse{
+ color:#aabcc1;
+}
+
+.empty{
+ text-align:center;
+ color:#78959c;
+ padding:50px 10px;
+}
+
+#updated{
+ color:#78959c;
+ font-size:10px;
+ margin-bottom:9px;
+}
+
+@media(max-width:700px){
+
+ .stats{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
+
+ .top{
+  flex-direction:column;
+ }
+
+ .controls{
+  display:block;
+ }
+
+ input,select{
+  width:100%;
+  margin-bottom:7px;
+ }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- NMA_QUALITY_GATE_V1 -->
+
+<header>
+
+<div class="head">
+
+ <div>
+
+  <div class="brand">
+   NMA BUILD OS — QUALITY GATE
+  </div>
+
+  <div class="live">
+   ● PRE-VALIDAZIONE
+  </div>
+
+ </div>
+
+ <button
+  class="back"
+  onclick="location.href='/supervisore'">
+  SUPERVISORE
+ </button>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="notice">
+
+ <strong>CONTROLLO AUTOMATICO PRE-VALIDAZIONE</strong>
+ <br>
+ Il sistema verifica completezza tecnica e documentale.
+ Non sostituisce le verifiche HSE, le procedure aziendali,
+ le prescrizioni del committente o il giudizio del personale
+ qualificato.
+
+</div>
+
+<div class="stats">
+
+ <div class="stat">
+  <small>Interventi</small>
+  <strong id="totale">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Pronti dati</small>
+  <strong id="pronti">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Con avvisi</small>
+  <strong id="avvisi">0</strong>
+ </div>
+
+ <div class="stat">
+  <small>Bloccati</small>
+  <strong id="blocchi">0</strong>
+ </div>
+
+</div>
+
+<div class="controls">
+
+ <input
+  id="search"
+  placeholder="Cerca ID, cantiere, operatore, squadra...">
+
+ <select id="filter">
+
+  <option value="tutti">
+   Tutti
+  </option>
+
+  <option value="pronto">
+   Pronti dati
+  </option>
+
+  <option value="avviso">
+   Con avvisi
+  </option>
+
+  <option value="blocco">
+   Bloccati
+  </option>
+
+  <option value="chiuso">
+   Dossier chiusi
+  </option>
+
+ </select>
+
+</div>
+
+<div id="updated"></div>
+
+<div id="board">
+
+ <div class="empty">
+  Caricamento Quality Gate...
+ </div>
+
+</div>
+
+</main>
+
+<script>
+
+let rows=[];
+
+const esc=v=>
+ String(v??'')
+  .replaceAll(
+   '&',
+   '&amp;'
+  )
+  .replaceAll(
+   '<',
+   '&lt;'
+  )
+  .replaceAll(
+   '>',
+   '&gt;'
+  );
+
+function tipo(x){
+
+ if(x.dossier_chiuso){
+  return 'chiuso';
+ }
+
+ if(
+  Array.isArray(x.bloccanti) &&
+  x.bloccanti.length
+ ){
+  return 'blocco';
+ }
+
+ if(
+  Array.isArray(x.avvisi) &&
+  x.avvisi.length
+ ){
+  return 'avviso';
+ }
+
+ return 'pronto';
+}
+
+function labelTipo(x){
+
+ const t=tipo(x);
+
+ if(t==='chiuso')
+  return 'DOSSIER CHIUSO';
+
+ if(t==='blocco')
+  return 'BLOCCATO';
+
+ if(t==='avviso')
+  return 'PRONTO CON AVVISI';
+
+ return 'PRONTO DATI';
+}
+
+function classTipo(x){
+
+ const t=tipo(x);
+
+ if(t==='chiuso')
+  return 'closed';
+
+ if(t==='blocco')
+  return 'block';
+
+ if(t==='avviso')
+  return 'warn';
+
+ return 'ready';
+}
+
+function render(){
+
+ const q=
+  document.getElementById(
+   'search'
+  )
+  .value
+  .trim()
+  .toLowerCase();
+
+ const filtro=
+  document.getElementById(
+   'filter'
+  ).value;
+
+ const filtered=
+  rows.filter(x=>{
+
+   if(
+    filtro!=='tutti' &&
+    tipo(x)!==filtro
+   ){
+    return false;
+   }
+
+   if(!q){
+    return true;
+   }
+
+   return [
+    x.id_intervento,
+    x.id_cantiere,
+    x.operatore,
+    x.squadra,
+    x.stato
+   ]
+   .join(' ')
+   .toLowerCase()
+   .includes(q);
+  });
+
+ const board=
+  document.getElementById(
+   'board'
+  );
+
+ if(!filtered.length){
+
+  board.innerHTML=
+   '<div class="empty">'+
+   'Nessun intervento corrispondente.'+
+   '</div>';
+
+  return;
+ }
+
+ board.innerHTML=
+  filtered.map(x=>{
+
+   const c=
+    x.controlli || {};
+
+   const evidenze=
+    Number(c.evidenze || 0);
+
+   const blocchi=
+    Array.isArray(x.bloccanti)
+     ? x.bloccanti
+     : [];
+
+   const avvisi=
+    Array.isArray(x.avvisi)
+     ? x.avvisi
+     : [];
+
+   return `
+    <div class="card">
+
+     <div class="top">
+
+      <div>
+
+       <div class="id">
+        ${esc(x.id_intervento)}
+       </div>
+
+       <div class="meta">
+        Cantiere:
+        <strong>
+         ${esc(x.id_cantiere || '—')}
+        </strong>
+        <br>
+        Operatore:
+        ${esc(x.operatore || '—')}
+        · Squadra:
+        ${esc(x.squadra || '—')}
+        <br>
+        Stato:
+        ${esc(x.stato || '—')}
+       </div>
+
+      </div>
+
+      <span
+       class="badge ${classTipo(x)}">
+       ${labelTipo(x)}
+      </span>
+
+     </div>
+
+     <div class="section">
+
+      <div class="item ${
+       c.dati_essenziali
+        ? 'ok'
+        : 'error'
+      }">
+       ${
+        c.dati_essenziali
+         ? '✓'
+         : '✕'
+       }
+       Dati essenziali
+      </div>
+
+      <div class="item ${
+       evidenze>0
+        ? 'ok'
+        : 'warning'
+      }">
+       ${
+        evidenze>0
+         ? '✓'
+         : '⚠'
+       }
+       Evidenze:
+       ${evidenze}
+      </div>
+
+      <div class="item ${
+       c.collaudo_presente
+        ? 'ok'
+        : 'warning'
+      }">
+       ${
+        c.collaudo_presente
+         ? '✓'
+         : '⚠'
+       }
+       Collaudo
+      </div>
+
+      <div class="item ${
+       c.asbuilt_presente
+        ? 'ok'
+        : 'warning'
+      }">
+       ${
+        c.asbuilt_presente
+         ? '✓'
+         : '⚠'
+       }
+       As-Built
+      </div>
+
+      ${
+       c.sorgente_posizione
+        ? `
+         <div class="item">
+          Posizione:
+          ${esc(
+           c.sorgente_posizione
+          )}
+          ${
+           c.qualita_posizione
+            ? ' · '+esc(
+               c.qualita_posizione
+              )
+            : ''
+          }
+         </div>
+        `
+        : ''
+      }
+
+     </div>
+
+     ${
+      blocchi.length
+       ? `
+        <div class="section error">
+         <strong>BLOCCHI</strong>
+         ${blocchi.map(
+          v=>
+           '<div class="item">✕ '+
+           esc(v)+
+           '</div>'
+         ).join('')}
+        </div>
+       `
+       : ''
+     }
+
+     ${
+      avvisi.length
+       ? `
+        <div class="section warning">
+         <strong>AVVISI</strong>
+         ${avvisi.map(
+          v=>
+           '<div class="item">⚠ '+
+           esc(v)+
+           '</div>'
+         ).join('')}
+        </div>
+       `
+       : ''
+     }
+
+     <div class="section hse">
+      HSE:
+      <strong>
+       DA VERIFICARE SECONDO PROCEDURA APPLICABILE
+      </strong>
+     </div>
+
+    </div>
+   `;
+  }).join('');
+}
+
+async function carica(){
+
+ try{
+
+  const r=
+   await fetch(
+    '/api/quality-gate',
+    {
+     cache:'no-store'
+    }
+   );
+
+  const data=
+   await r.json();
+
+  if(
+   !r.ok ||
+   !data.ok ||
+   !Array.isArray(
+    data.risultati
+   )
+  ){
+   throw new Error(
+    data.error ||
+    'Quality Gate non disponibile'
+   );
+  }
+
+  rows=
+   data.risultati;
+
+  document.getElementById(
+   'totale'
+  ).textContent=
+   data.totale || 0;
+
+  document.getElementById(
+   'pronti'
+  ).textContent=
+   data.pronti || 0;
+
+  document.getElementById(
+   'avvisi'
+  ).textContent=
+   data.con_avvisi || 0;
+
+  document.getElementById(
+   'blocchi'
+  ).textContent=
+   data.con_blocchi || 0;
+
+  document.getElementById(
+   'updated'
+  ).textContent=
+   'Aggiornato: '+
+   new Date()
+    .toLocaleTimeString();
+
+  render();
+
+ }catch(e){
+
+  document.getElementById(
+   'board'
+  ).innerHTML=
+   '<div class="empty">'+
+   esc(e.message)+
+   '</div>';
+ }
+}
+
+document.getElementById(
+ 'search'
+).addEventListener(
+ 'input',
+ render
+);
+
+document.getElementById(
+ 'filter'
+).addEventListener(
+ 'change',
+ render
+);
+
+carica();
+
+setInterval(
+ carica,
+ 30000
+);
+
+</script>
+
+</body>
+</html>

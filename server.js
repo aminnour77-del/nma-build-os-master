@@ -1644,6 +1644,461 @@ app.get(
 );
 
 
+
+// ============================================================
+// NMA BUILD OS — QUALITY GATE v1
+//
+// Controllo automatico PRE-VALIDAZIONE.
+//
+// IMPORTANTE:
+// questo modulo NON dichiara conformità normativa/HSE.
+// I controlli HSE dipendono dalle procedure applicabili,
+// dal committente e dal contesto reale di cantiere.
+// ============================================================
+
+app.get(
+    '/api/quality-gate',
+    requireAuth,
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+    async (req,res)=>{
+
+        try{
+
+            const filtro={};
+
+            const cantiere=
+                String(
+                    req.query.cantiere || ''
+                ).trim();
+
+            if(cantiere){
+                filtro.id_cantiere=
+                    cantiere;
+            }
+
+            const interventi=
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(100)
+                    .lean();
+
+            const ids=
+                interventi
+                    .map(
+                        x=>String(
+                            x.id_intervento || ''
+                        )
+                    )
+                    .filter(Boolean);
+
+            // ----------------------------------------------
+            // EVIDENZE PER INTERVENTO
+            // ----------------------------------------------
+
+            const evidenzeAgg=
+                ids.length
+                    ? await Evidenza.aggregate([
+                        {
+                            $match:{
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            }
+                        },
+                        {
+                            $group:{
+                                _id:
+                                    '$id_intervento',
+                                totale:{
+                                    $sum:1
+                                }
+                            }
+                        }
+                    ])
+                    : [];
+
+            const evidenzeMap=
+                new Map(
+                    evidenzeAgg.map(
+                        x=>[
+                            String(x._id),
+                            Number(x.totale || 0)
+                        ]
+                    )
+                );
+
+            // ----------------------------------------------
+            // AS-BUILT PER INTERVENTO
+            // ----------------------------------------------
+
+            const asbuiltIds=
+                ids.map(
+                    id=>'ASB-'+id
+                );
+
+            const tratti=
+                asbuiltIds.length
+                    ? await TrattoRete
+                        .find({
+                            id_tratto:{
+                                $in:asbuiltIds
+                            }
+                        })
+                        .select({
+                            _id:0,
+                            id_tratto:1,
+                            qualita_gps:1,
+                            accuratezza_massima_m:1,
+                            sorgente_gps:1,
+                            lunghezza_gps_m:1,
+                            lunghezza_misurata_m:1
+                        })
+                        .lean()
+                    : [];
+
+            const asbuiltMap=
+                new Map(
+                    tratti.map(
+                        x=>[
+                            String(
+                                x.id_tratto || ''
+                            ).replace(
+                                /^ASB-/,
+                                ''
+                            ),
+                            x
+                        ]
+                    )
+                );
+
+            // ----------------------------------------------
+            // VALUTAZIONE
+            // ----------------------------------------------
+
+            const risultati=
+                interventi.map(
+                    intervento=>{
+
+                        const id=
+                            String(
+                                intervento
+                                    .id_intervento ||
+                                ''
+                            );
+
+                        const base=
+                            nmaValidaInterventoCampoServer(
+                                intervento
+                            );
+
+                        const bloccanti=[
+                            ...(
+                                Array.isArray(
+                                    base.errori
+                                )
+                                    ? base.errori
+                                    : []
+                            )
+                        ];
+
+                        const avvisi=[
+                            ...(
+                                Array.isArray(
+                                    base.avvisi
+                                )
+                                    ? base.avvisi
+                                    : []
+                            )
+                        ];
+
+                        const evidenze=
+                            evidenzeMap.get(id) || 0;
+
+                        const asbuilt=
+                            asbuiltMap.get(id) || null;
+
+                        // ----------------------------------
+                        // STATO WORKFLOW
+                        // ----------------------------------
+
+                        if(
+                            intervento.stato ===
+                            'da_correggere'
+                        ){
+                            bloccanti.push(
+                                'Intervento ancora in correzione'
+                            );
+                        }
+
+                        // ----------------------------------
+                        // EVIDENZE
+                        // ----------------------------------
+
+                        if(evidenze===0){
+
+                            avvisi.push(
+                                'Nessuna evidenza foto/documento caricata'
+                            );
+                        }
+
+                        // ----------------------------------
+                        // COLLAUDO
+                        // Nessun valore tecnico viene
+                        // inventato dal software.
+                        // ----------------------------------
+
+                        const collaudoEsito=
+                            String(
+                                intervento
+                                    .collaudo
+                                    ?.esito ||
+                                ''
+                            ).trim();
+
+                        const strumento=
+                            String(
+                                intervento
+                                    .collaudo
+                                    ?.strumento ||
+                                ''
+                            ).trim();
+
+                        const pressione=
+                            Number(
+                                intervento
+                                    .collaudo
+                                    ?.pressione ||
+                                0
+                            );
+
+                        if(!collaudoEsito){
+
+                            avvisi.push(
+                                'Esito collaudo non registrato'
+                            );
+                        }
+
+                        if(
+                            collaudoEsito &&
+                            !strumento
+                        ){
+
+                            avvisi.push(
+                                'Identificativo strumento di collaudo assente'
+                            );
+                        }
+
+                        if(
+                            collaudoEsito &&
+                            !(pressione>0)
+                        ){
+
+                            avvisi.push(
+                                'Valore pressione collaudo non disponibile'
+                            );
+                        }
+
+                        // ----------------------------------
+                        // AS-BUILT
+                        // ----------------------------------
+
+                        if(!asbuilt){
+
+                            avvisi.push(
+                                'Tracciato As-Built non disponibile'
+                            );
+
+                        }else{
+
+                            const accuracy=
+                                Number(
+                                    asbuilt
+                                        .accuratezza_massima_m ||
+                                    0
+                                );
+
+                            if(
+                                asbuilt.sorgente_gps ===
+                                    'smartphone' &&
+                                accuracy>10
+                            ){
+
+                                avvisi.push(
+                                    'As-Built smartphone con posizione indicativa/scarsa'
+                                );
+                            }
+                        }
+
+                        // ----------------------------------
+                        // DOSSIER
+                        // ----------------------------------
+
+                        const dossierChiuso=
+                            intervento
+                                .dossier_chiusura
+                                ?.chiuso === true;
+
+                        const pronto=
+                            !dossierChiuso &&
+                            bloccanti.length===0;
+
+                        return {
+
+                            id_intervento:id,
+
+                            id_cantiere:
+                                intervento
+                                    .id_cantiere ||
+                                '',
+
+                            operatore:
+                                intervento
+                                    .operatore ||
+                                '',
+
+                            squadra:
+                                intervento
+                                    .squadra ||
+                                '',
+
+                            stato:
+                                intervento
+                                    .stato ||
+                                '',
+
+                            pronto_prevalidazione:
+                                pronto,
+
+                            dossier_chiuso:
+                                dossierChiuso,
+
+                            bloccanti,
+                            avvisi,
+
+                            controlli:{
+
+                                dati_essenziali:
+                                    base.ok === true,
+
+                                evidenze:
+                                    evidenze,
+
+                                collaudo_presente:
+                                    Boolean(
+                                        collaudoEsito
+                                    ),
+
+                                strumento_collaudo:
+                                    Boolean(
+                                        strumento
+                                    ),
+
+                                asbuilt_presente:
+                                    Boolean(
+                                        asbuilt
+                                    ),
+
+                                sorgente_posizione:
+                                    asbuilt
+                                        ?.sorgente_gps ||
+                                    '',
+
+                                qualita_posizione:
+                                    asbuilt
+                                        ?.qualita_gps ||
+                                    ''
+                            },
+
+                            /*
+                             * NON è un giudizio di conformità.
+                             */
+                            hse:{
+                                verificato_automaticamente:
+                                    false,
+
+                                stato:
+                                    'DA VERIFICARE SECONDO PROCEDURA APPLICABILE'
+                            },
+
+                            aggiornato_il:
+                                intervento
+                                    .aggiornato_il ||
+                                intervento
+                                    .creato_il ||
+                                null
+                        };
+                    }
+                );
+
+            return res.json({
+
+                ok:true,
+
+                totale:
+                    risultati.length,
+
+                pronti:
+                    risultati.filter(
+                        x=>
+                            x.pronto_prevalidazione &&
+                            !x.dossier_chiuso
+                    ).length,
+
+                con_blocchi:
+                    risultati.filter(
+                        x=>
+                            x.bloccanti.length>0
+                    ).length,
+
+                con_avvisi:
+                    risultati.filter(
+                        x=>
+                            x.avvisi.length>0
+                    ).length,
+
+                risultati
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Quality Gate:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Quality Gate'
+            });
+        }
+    }
+);
+
+
+app.get(
+    '/quality',
+    requireAuth,
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/quality_v1.html'
+        );
+    }
+);
+
+
 // ============================================================
 // NMA BUILD OS — SUPERVISORE VALIDAZIONE v1
 // ============================================================
