@@ -79,6 +79,55 @@ const TrattoReteSchema = new mongoose.Schema({
   collection: 'tratti_rete'
 });
 
+
+// ============================================================
+// NMA BUILD OS — GPS QUALITY v1
+// La geometria GPS e la misura metrica sono dati distinti.
+// ============================================================
+
+TrattoReteSchema.add({
+
+    sorgente_gps: {
+        type: String,
+        enum: [
+            'smartphone',
+            'gnss',
+            'rtk'
+        ],
+        default: 'smartphone'
+    },
+
+    accuratezza_media_m: {
+        type: Number,
+        default: 0
+    },
+
+    accuratezza_massima_m: {
+        type: Number,
+        default: 0
+    },
+
+    qualita_gps: {
+        type: String,
+        default: 'sconosciuta'
+    },
+
+    gps_idoneo_misura: {
+        type: Boolean,
+        default: false
+    },
+
+    lunghezza_gps_m: {
+        type: Number,
+        default: 0
+    },
+
+    lunghezza_misurata_m: {
+        type: Number,
+        default: 0
+    }
+});
+
 const TrattoRete = mongoose.model('TrattoRete', TrattoReteSchema);
 
 // -------------------------------------------------------------
@@ -2553,6 +2602,114 @@ app.post(
                     req.body?.pressione
                 );
 
+            // ------------------------------------------------
+            // QUALITÀ DELLA SORGENTE GPS
+            // ------------------------------------------------
+
+            const sorgenteRaw =
+                String(
+                    req.body?.sorgente_gps ||
+                    'smartphone'
+                )
+                .trim()
+                .toLowerCase();
+
+            const sorgenteGps =
+                [
+                    'smartphone',
+                    'gnss',
+                    'rtk'
+                ].includes(sorgenteRaw)
+                    ? sorgenteRaw
+                    : 'smartphone';
+
+            const accuratezze =
+                puntiRaw
+                    .map(
+                        p => Number(
+                            p?.accuracy
+                        )
+                    )
+                    .filter(
+                        x =>
+                            Number.isFinite(x) &&
+                            x >= 0
+                    );
+
+            const accuracyMedia =
+                accuratezze.length
+                    ? accuratezze.reduce(
+                        (a,b) => a+b,
+                        0
+                    ) / accuratezze.length
+                    : 0;
+
+            const accuracyMax =
+                accuratezze.length
+                    ? Math.max(
+                        ...accuratezze
+                    )
+                    : 0;
+
+            let qualitaGps =
+                'sconosciuta';
+
+            if (accuratezze.length) {
+
+                if (accuracyMax <= 0.10) {
+                    qualitaGps =
+                        'precisione_rtk';
+                } else if (accuracyMax <= 1) {
+                    qualitaGps =
+                        'alta';
+                } else if (accuracyMax <= 3) {
+                    qualitaGps =
+                        'buona';
+                } else if (accuracyMax <= 10) {
+                    qualitaGps =
+                        'indicativa';
+                } else {
+                    qualitaGps =
+                        'scarsa';
+                }
+            }
+
+            /*
+             * IMPORTANTE:
+             * non trasformiamo softwaremente un GPS smartphone
+             * in uno strumento metrico.
+             *
+             * Questa flag descrive solo la qualità tecnica
+             * dichiarata dalla sorgente, non una certificazione.
+             */
+            const gpsIdoneoMisura =
+                (
+                    sorgenteGps === 'rtk' &&
+                    accuracyMax > 0 &&
+                    accuracyMax <= 0.10
+                ) ||
+                (
+                    sorgenteGps === 'gnss' &&
+                    accuracyMax > 0 &&
+                    accuracyMax <= 1
+                );
+
+            const lunghezzaMisurataRaw =
+                Number(
+                    req.body?.lunghezza_misurata_m
+                );
+
+            const lunghezzaMisurata =
+                Number.isFinite(
+                    lunghezzaMisurataRaw
+                )
+                    ? Math.max(
+                        0,
+                        lunghezzaMisurataRaw
+                    )
+                    : 0;
+
+
             const tratto =
                 await TrattoRete.create({
 
@@ -2592,6 +2749,39 @@ app.post(
                         ' punti GPS · ' +
                         lunghezza.toFixed(2) +
                         ' m',
+
+                    sorgente_gps:
+                        sorgenteGps,
+
+                    accuratezza_media_m:
+                        Number(
+                            accuracyMedia
+                                .toFixed(2)
+                        ),
+
+                    accuratezza_massima_m:
+                        Number(
+                            accuracyMax
+                                .toFixed(2)
+                        ),
+
+                    qualita_gps:
+                        qualitaGps,
+
+                    gps_idoneo_misura:
+                        gpsIdoneoMisura,
+
+                    lunghezza_gps_m:
+                        Number(
+                            lunghezza
+                                .toFixed(2)
+                        ),
+
+                    lunghezza_misurata_m:
+                        Number(
+                            lunghezzaMisurata
+                                .toFixed(2)
+                        ),
 
                     ultimo_aggiornamento:
                         new Date()

@@ -312,6 +312,60 @@ button{
 
   <h2>TRACCIATO AS-BUILT GPS</h2>
 
+  <!-- NMA_GPS_QUALITY_V1 -->
+
+  <div style="
+    margin:8px 0 12px;
+    padding:10px;
+    border:1px solid #31515a;
+    border-radius:8px;
+    background:#08161c;
+  ">
+
+    <label style="
+      display:block;
+      margin-bottom:6px;
+      font-size:11px;
+      color:#8ba3aa;
+    ">
+      SORGENTE POSIZIONE
+    </label>
+
+    <select
+      id="sorgenteGps"
+      style="width:100%">
+
+      <option value="smartphone">
+        Smartphone — posizione indicativa
+      </option>
+
+      <option value="gnss">
+        GNSS esterno
+      </option>
+
+      <option value="rtk">
+        GNSS / RTK
+      </option>
+
+    </select>
+
+  </div>
+
+  <div
+    id="gpsQualityWarning"
+    style="
+      margin-bottom:12px;
+      padding:10px;
+      border-radius:8px;
+      background:#3a2910;
+      color:#ffbd55;
+      font-size:12px;
+      line-height:1.45;
+    ">
+    GPS smartphone: il tracciato è indicativo.
+    I metri posati devono essere rilevati con una misura reale.
+  </div>
+
   <div style="font-size:12px;color:#87a3aa">
     Registra il percorso reale della tubazione come
     sequenza di coordinate GPS.
@@ -861,7 +915,17 @@ async function inviaPayloadCampo(payload){
                 : 'online',
 
             coordinates:
-              payload.tracciato
+              payload.tracciato,
+
+            sorgente_gps:
+              payload.tracciato?.[0]?.source ||
+              'smartphone',
+
+            lunghezza_misurata_m:
+              Number(
+                payload.tubazione?.metri ||
+                0
+              )
           })
         }
       );
@@ -1019,6 +1083,72 @@ function lunghezzaTracciato(){
   return totale;
 }
 
+
+function qualitaGpsCorrente(){
+
+  if(!tracciatoPunti.length){
+
+    return {
+      livello:'NESSUN DATO',
+      max:0,
+      media:0,
+      classe:'warn'
+    };
+  }
+
+  const valori=
+    tracciatoPunti
+      .map(
+        p=>Number(p.accuracy)
+      )
+      .filter(
+        x=>
+          Number.isFinite(x) &&
+          x>=0
+      );
+
+  if(!valori.length){
+
+    return {
+      livello:'SCONOSCIUTA',
+      max:0,
+      media:0,
+      classe:'warn'
+    };
+  }
+
+  const max=
+    Math.max(...valori);
+
+  const media=
+    valori.reduce(
+      (a,b)=>a+b,
+      0
+    ) / valori.length;
+
+  let livello='SCARSA';
+
+  if(max<=0.10){
+    livello='RTK';
+  }else if(max<=1){
+    livello='ALTA';
+  }else if(max<=3){
+    livello='BUONA';
+  }else if(max<=10){
+    livello='INDICATIVA';
+  }
+
+  return {
+    livello,
+    max,
+    media,
+    classe:
+      max<=3
+        ? 'ok'
+        : 'warn'
+  };
+}
+
 function aggiornaTracciatoUI(){
 
   const el=
@@ -1035,29 +1165,130 @@ function aggiornaTracciatoUI(){
       tracciatoPunti.length-1
     ];
 
+  const q=
+    qualitaGpsCorrente();
+
   let testo=
     'Punti: '+
     tracciatoPunti.length+
-    ' · Lunghezza GPS: '+
+    ' · Lunghezza GPS indicativa: '+
     lunghezzaTracciato().toFixed(2)+
     ' m';
 
   if(ultimo){
+
     testo+=
       ' · Accuratezza ultimo: '+
       Math.round(
         ultimo.accuracy || 0
       )+
       ' m';
+
+    testo+=
+      ' · Qualità: '+
+      q.livello;
   }
 
   el.textContent=testo;
+
+  const warning=
+    document.getElementById(
+      'gpsQualityWarning'
+    );
+
+  if(!warning){
+    return;
+  }
+
+  const source=
+    document.getElementById(
+      'sorgenteGps'
+    )?.value ||
+    'smartphone';
+
+  if(source==='smartphone'){
+
+    warning.style.background=
+      '#3a2910';
+
+    warning.style.color=
+      '#ffbd55';
+
+    warning.textContent=
+      'GPS SMARTPHONE — POSIZIONE INDICATIVA. '+
+      'Non usare la lunghezza GPS come misura dei metri posati. '+
+      (
+        q.max
+          ? 'Accuratezza peggiore acquisita: '+
+            q.max.toFixed(1)+
+            ' m.'
+          : ''
+      );
+
+    return;
+  }
+
+  if(
+    source==='rtk' &&
+    q.max>0 &&
+    q.max<=0.10
+  ){
+
+    warning.style.background=
+      '#0b3a26';
+
+    warning.style.color=
+      '#20e88b';
+
+    warning.textContent=
+      'SORGENTE RTK — qualità posizione elevata ('+
+      q.max.toFixed(2)+
+      ' m dichiarati dal dispositivo).';
+
+    return;
+  }
+
+  if(
+    source==='gnss' &&
+    q.max>0 &&
+    q.max<=1
+  ){
+
+    warning.style.background=
+      '#0b3a26';
+
+    warning.style.color=
+      '#20e88b';
+
+    warning.textContent=
+      'GNSS ESTERNO — qualità posizione elevata ('+
+      q.max.toFixed(2)+
+      ' m dichiarati dal dispositivo).';
+
+    return;
+  }
+
+  warning.style.background=
+    '#3a2910';
+
+  warning.style.color=
+    '#ffbd55';
+
+  warning.textContent=
+    'ATTENZIONE — la precisione dichiarata dalla sorgente '+
+    'non è sufficiente per considerare il GPS una misura metrica.';
 }
+
 
 function registraCoordinate(
   coords,
   forza=false
 ){
+
+  const accuracy=
+    Number(
+      coords.accuracy || 0
+    );
 
   const punto={
 
@@ -1075,10 +1306,18 @@ function registraCoordinate(
         : 0,
 
     accuracy:
-      Number(coords.accuracy || 0),
+      Number.isFinite(accuracy)
+        ? accuracy
+        : 0,
 
     timestamp:
-      new Date().toISOString()
+      new Date().toISOString(),
+
+    source:
+      document.getElementById(
+        'sorgenteGps'
+      )?.value ||
+      'smartphone'
   };
 
   if(
@@ -1088,39 +1327,124 @@ function registraCoordinate(
     return;
   }
 
+  /*
+   * Rifiutiamo letture estremamente degradate.
+   * Non cerchiamo di inventare precisione che il dispositivo
+   * non possiede.
+   */
+  if(
+    !forza &&
+    punto.accuracy > 25
+  ){
+
+    status(
+      'GPS troppo impreciso ('+
+      Math.round(punto.accuracy)+
+      ' m): punto ignorato',
+      'warn'
+    );
+
+    return;
+  }
+
   const ultimo=
     tracciatoPunti[
       tracciatoPunti.length-1
     ];
 
-  if(
-    ultimo &&
-    !forza &&
-    distanzaGPS(
-      ultimo,
-      punto
-    ) < 2
-  ){
-    return;
+  if(ultimo){
+
+    const distanza=
+      distanzaGPS(
+        ultimo,
+        punto
+      );
+
+    const t1=
+      new Date(
+        ultimo.timestamp
+      ).getTime();
+
+    const t2=
+      new Date(
+        punto.timestamp
+      ).getTime();
+
+    const secondi=
+      Math.max(
+        0.1,
+        (t2-t1)/1000
+      );
+
+    const velocita=
+      distanza/secondi;
+
+    /*
+     * Salto palesemente incompatibile con un operatore
+     * che sta eseguendo un rilievo a piedi.
+     */
+    if(
+      !forza &&
+      velocita > 8
+    ){
+
+      return;
+    }
+
+    /*
+     * Filtro adattivo del drift.
+     *
+     * Con GPS poco preciso non sommiamo continuamente
+     * oscillazioni di pochi metri mentre l'operatore è fermo.
+     */
+    const sogliaMovimento=
+      Math.max(
+        2,
+        Math.min(
+          8,
+          Math.max(
+            Number(
+              ultimo.accuracy || 0
+            ),
+            Number(
+              punto.accuracy || 0
+            )
+          ) * 0.60
+        )
+      );
+
+    if(
+      !forza &&
+      distanza < sogliaMovimento
+    ){
+
+      return;
+    }
   }
 
   tracciatoPunti.push(
     punto
   );
 
-  // Protezione da tracciati eccessivi
-  if(tracciatoPunti.length>2000){
+  if(
+    tracciatoPunti.length>2000
+  ){
     tracciatoPunti.shift();
   }
 
-  // Manteniamo aggiornato anche il GPS puntuale
-  document.getElementById('lat').value=
+  document.getElementById(
+    'lat'
+  ).value=
     punto.lat.toFixed(7);
 
-  document.getElementById('lng').value=
+  document.getElementById(
+    'lng'
+  ).value=
     punto.lng.toFixed(7);
 
-  document.getElementById('accuracy').value=
+  document.getElementById(
+    'accuracy'
+  ).value=
     Math.round(
       punto.accuracy
     );
@@ -1555,6 +1879,13 @@ async function logout(){
     location.href='/';
   }
 }
+
+document
+  .getElementById('sorgenteGps')
+  ?.addEventListener(
+    'change',
+    aggiornaTracciatoUI
+  );
 
 caricaCantieri();
 
