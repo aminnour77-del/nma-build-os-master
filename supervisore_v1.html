@@ -100,6 +100,33 @@ textarea{
   .grid{grid-template-columns:1fr}
   .actions{flex-direction:column}
 }
+
+/* NMA_EVIDENZE_SUPERVISORE_V1 */
+.evidenceBox{
+  margin-top:10px;
+  padding:10px;
+  background:#08161c;
+  border-radius:8px;
+}
+.evidenceItem{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid #1c3740;
+}
+.evidenceItem:last-child{
+  border-bottom:0;
+}
+.evidenceItem img{
+  width:72px;
+  height:55px;
+  object-fit:cover;
+  border-radius:7px;
+}
+.evidenceItem a{
+  color:#23d8ff;
+}
 </style>
 </head>
 
@@ -207,7 +234,19 @@ async function carica(){
           placeholder="Note del supervisore..."
         >${esc(x.validazione?.note || '')}</textarea>
 
+        <div
+          id="evidenze-${id}"
+          class="evidenceBox"
+          style="display:none">
+        </div>
+
         <div class="actions">
+
+          <button
+            onclick="mostraEvidenze('${id}')">
+            📎 EVIDENZE
+          </button>
+
           <button class="approve"
             onclick="valida('${id}','validato')">
             ✓ VALIDA
@@ -224,6 +263,99 @@ async function carica(){
   }catch(e){
     box.innerHTML=
       '<div class="empty">Errore caricamento interventi.</div>';
+  }
+}
+
+
+async function mostraEvidenze(id){
+
+  const box=
+    document.getElementById(
+      'evidenze-'+id
+    );
+
+  if(!box){
+    return;
+  }
+
+  if(box.style.display==='block'){
+    box.style.display='none';
+    return;
+  }
+
+  box.style.display='block';
+  box.innerHTML='Caricamento evidenze...';
+
+  try{
+
+    const r=
+      await fetch(
+        '/api/interventi/' +
+        encodeURIComponent(id) +
+        '/evidenze'
+      );
+
+    const data=
+      await r.json();
+
+    if(!r.ok || !data.ok){
+      throw new Error();
+    }
+
+    if(!data.evidenze.length){
+      box.innerHTML=
+        'Nessuna evidenza collegata.';
+      return;
+    }
+
+    box.innerHTML=
+      data.evidenze.map(e=>{
+
+        const url=
+          '/api/evidenze/' +
+          encodeURIComponent(
+            e.id_evidenza
+          ) +
+          '/file';
+
+        const preview=
+          e.tipo==='foto'
+            ? '<img src="'+url+'" alt="evidenza">'
+            : '<span>📄 PDF</span>';
+
+        return `
+          <div class="evidenceItem">
+            ${preview}
+
+            <div>
+              <a
+                href="${url}"
+                target="_blank"
+                rel="noopener">
+                ${esc(e.nome_file)}
+              </a>
+
+              <div class="label">
+                ${esc(e.tipo)} ·
+                ${(Number(e.dimensione)/1024).toFixed(1)} KB
+              </div>
+
+              <div class="label">
+                SHA-256:
+                ${esc(
+                  String(e.sha256)
+                    .slice(0,16)
+                )}…
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+  }catch{
+
+    box.innerHTML=
+      'Errore caricamento evidenze.';
   }
 }
 

@@ -357,6 +357,27 @@ button{
   </div>
 </div>
 
+<!-- NMA_EVIDENZE_V1 -->
+<div class="card">
+  <h2>EVIDENZE FOTO / DOCUMENTI</h2>
+
+  <label>
+    Foto o PDF — massimo 15 MB per file
+  </label>
+
+  <input
+    id="evidenze"
+    type="file"
+    accept="image/jpeg,image/png,image/webp,application/pdf"
+    multiple
+  >
+
+  <div style="margin-top:8px;color:#87a3aa;font-size:12px">
+    Le evidenze vengono collegate all'ID intervento
+    e protette con hash SHA-256.
+  </div>
+</div>
+
 <div class="card">
   <h2>NOTE OPERATIVE</h2>
   <textarea id="note"
@@ -654,6 +675,75 @@ function nuovoIdentificativo(){
   ).textContent=idIntervento;
 }
 
+
+async function caricaEvidenze(interventoId){
+
+  const input=
+    document.getElementById('evidenze');
+
+  const files=
+    Array.from(
+      input?.files || []
+    );
+
+  if(!files.length){
+    return 0;
+  }
+
+  let completati=0;
+
+  for(const file of files){
+
+    if(file.size > 15*1024*1024){
+      throw new Error(
+        'File troppo grande: '+file.name
+      );
+    }
+
+    const form=
+      new FormData();
+
+    form.append(
+      'file',
+      file,
+      file.name
+    );
+
+    const r=
+      await fetch(
+        '/api/interventi/' +
+        encodeURIComponent(
+          interventoId
+        ) +
+        '/evidenze',
+        {
+          method:'POST',
+          body:form
+        }
+      );
+
+    let data={};
+
+    try{
+      data=await r.json();
+    }catch{}
+
+    if(!r.ok || !data.ok){
+      throw new Error(
+        data.error ||
+        'Upload evidenza fallito: '+
+        file.name
+      );
+    }
+
+    completati++;
+  }
+
+  input.value='';
+
+  return completati;
+}
+
 async function registraIntervento(){
 
   const cantiere =
@@ -740,12 +830,36 @@ async function registraIntervento(){
 
     await inviaPayloadCampo(payload);
 
-    status(
-      '✓ INTERVENTO REGISTRATO E SINCRONIZZATO',
-      'ok'
-    );
+    try{
 
-    nuovoIdentificativo();
+      const nEvidenze=
+        await caricaEvidenze(
+          payload.id_intervento
+        );
+
+      status(
+        '✓ INTERVENTO REGISTRATO E SINCRONIZZATO' +
+        (
+          nEvidenze
+            ? ' — '+nEvidenze+' evidenze caricate'
+            : ''
+        ),
+        'ok'
+      );
+
+      nuovoIdentificativo();
+
+    }catch(uploadError){
+
+      status(
+        'Intervento registrato. Evidenze da completare: ' +
+        uploadError.message +
+        '. Premi REGISTRA nuovamente per riprovare.',
+        'warn'
+      );
+
+      return;
+    }
 
   }catch(e){
 

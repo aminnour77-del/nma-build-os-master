@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const multer = require('multer');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
@@ -544,6 +545,151 @@ async function registraAudit({
     }
 }
 
+
+// ============================================================
+// NMA BUILD OS — EVIDENZE v1
+// File binari in MongoDB GridFS + metadati + SHA-256
+// ============================================================
+
+const EvidenzaSchema = new mongoose.Schema({
+
+    id_evidenza: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
+
+    id_intervento: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    id_cantiere: {
+        type: String,
+        default: '',
+        index: true
+    },
+
+    nome_file: {
+        type: String,
+        required: true
+    },
+
+    mime_type: {
+        type: String,
+        required: true
+    },
+
+    dimensione: {
+        type: Number,
+        required: true
+    },
+
+    tipo: {
+        type: String,
+        enum: ['foto', 'documento'],
+        required: true
+    },
+
+    sha256: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    gridfs_file_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+
+    caricato_da_ruolo: {
+        type: String,
+        default: ''
+    },
+
+    operatore: {
+        type: String,
+        default: ''
+    },
+
+    squadra: {
+        type: String,
+        default: ''
+    },
+
+    creato_il: {
+        type: Date,
+        default: Date.now,
+        index: true
+    }
+
+}, {
+    collection: 'evidenze'
+});
+
+EvidenzaSchema.index(
+    {
+        id_intervento: 1,
+        sha256: 1
+    },
+    {
+        unique: true
+    }
+);
+
+const Evidenza =
+    mongoose.models.Evidenza ||
+    mongoose.model(
+        'Evidenza',
+        EvidenzaSchema,
+        'evidenze'
+    );
+
+const evidenceUpload = multer({
+
+    storage:
+        multer.memoryStorage(),
+
+    limits: {
+        fileSize:
+            15 * 1024 * 1024
+    },
+
+    fileFilter: (req, file, cb) => {
+
+        const allowed = [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'application/pdf'
+        ];
+
+        cb(
+            null,
+            allowed.includes(file.mimetype)
+        );
+    }
+});
+
+function evidenceBucket() {
+
+    if (!mongoose.connection.db) {
+        throw new Error(
+            'MongoDB non disponibile'
+        );
+    }
+
+    return new mongoose.mongo.GridFSBucket(
+        mongoose.connection.db,
+        {
+            bucketName:
+                'evidenze_files'
+        }
+    );
+}
+
 const InterventoCampoSchema = new mongoose.Schema({
     id_intervento: {
         type: String,
@@ -1075,6 +1221,372 @@ app.get(
         res.sendFile(
             __dirname + '/supervisore_v1.html'
         );
+    }
+);
+
+
+app.post(
+    '/api/interventi/:id/evidenze',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    evidenceUpload.single('file'),
+    async (req, res) => {
+
+        let gridId = null;
+
+        try {
+
+            const idIntervento =
+                String(
+                    req.params.id || ''
+                ).trim();
+
+            const intervento =
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            idIntervento
+                    })
+                    .lean();
+
+            if (!intervento) {
+                return res.status(404).json({
+                    ok: false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({
+                    ok: false,
+                    error:
+                        'File mancante o formato non consentito'
+                });
+            }
+
+            const hash =
+                crypto
+                    .createHash('sha256')
+                    .update(req.file.buffer)
+                    .digest('hex');
+
+            const esistente =
+                await Evidenza.findOne({
+                    id_intervento:
+                        idIntervento,
+                    sha256:
+                        hash
+                }).lean();
+
+            if (esistente) {
+                return res.status(200).json({
+                    ok: true,
+                    idempotente: true,
+                    evidenza: esistente
+                });
+            }
+
+            const nomeFile =
+                String(
+                    req.file.originalname ||
+                    'evidenza'
+                )
+                .replace(
+                    /[\r\n]/g,
+                    ''
+                )
+                .slice(
+                    0,
+                    180
+                );
+
+            const tipo =
+                req.file.mimetype
+                    .startsWith('image/')
+                    ? 'foto'
+                    : 'documento';
+
+            const bucket =
+                evidenceBucket();
+
+            gridId =
+                await new Promise(
+                    (resolve, reject) => {
+
+                        const stream =
+                            bucket.openUploadStream(
+                                nomeFile,
+                                {
+                                    contentType:
+                                        req.file.mimetype,
+
+                                    metadata: {
+                                        id_intervento:
+                                            idIntervento,
+                                        id_cantiere:
+                                            intervento.id_cantiere,
+                                        sha256:
+                                            hash
+                                    }
+                                }
+                            );
+
+                        stream.on(
+                            'error',
+                            reject
+                        );
+
+                        stream.on(
+                            'finish',
+                            () =>
+                                resolve(
+                                    stream.id
+                                )
+                        );
+
+                        stream.end(
+                            req.file.buffer
+                        );
+                    }
+                );
+
+            const evidenza =
+                await Evidenza.create({
+
+                    id_evidenza:
+                        crypto.randomUUID(),
+
+                    id_intervento:
+                        idIntervento,
+
+                    id_cantiere:
+                        String(
+                            intervento.id_cantiere ||
+                            ''
+                        ),
+
+                    nome_file:
+                        nomeFile,
+
+                    mime_type:
+                        req.file.mimetype,
+
+                    dimensione:
+                        req.file.size,
+
+                    tipo,
+
+                    sha256:
+                        hash,
+
+                    gridfs_file_id:
+                        gridId,
+
+                    caricato_da_ruolo:
+                        String(
+                            req.session.role ||
+                            ''
+                        ),
+
+                    operatore:
+                        String(
+                            intervento.operatore ||
+                            ''
+                        ),
+
+                    squadra:
+                        String(
+                            intervento.squadra ||
+                            ''
+                        )
+                });
+
+            await registraAudit({
+
+                evento:
+                    'EVIDENZA_CARICATA',
+
+                intervento,
+
+                ruolo:
+                    String(
+                        req.session.role ||
+                        ''
+                    ),
+
+                origine:
+                    'evidenza',
+
+                stato:
+                    String(
+                        intervento.stato ||
+                        ''
+                    ),
+
+                note:
+                    tipo +
+                    ': ' +
+                    nomeFile +
+                    ' sha256:' +
+                    hash
+            });
+
+            return res.status(201).json({
+                ok: true,
+                idempotente: false,
+                evidenza
+            });
+
+        } catch (error) {
+
+            if (gridId) {
+                try {
+                    await evidenceBucket()
+                        .delete(gridId);
+                } catch {}
+            }
+
+            if (error?.code === 11000) {
+
+                return res.status(200).json({
+                    ok: true,
+                    idempotente: true
+                });
+            }
+
+            console.error(
+                'Errore upload evidenza:',
+                error
+            );
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore caricamento evidenza'
+            });
+        }
+    }
+);
+
+app.get(
+    '/api/interventi/:id/evidenze',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const evidenze =
+                await Evidenza
+                    .find({
+                        id_intervento:
+                            String(
+                                req.params.id ||
+                                ''
+                            )
+                    })
+                    .sort({
+                        creato_il: 1
+                    })
+                    .lean();
+
+            return res.json({
+                ok: true,
+                totale:
+                    evidenze.length,
+                evidenze
+            });
+
+        } catch (error) {
+
+            return res.status(500).json({
+                ok: false,
+                error:
+                    'Errore lettura evidenze'
+            });
+        }
+    }
+);
+
+app.get(
+    '/api/evidenze/:id/file',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
+
+        try {
+
+            const evidenza =
+                await Evidenza
+                    .findOne({
+                        id_evidenza:
+                            String(
+                                req.params.id ||
+                                ''
+                            )
+                    })
+                    .lean();
+
+            if (!evidenza) {
+
+                return res.status(404).json({
+                    ok: false,
+                    error:
+                        'Evidenza non trovata'
+                });
+            }
+
+            res.setHeader(
+                'Content-Type',
+                evidenza.mime_type
+            );
+
+            res.setHeader(
+                'Content-Length',
+                String(
+                    evidenza.dimensione
+                )
+            );
+
+            res.setHeader(
+                'Content-Disposition',
+                "inline; filename*=UTF-8''" +
+                encodeURIComponent(
+                    evidenza.nome_file
+                )
+            );
+
+            const stream =
+                evidenceBucket()
+                    .openDownloadStream(
+                        evidenza.gridfs_file_id
+                    );
+
+            stream.on(
+                'error',
+                () => {
+
+                    if (!res.headersSent) {
+                        res.status(404).end();
+                    } else {
+                        res.destroy();
+                    }
+                }
+            );
+
+            stream.pipe(res);
+
+        } catch (error) {
+
+            if (!res.headersSent) {
+                return res.status(500).json({
+                    ok: false,
+                    error:
+                        'Errore lettura file'
+                });
+            }
+        }
     }
 );
 
