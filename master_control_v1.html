@@ -8758,7 +8758,12 @@ setInterval(
    addTube(
     root,
     MAIN_COORDS,
-    .67
+
+    /*
+     Scala VISIVA dimostrativa.
+     NON è il diametro fisico della rete.
+    */
+    3.0
    );
 
 
@@ -8766,7 +8771,11 @@ setInterval(
    addTube(
     root,
     BRANCH_COORDS,
-    .50
+
+    /*
+     Diramazione demo con scala grafica.
+    */
+    2.20
    );
 
 
@@ -9102,7 +9111,11 @@ setInterval(
 
   const layers=[
 
-   'nma-true-pipe-3d',
+   /*
+    Il precedente True3D è un CUSTOM WEBGL layer.
+    Non tocchiamo layout.visibility:
+    durante la DEMO siamo geograficamente altrove.
+   */
 
    'asbuilt-shadow',
    'asbuilt-glow',
@@ -9146,7 +9159,9 @@ setInterval(
 
   const layers=[
 
-   'nma-true-pipe-3d',
+   /*
+    Custom WebGL reale lasciato intatto.
+   */
 
    'asbuilt-shadow',
    'asbuilt-glow',
@@ -9187,11 +9202,11 @@ setInterval(
     45.22803
    ],
 
-   zoom:17.25,
+   zoom:17.65,
 
-   pitch:64,
+   pitch:67,
 
-   bearing:-31,
+   bearing:-34,
 
    duration:1100
   });
@@ -9249,7 +9264,7 @@ setInterval(
    'demoWatermark';
 
   watermark.textContent=
-   'SIMULAZIONE VISIVA · NON È UNA RETE REALE';
+   'DEMO SAN BENIGNO · RETE 3D SINTETICA · NON È UNA RETE REALE';
 
 
   document.body.appendChild(
@@ -9454,18 +9469,12 @@ setInterval(
   hideRealNetwork();
 
 
-  if(
-   map.getLayer(
-    DEMO.layerId
-   )
-  ){
+  /*
+   Il custom layer DEMO usa DEMO.enabled.
+   Nessun setLayoutProperty sul custom WebGL layer.
+  */
 
-   map.setLayoutProperty(
-    DEMO.layerId,
-    'visibility',
-    'visible'
-   );
-  }
+  map.triggerRepaint();
 
 
   document
@@ -9502,6 +9511,34 @@ setInterval(
   zoomDemo();
 
   map.triggerRepaint();
+
+
+  /*
+   Il caricamento delle API reali può terminare subito dopo
+   l'avvio della pagina. Riaffermiamo SOLO la vista DEMO,
+   senza scrivere né modificare alcun dato.
+  */
+
+  setTimeout(
+   ()=>{
+    if(DEMO.enabled){
+     renderDemoInspector();
+     map.triggerRepaint();
+    }
+   },
+   900
+  );
+
+
+  setTimeout(
+   ()=>{
+    if(DEMO.enabled){
+     renderDemoInspector();
+     map.triggerRepaint();
+    }
+   },
+   2200
+  );
  }
 
 
@@ -9510,18 +9547,11 @@ setInterval(
   DEMO.enabled=false;
 
 
-  if(
-   map.getLayer(
-    DEMO.layerId
-   )
-  ){
+  /*
+   DEMO.enabled=false basta a fermare il rendering.
+  */
 
-   map.setLayoutProperty(
-    DEMO.layerId,
-    'visibility',
-    'none'
-   );
-  }
+  map.triggerRepaint();
 
 
   showRealNetwork();
@@ -9622,6 +9652,7 @@ setInterval(
 </script>
 
 <!-- NMA SAN BENIGNO DEMO TRUE3D v1 -->
+<!-- NMA SAN BENIGNO DEMO TRUE3D v2 -->
 
 </body>
 </html>
