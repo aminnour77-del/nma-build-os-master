@@ -13,6 +13,70 @@ const MongoStore =
 
 const app = express();
 
+// ============================================================
+// NMA BUILD OS — SECURITY HEADERS v1
+// ============================================================
+
+app.disable('x-powered-by');
+
+app.use((req,res,next)=>{
+
+    res.setHeader(
+        'X-Content-Type-Options',
+        'nosniff'
+    );
+
+    res.setHeader(
+        'X-Frame-Options',
+        'DENY'
+    );
+
+    res.setHeader(
+        'Referrer-Policy',
+        'strict-origin-when-cross-origin'
+    );
+
+    res.setHeader(
+        'Permissions-Policy',
+        'geolocation=(self), camera=(self), microphone=()'
+    );
+
+    /*
+     * HSTS solo quando la richiesta arriva realmente via HTTPS.
+     * Render usa X-Forwarded-Proto dietro il proxy.
+     */
+    const forwardedProto=
+        String(
+            req.headers['x-forwarded-proto'] || ''
+        )
+        .split(',')[0]
+        .trim()
+        .toLowerCase();
+
+    if(
+        req.secure ||
+        forwardedProto === 'https'
+    ){
+        res.setHeader(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains'
+        );
+    }
+
+    /*
+     * Marker innocuo usato esclusivamente
+     * per riconoscere il nuovo deploy.
+     */
+    res.setHeader(
+        'X-NMA-Security',
+        'hardening-v1'
+    );
+
+    next();
+});
+
+
+
 // --- BLOCCO 1: DATABASE INDUSTRIALE MONGODB (NMA BUILD OS) ---
 const mongoose = require('mongoose');
 
