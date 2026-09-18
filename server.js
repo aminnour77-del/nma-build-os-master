@@ -201,6 +201,18 @@ const io = new Server(server);
 
 app.use(express.json({ limit: '15mb' }));
 
+app.use((req, res, next) => {
+    if (String(req.originalUrl || '').startsWith('/api/')) {
+        res.setHeader(
+            'Cache-Control',
+            'no-store, no-cache, must-revalidate'
+        );
+        res.setHeader('Pragma', 'no-cache');
+    }
+
+    next();
+});
+
 // === NMA AUTH SERVER SIDE ===
 
 if (!process.env.SESSION_SECRET) {
@@ -239,29 +251,54 @@ app.use(session({
     }
 }));
 
+// ============================================================
+// NMA BUILD OS — RESILIENZA v1
+// Sessione/API/RBAC coerenti
+// ============================================================
+
+const nmaIsApiRequest = req =>
+    String(req.originalUrl || '').startsWith('/api/');
+
 const requireAuth = (req, res, next) => {
     if (req.session && req.session.authenticated === true) {
         return next();
     }
 
+    if (nmaIsApiRequest(req)) {
+        return res.status(401).json({
+            ok: false,
+            code: 'AUTH_REQUIRED',
+            error: 'Sessione scaduta o autenticazione richiesta'
+        });
+    }
+
     return res.redirect('/');
 };
 
-
-
-// ============================================================
-// NMA BUILD OS — RBAC FASE 2
-// Controllo autorizzazioni per ruolo
-// ============================================================
-
 const requireRole = (...allowedRoles) => (req, res, next) => {
     if (!req.session || req.session.authenticated !== true) {
+        if (nmaIsApiRequest(req)) {
+            return res.status(401).json({
+                ok: false,
+                code: 'AUTH_REQUIRED',
+                error: 'Sessione scaduta o autenticazione richiesta'
+            });
+        }
+
         return res.redirect('/');
     }
 
     const currentRole = String(req.session.role || '');
 
     if (!allowedRoles.includes(currentRole)) {
+        if (nmaIsApiRequest(req)) {
+            return res.status(403).json({
+                ok: false,
+                code: 'ROLE_FORBIDDEN',
+                error: 'Ruolo non autorizzato'
+            });
+        }
+
         return res.status(403).send('Accesso non autorizzato');
     }
 
@@ -285,7 +322,8 @@ app.get('/api/health', async (req, res) => {
 
         // NMA_SERVER_GUARD_CAPABILITY_V1
         capabilities: {
-            server_guard_v1: true
+            server_guard_v1: true,
+            resilience_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -5690,67 +5728,269 @@ app.get(
     }
 );
 
-app.post('/api/collaudo', async (req, res) => {
-  try {
-    const { cantiere, pressione, lat, lng, strumento, operatore, metriTubo, raccordi, anomalia, offline_id } = req.body;
-    
-    const uniqueOfflineId = offline_id || ('OFF-' + Date.now() + '-' + Math.floor(Math.random()*1000));
-    const pressioneVal = Number(pressione || 22.5);
-    const metriVal = Number(metriTubo || 30);
-    const raccordiVal = Number(raccordi || 2);
-    const segnalazioneAnomalia = anomalia || "Nessuna anomalia";
-    const conteggioAnomalia = (segnalazioneAnomalia !== "Nessuna anomalia") ? 1 : 0;
+app.post(
+    '/api/collaudo',
+    requireAuth,
+    requireRole('operatore', 'supervisore', 'admin'),
+    async (req, res) => {
 
-    const payloadCertificato = { cantiere, operatore, offline_id: uniqueOfflineId, pressione: pressioneVal, metri: metriVal, data: new Date().toISOString() };
-    const hashLegale = require('crypto').createHash('sha256').update(JSON.stringify(payloadCertificato) + Date.now()).digest('hex');
-    const valoreProduzioneEur = (metriVal * 45) + (raccordiVal * 35);
+        try {
+            const body = req.body || {};
 
-    // SALVATAGGIO DEFINITIVO E PULITO SOLO SU MONGODB ATLAS
-    // Salva lo storico del singolo collaudo
-await Collaudo.findOneAndUpdate(
-  { offline_id: uniqueOfflineId },
-  {
-    $setOnInsert: {
-      id_collaudo: 'COL-' + uniqueOfflineId,
-      id_cantiere: cantiere || 'ERG-CANTIERE-01',
-      operatore: operatore || 'Operatore',
-      pressione: pressioneVal,
-      metri_tubo: metriVal,
-      raccordi: raccordiVal,
-      anomalia: segnalazioneAnomalia,
-      lat: Number.isFinite(Number(lat)) ? Number(lat) : undefined,
-      lng: Number.isFinite(Number(lng)) ? Number(lng) : undefined,
-      strumento: strumento || '',
-      offline_id: uniqueOfflineId,
-      hash_sha256: hashLegale,
-      valore_produzione_eur: valoreProduzioneEur,
-      data_ora: new Date()
+            const cantiere =
+                String(body.cantiere || '').trim();
+
+            const operatore =
+                String(body.operatore || '').trim();
+
+            const offlineId =
+                String(body.offline_id || '').trim();
+
+            const pressioneVal =
+                Number(body.pressione);
+
+            const metriVal =
+                Number(body.metriTubo);
+
+            const raccordiVal =
+                Number(body.raccordi);
+
+            const anomalia =
+                String(body.anomalia || '').trim();
+
+            const strumento =
+                String(body.strumento || '').trim();
+
+            const errori = [];
+
+            if (!cantiere) {
+                errori.push('Cantiere obbligatorio');
+            }
+
+            if (!operatore) {
+                errori.push('Operatore obbligatorio');
+            }
+
+            if (!offlineId) {
+                errori.push('offline_id obbligatorio');
+            }
+
+            if (
+                !Number.isFinite(pressioneVal) ||
+                pressioneVal < 0
+            ) {
+                errori.push('Pressione non valida');
+            }
+
+            if (
+                !Number.isFinite(metriVal) ||
+                metriVal < 0
+            ) {
+                errori.push('Metri tubo non validi');
+            }
+
+            if (
+                !Number.isFinite(raccordiVal) ||
+                raccordiVal < 0 ||
+                !Number.isInteger(raccordiVal)
+            ) {
+                errori.push('Numero raccordi non valido');
+            }
+
+            if (errori.length) {
+                return res.status(422).json({
+                    success: false,
+                    code: 'COLLAUDO_VALIDATION',
+                    error:
+                        'Collaudo incompleto o non valido',
+                    errori
+                });
+            }
+
+            const dataOra =
+                new Date();
+
+            const payloadHash = {
+                cantiere,
+                operatore,
+                offline_id: offlineId,
+                pressione: pressioneVal,
+                metri: metriVal,
+                raccordi: raccordiVal,
+                anomalia,
+                strumento,
+                data_ora: dataOra.toISOString()
+            };
+
+            const hashLegale =
+                crypto
+                    .createHash('sha256')
+                    .update(
+                        JSON.stringify(payloadHash)
+                    )
+                    .digest('hex');
+
+            const valoreProduzioneEur =
+                (metriVal * 45) +
+                (raccordiVal * 35);
+
+            const writeResult =
+                await Collaudo.updateOne(
+                    {
+                        offline_id: offlineId
+                    },
+                    {
+                        $setOnInsert: {
+                            id_collaudo:
+                                'COL-' + offlineId,
+
+                            id_cantiere:
+                                cantiere,
+
+                            operatore:
+                                operatore,
+
+                            pressione:
+                                pressioneVal,
+
+                            metri_tubo:
+                                metriVal,
+
+                            raccordi:
+                                raccordiVal,
+
+                            anomalia:
+                                anomalia,
+
+                            lat:
+                                Number.isFinite(
+                                    Number(body.lat)
+                                )
+                                    ? Number(body.lat)
+                                    : undefined,
+
+                            lng:
+                                Number.isFinite(
+                                    Number(body.lng)
+                                )
+                                    ? Number(body.lng)
+                                    : undefined,
+
+                            strumento:
+                                strumento,
+
+                            offline_id:
+                                offlineId,
+
+                            hash_sha256:
+                                hashLegale,
+
+                            valore_produzione_eur:
+                                valoreProduzioneEur,
+
+                            data_ora:
+                                dataOra
+                        }
+                    },
+                    {
+                        upsert: true
+                    }
+                );
+
+            const nuovo =
+                Number(writeResult.upsertedCount || 0) === 1;
+
+            /*
+             * Punto fondamentale:
+             * i KPI del cantiere vengono incrementati
+             * SOLTANTO se il collaudo è stato realmente
+             * inserito per la prima volta.
+             */
+            if (nuovo) {
+                const conteggioAnomalia =
+                    anomalia &&
+                    anomalia !== 'Nessuna anomalia'
+                        ? 1
+                        : 0;
+
+                await Cantiere.findOneAndUpdate(
+                    {
+                        id_cantiere: cantiere
+                    },
+                    {
+                        $inc: {
+                            metri_posati:
+                                metriVal,
+
+                            raccordi:
+                                raccordiVal,
+
+                            anomalie:
+                                conteggioAnomalia
+                        },
+
+                        $set: {
+                            ultimo_aggiornamento:
+                                new Date()
+                        }
+                    },
+                    {
+                        upsert: true,
+                        new: true
+                    }
+                );
+
+                io.emit(
+                    'nuovo_collaudo',
+                    {
+                        cantiere,
+                        metri: metriVal,
+                        offline_id: offlineId
+                    }
+                );
+            }
+
+            const salvato =
+                await Collaudo
+                    .findOne({
+                        offline_id: offlineId
+                    })
+                    .lean();
+
+            return res.json({
+                success: true,
+                idempotente: !nuovo,
+                alert:
+                    Number(salvato?.pressione) < 15,
+                hash:
+                    salvato?.hash_sha256 || hashLegale,
+                valore_eur:
+                    Number(
+                        salvato?.valore_produzione_eur ||
+                        0
+                    ),
+                synced_id:
+                    offlineId
+            });
+
+        } catch (error) {
+            console.error(
+                'Errore /api/collaudo:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    'Errore interno durante il salvataggio del collaudo'
+            });
+        }
     }
-  },
-  { upsert: true, new: true }
 );
-await Cantiere.findOneAndUpdate(
-        { id_cantiere: cantiere || 'ERG-CANTIERE-01' },
-        { 
-            $inc: { metri_posati: metriVal, raccordi: raccordiVal, anomalie: conteggioAnomalia },
-            $set: { ultimo_aggiornamento: new Date() }
-        },
-        { upsert: true, new: true }
-    );
-    
-    if (typeof io !== 'undefined') {
-        io.emit('nuovo_collaudo', { cantiere: cantiere || 'ERG-CANTIERE-01', metri: metriVal, offline_id: uniqueOfflineId });
-    }
 
-    res.json({ success: true, alert: pressioneVal < 15.0, hash: hashLegale, valore_eur: valoreProduzioneEur, synced_id: uniqueOfflineId });
-  } catch (err) {
-    console.error('Errore salvataggio MongoDB:', err);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
 
 // === KPI CANTIERE - MONGODB ===
-app.get('/api/kpi/:cantiere', async (req, res) => {
+app.get('/api/kpi/:cantiere', requireAuth, requireRole('supervisore', 'admin'), async (req, res) => {
   try {
     const { cantiere } = req.params;
 
@@ -5821,7 +6061,7 @@ app.get('/api/kpi/:cantiere', async (req, res) => {
 });
 
 // === ELENCO CANTIERI - MONGODB ===
-app.get('/api/cantieri', async (req, res) => {
+app.get('/api/cantieri', requireAuth, requireRole('supervisore', 'admin'), async (req, res) => {
   try {
     const cantieri = await Cantiere
       .find({}, { id_cantiere: 1, _id: 0 })
@@ -5842,7 +6082,7 @@ app.get('/api/cantieri', async (req, res) => {
 });
 
 // === RETE GAS / GEOJSON - MONGODB ===
-app.get('/api/tubi', async (req, res) => {
+app.get('/api/tubi', requireAuth, requireRole('supervisore', 'admin'), async (req, res) => {
   try {
     const cantiereFiltro = req.query.cantiere;
 
@@ -6223,7 +6463,7 @@ app.get(
 
 
 // --- INIZIO: ENDPOINT RECUPERO CODA OFF-GRID ---
-app.post('/api/sync-offline', express.json(), (req, res) => {
+app.post('/api/sync-offline', express.json(), requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
     const collaudi = req.body.collaudi || [];
     console.log(`[SYNC] 🔄 Ripristinati ${collaudi.length} collaudi dalla coda offline del cantiere.`);
     
@@ -6241,7 +6481,7 @@ app.post('/api/sync-offline', express.json(), (req, res) => {
 // --- INIZIO: MODULO TRACCIAMENTO SQUADRE E FLOTTA ---
 const registroSquadre = new Map();
 
-app.post('/api/registra-squadra', express.json(), (req, res) => {
+app.post('/api/registra-squadra', express.json(), requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
     const { operatore, cantiere, hardwareId } = req.body;
     registroSquadre.set(operatore, { 
         cantiere, 
@@ -6256,7 +6496,7 @@ app.post('/api/registra-squadra', express.json(), (req, res) => {
     res.status(200).json({ success: true, attivi: registroSquadre.size });
 });
 
-app.get('/api/squadre-attive', (req, res) => {
+app.get('/api/squadre-attive', requireAuth, requireRole('supervisore', 'admin'), (req, res) => {
     res.json(Array.from(registroSquadre.entries()));
 });
 // --- FINE: MODULO TRACCIAMENTO SQUADRE ---
@@ -6338,6 +6578,112 @@ app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => 
     res.send(htmlSAL);
 });
 // --- FINE: MODULO GENERAZIONE SAL IN PDF ---
+
+// ============================================================
+// NMA BUILD OS — RESILIENZA v1
+// Error boundary + graceful shutdown
+// ============================================================
+
+app.use((err, req, res, next) => {
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    if (
+        err instanceof SyntaxError &&
+        err.status === 400
+    ) {
+        return res.status(400).json({
+            ok: false,
+            code: 'INVALID_JSON',
+            error: 'Payload JSON non valido'
+        });
+    }
+
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+            ok: false,
+            code: 'FILE_TOO_LARGE',
+            error:
+                'File superiore al limite consentito'
+        });
+    }
+
+    console.error(
+        'Errore non gestito richiesta:',
+        err
+    );
+
+    return res.status(500).json({
+        ok: false,
+        code: 'INTERNAL_ERROR',
+        error: 'Errore interno del server'
+    });
+});
+
+
+let nmaShutdownInProgress = false;
+
+async function nmaGracefulShutdown(signal) {
+
+    if (nmaShutdownInProgress) {
+        return;
+    }
+
+    nmaShutdownInProgress = true;
+
+    console.log(
+        `[SISTEMA] ${signal}: arresto controllato`
+    );
+
+    const forceTimer =
+        setTimeout(() => {
+            console.error(
+                '[SISTEMA] Arresto forzato dopo timeout'
+            );
+            process.exit(1);
+        }, 15000);
+
+    forceTimer.unref();
+
+    server.close(async () => {
+
+        try {
+            if (
+                mongoose.connection.readyState !== 0
+            ) {
+                await mongoose.connection.close();
+            }
+
+            console.log(
+                '[SISTEMA] Connessioni chiuse correttamente'
+            );
+
+            process.exit(0);
+
+        } catch (error) {
+
+            console.error(
+                '[SISTEMA] Errore durante arresto:',
+                error
+            );
+
+            process.exit(1);
+        }
+    });
+}
+
+process.once(
+    'SIGTERM',
+    () => nmaGracefulShutdown('SIGTERM')
+);
+
+process.once(
+    'SIGINT',
+    () => nmaGracefulShutdown('SIGINT')
+);
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROL ROOM SATELLITARE 3D ONLINE'); });
