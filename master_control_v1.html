@@ -951,6 +951,195 @@ select{
 
 </style>
 
+
+<style id="nma-final-polish-style">
+
+/* FINAL EXPERIENCE POLISH v1 */
+
+.reconcileBanner{
+ margin-top:8px;
+
+ display:flex;
+ align-items:center;
+ gap:7px;
+
+ padding:9px 10px;
+
+ border:
+  1px solid
+  rgba(35,230,161,.40);
+
+ border-radius:9px;
+
+ background:
+  rgba(4,34,27,.82);
+
+ color:var(--green);
+
+ font-size:10px;
+ font-weight:900;
+
+ line-height:1.3;
+}
+
+.reconcileBanner.warn{
+ border-color:
+  rgba(255,171,50,.60);
+
+ background:
+  rgba(58,36,4,.90);
+
+ color:var(--orange);
+}
+
+.reconcileDot{
+ flex:none;
+
+ width:7px;
+ height:7px;
+
+ border-radius:50%;
+
+ background:currentColor;
+
+ box-shadow:
+  0 0 9px currentColor;
+}
+
+.legacyWarning{
+ margin-bottom:10px;
+
+ padding:11px;
+
+ border:
+  1px solid
+  rgba(255,171,50,.58);
+
+ border-radius:10px;
+
+ background:
+  rgba(58,36,4,.90);
+
+ color:#ffd089;
+
+ font-size:11px;
+
+ line-height:1.5;
+}
+
+.legacyWarning b{
+ color:var(--orange);
+}
+
+.legacyLinks{
+ display:grid;
+
+ grid-template-columns:
+  1fr 1fr;
+
+ gap:5px;
+
+ margin-top:10px;
+}
+
+.legacyLinks a{
+ padding:9px 6px;
+
+ text-align:center;
+ text-decoration:none;
+
+ border:
+  1px solid #27596b;
+
+ border-radius:8px;
+
+ background:#082631;
+
+ color:white;
+
+ font-size:9px;
+ font-weight:900;
+}
+
+/* desktop readability */
+
+@media(min-width:901px){
+
+ .miniKpi small{
+  font-size:9px;
+ }
+
+ .miniKpi b{
+  font-size:17px;
+ }
+
+ .panelTitle{
+  font-size:11px;
+ }
+
+ .layer{
+  font-size:10px;
+ }
+
+ .result strong{
+  font-size:12px;
+ }
+
+ .resultMeta{
+  font-size:10px;
+ }
+
+ .assetHead small{
+  font-size:10px;
+ }
+
+ .assetName{
+  font-size:20px;
+ }
+
+ .assetSub{
+  font-size:11px;
+ }
+
+ .assetEmpty{
+  font-size:11px;
+ }
+
+ .assetField small{
+  font-size:9px;
+ }
+
+ .assetField b{
+  font-size:12px;
+ }
+
+ .telemetryBox small{
+  font-size:9px;
+ }
+
+ .telemetryBox strong{
+  font-size:11px;
+ }
+
+ .quickNav a{
+  font-size:9px;
+ }
+
+ .eventTime{
+  font-size:9px;
+ }
+
+ .eventTitle{
+  font-size:11px;
+ }
+
+ .eventText{
+  font-size:10px;
+ }
+}
+
+</style>
+
 </head>
 
 <body>
@@ -2607,6 +2796,781 @@ setInterval(
 </script>
 
 <!-- MASTER EXPERIENCE v1 -->
+
+
+<script id="nma-final-polish-script">
+
+/* =====================================================
+   FINAL EXPERIENCE POLISH v1
+   ===================================================== */
+
+(function(){
+
+ /* ---------------------------------------------------
+    reconciliation banner
+    --------------------------------------------------- */
+
+ const layerBox=
+  document.querySelector(
+   '.layerBox'
+  );
+
+ if(
+  layerBox &&
+  !document.getElementById(
+   'reconcileBanner'
+  )
+ ){
+
+  const banner=
+   document.createElement(
+    'div'
+   );
+
+  banner.id=
+   'reconcileBanner';
+
+  banner.className=
+   'reconcileBanner';
+
+  banner.innerHTML=
+   '<span class="reconcileDot"></span>'+
+   '<span>AS-BUILT: VERIFICA COLLEGAMENTI</span>';
+
+  layerBox.appendChild(
+   banner
+  );
+ }
+
+
+ /* ---------------------------------------------------
+    line style:
+    green = linked
+    orange = reconciliation required
+    --------------------------------------------------- */
+
+ map.on(
+  'load',
+  ()=>{
+
+   if(
+    map.getLayer(
+     'asbuilt-line'
+    )
+   ){
+
+    map.setPaintProperty(
+     'asbuilt-line',
+     'line-color',
+     [
+      'case',
+
+      [
+       '==',
+       [
+        'get',
+        'intervento_collegato'
+       ],
+       true
+      ],
+
+      '#23e6a1',
+
+      '#ffab32'
+     ]
+    );
+   }
+  }
+ );
+
+
+ /* ---------------------------------------------------
+    renderSpatial override
+    --------------------------------------------------- */
+
+ window.renderSpatial=
+ function(){
+
+  const collections=
+   spatial
+    ?.feature_collections
+   || {};
+
+
+  const asbuiltTotal=
+   Number(
+    spatial
+     ?.totali
+     ?.asbuilt ||
+    0
+   );
+
+
+  const orphanCount=
+   Number(
+    spatial
+     ?.totali
+     ?.asbuilt_non_collegati ||
+    0
+   );
+
+
+  map
+   .getSource('asbuilt')
+   ?.setData(
+    collections.asbuilt ||
+    EMPTY
+   );
+
+
+  map
+   .getSource('project')
+   ?.setData(
+    collections.project ||
+    EMPTY
+   );
+
+
+  map
+   .getSource('anchors')
+   ?.setData(
+    collections.anchors ||
+    EMPTY
+   );
+
+
+  const banner=
+   document.getElementById(
+    'reconcileBanner'
+   );
+
+
+  if(banner){
+
+   banner.classList.toggle(
+    'warn',
+    orphanCount>0
+   );
+
+
+   banner.innerHTML=
+    '<span class="reconcileDot"></span>'+
+    '<span>'+
+    (
+     orphanCount>0
+      ?
+      orphanCount+
+      ' AS-BUILT DA RICONCILIARE'
+      :
+      'TUTTI GLI AS-BUILT COLLEGATI'
+    )+
+    '</span>';
+  }
+
+
+  set(
+   'kAsbuilt',
+   orphanCount>0
+    ?
+    asbuiltTotal+
+    ' · '+
+    orphanCount+
+    ' ⚠'
+    :
+    asbuiltTotal
+  );
+
+
+  fitNetwork();
+ };
+
+
+ /* ---------------------------------------------------
+    search override:
+    modern interventions + orphan GIS assets
+    --------------------------------------------------- */
+
+ window.runSearch=
+ async function(){
+
+  const q=
+   document
+    .getElementById(
+     'search'
+    )
+    .value
+    .trim();
+
+
+  const site=
+   document
+    .getElementById(
+     'site'
+    )
+    .value;
+
+
+  const params=
+   new URLSearchParams();
+
+
+  if(q){
+
+   params.set(
+    'q',
+    q
+   );
+  }
+
+
+  if(site){
+
+   params.set(
+    'cantiere',
+    site
+   );
+  }
+
+
+  try{
+
+   const data=
+    await api(
+     '/api/infrastructure-search?'+
+     params.toString()
+    );
+
+
+   currentSearch=
+    data.risultati || [];
+
+
+   const normalizedQ=
+    q.toLowerCase();
+
+
+   const legacy=
+    (
+     spatial
+      ?.feature_collections
+      ?.asbuilt
+      ?.features ||
+     []
+    )
+    .filter(
+     feature=>
+      feature
+       ?.properties
+       ?.intervento_collegato !==
+      true
+    )
+    .map(
+     feature=>{
+
+      const props=
+       feature.properties || {};
+
+
+      return {
+
+       id_intervento:
+        String(
+         props.id_intervento ||
+         props.id_tratto ||
+         ''
+        ),
+
+       id_cantiere:
+        String(
+         props.id_cantiere ||
+         ''
+        ),
+
+       materiale:
+        'AS-BUILT LEGACY',
+
+       anomalia:false,
+
+       legacy:true
+      };
+     }
+    )
+    .filter(
+     item=>{
+
+      if(
+       site &&
+       item.id_cantiere !==
+       site
+      ){
+
+       return false;
+      }
+
+
+      if(!normalizedQ){
+
+       return true;
+      }
+
+
+      return (
+       item.id_intervento+
+       ' '+
+       item.id_cantiere+
+       ' '+
+       item.materiale
+      )
+      .toLowerCase()
+      .includes(
+       normalizedQ
+      );
+     }
+    );
+
+
+   const modernIds=
+    new Set(
+     currentSearch.map(
+      item=>
+       String(
+        item.id_intervento
+       )
+     )
+    );
+
+
+   for(const item of legacy){
+
+    if(
+     !modernIds.has(
+      String(
+       item.id_intervento
+      )
+     )
+    ){
+
+     currentSearch.push(
+      item
+     );
+    }
+   }
+
+
+   renderResults();
+
+
+  }catch(error){
+
+   console.error(error);
+  }
+ };
+
+
+ /* ---------------------------------------------------
+    results override
+    --------------------------------------------------- */
+
+ window.renderResults=
+ function(){
+
+  const box=
+   document.getElementById(
+    'results'
+   );
+
+
+  box.innerHTML='';
+
+
+  set(
+   'resultCount',
+   currentSearch.length
+  );
+
+
+  if(!currentSearch.length){
+
+   box.innerHTML=
+    '<div class="resultMeta">'+
+    'Nessun asset nel filtro corrente.'+
+    '</div>';
+
+   return;
+  }
+
+
+  for(
+   const item
+   of currentSearch.slice(
+    0,
+    30
+   )
+  ){
+
+   const row=
+    document.createElement(
+     'div'
+    );
+
+
+   row.className=
+    'result';
+
+
+   row.innerHTML=
+
+    '<strong>'+
+    esc(
+     item.id_intervento
+    )+
+    '</strong>'+
+
+    '<div class="resultMeta">'+
+
+    esc(
+     item.id_cantiere ||
+     '—'
+    )+
+
+    ' · '+
+
+    esc(
+     item.materiale ||
+     '—'
+    )+
+
+    (
+     item.anomalia
+      ?
+      ' · ⚠ ANOMALIA'
+      :
+      ''
+    )+
+
+    (
+     item.legacy
+      ?
+      ' · ⚠ DA RICONCILIARE'
+      :
+      ''
+    )+
+
+    '</div>';
+
+
+   row.onclick=
+    ()=>loadAsset(
+     item.id_intervento
+    );
+
+
+   box.appendChild(
+    row
+   );
+  }
+ };
+
+
+ /* ---------------------------------------------------
+    preserve modern inspector
+    --------------------------------------------------- */
+
+ const modernLoadAsset=
+  window.loadAsset;
+
+
+ /* ---------------------------------------------------
+    legacy inspector
+    --------------------------------------------------- */
+
+ async function loadLegacyAsset(
+  id
+ ){
+
+  const body=
+   document.getElementById(
+    'assetBody'
+   );
+
+
+  const data=
+   await api(
+    '/api/asbuilt-reconciliation/'+
+    encodeURIComponent(id)
+   );
+
+
+  const a=
+   data.asset || {};
+
+
+  set(
+   'assetName',
+   a.id_tratto ||
+   id
+  );
+
+
+  set(
+   'assetSub',
+   (
+    a.id_cantiere ||
+    '—'
+   )+
+   ' · '+
+   (
+    data.stato_riconciliazione ||
+    'DA RICONCILIARE'
+   )
+  );
+
+
+  let html=
+
+   '<div class="legacyWarning">'+
+
+   '<b>'+
+   'AS-BUILT PRESENTE · INTERVENTO NON COLLEGATO'+
+   '</b><br>'+
+
+   esc(
+    data.nota ||
+    'Il tratto viene preservato nel GIS.'
+   )+
+
+   '</div>'+
+
+
+   '<div class="assetGrid">'+
+
+   field(
+    'ID TRATTO',
+    a.id_tratto ||
+    '—'
+   )+
+
+   field(
+    'CANTIERE',
+    a.id_cantiere ||
+    '—'
+   )+
+
+   field(
+    'RIFERIMENTO',
+    a.riferimento_intervento ||
+    '—'
+   )+
+
+   field(
+    'OPERATORE LEGACY',
+    a.operatore ||
+    '—'
+   )+
+
+   field(
+    'GPS SOURCE',
+    a.sorgente_gps ||
+    '—'
+   )+
+
+   field(
+    'GPS QUALITY',
+    a.qualita_gps ||
+    '—'
+   )+
+
+   field(
+    'METRI MISURATI',
+    Number(
+     a.lunghezza_misurata_m ||
+     0
+    )
+    .toLocaleString(
+     'it-IT',
+     {
+      maximumFractionDigits:2
+     }
+    )+
+    ' m'
+   )+
+
+   field(
+    'LUNGHEZZA GPS',
+    Number(
+     a.lunghezza_gps_m ||
+     0
+    )
+    .toLocaleString(
+     'it-IT',
+     {
+      maximumFractionDigits:2
+     }
+    )+
+    ' m'
+   )+
+
+   '</div>';
+
+
+  if(a.descrizione){
+
+   html+=
+    '<div class="eventText" '+
+    'style="margin-bottom:10px">'+
+
+    esc(
+     a.descrizione
+    )+
+
+    '</div>';
+  }
+
+
+  html+=
+
+   '<div class="legacyLinks">'+
+
+   '<a href="/spatial-twin">'+
+   'SPATIAL TWIN'+
+   '</a>'+
+
+   '<a href="/network-memory">'+
+   'NETWORK MEMORY'+
+   '</a>'+
+
+   '</div>'+
+
+
+   '<div class="timelineTitle">'+
+   'INFRASTRUCTURE TIMELINE'+
+   '</div>'+
+
+
+   '<div class="timeline">'+
+
+   '<div '+
+   'class="event" '+
+   'data-type="asbuilt">'+
+
+   '<div class="eventTime">'+
+   esc(
+    formatDate(
+     a.ultimo_aggiornamento
+    )
+   )+
+   '</div>'+
+
+   '<div class="eventTitle">'+
+   'As-Built presente nel GIS'+
+   '</div>'+
+
+   '<div class="eventText">'+
+   'Stato: DA RICONCILIARE. '+
+   'Il tratto viene preservato senza creare '+
+   'artificialmente un intervento.'+
+   '</div>'+
+
+   '</div>'+
+
+   '</div>';
+
+
+  body.innerHTML=
+   html;
+ }
+
+
+ /* ---------------------------------------------------
+    smart inspector:
+    legacy -> reconciliation
+    modern -> existing timeline
+    --------------------------------------------------- */
+
+ window.loadAsset=
+ async function(id){
+
+  const normalized=
+   String(
+    id || ''
+   )
+   .replace(
+    /^ASB-/,
+    ''
+   );
+
+
+  const feature=
+   (
+    spatial
+     ?.feature_collections
+     ?.asbuilt
+     ?.features ||
+    []
+   )
+   .find(
+    candidate=>{
+
+     const props=
+      candidate.properties ||
+      {};
+
+
+     const candidateId=
+      String(
+       props.id_intervento ||
+       props.id_tratto ||
+       ''
+      )
+      .replace(
+       /^ASB-/,
+       ''
+      );
+
+
+     return (
+      candidateId===
+      normalized
+     );
+    }
+   );
+
+
+  if(
+   feature &&
+   feature
+    ?.properties
+    ?.intervento_collegato !==
+   true
+  ){
+
+   try{
+
+    await loadLegacyAsset(
+     normalized
+    );
+
+    return;
+
+   }catch(error){
+
+    console.error(
+     error
+    );
+   }
+  }
+
+
+  return modernLoadAsset(
+   normalized
+  );
+ };
+
+})();
+
+</script>
+
+<!-- FINAL EXPERIENCE POLISH v1 -->
 
 </body>
 </html>

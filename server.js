@@ -3041,6 +3041,9 @@ app.get(
                 );
 
 
+            const interventoIdSet=
+                new Set(ids);
+
             const asbuiltFeatures=
                 tratti
                     .filter(
@@ -3092,11 +3095,52 @@ app.get(
                                         ''
                                     ),
 
+                                intervento_collegato:
+                                    interventoIdSet.has(
+                                        String(
+                                            tratto
+                                                .id_tratto ||
+                                            ''
+                                        )
+                                        .replace(
+                                            /^ASB-/,
+                                            ''
+                                        )
+                                    ),
+
                                 id_cantiere:
                                     String(
                                         tratto
                                             .id_cantiere ||
                                         ''
+                                    ),
+
+                                descrizione:
+                                    String(
+                                        tratto
+                                            .descrizione ||
+                                        ''
+                                    ),
+
+                                operatore:
+                                    String(
+                                        tratto
+                                            .operatore ||
+                                        ''
+                                    ),
+
+                                lunghezza_misurata_m:
+                                    Number(
+                                        tratto
+                                            .lunghezza_misurata_m ||
+                                        0
+                                    ),
+
+                                lunghezza_gps_m:
+                                    Number(
+                                        tratto
+                                            .lunghezza_gps_m ||
+                                        0
                                     ),
 
                                 sorgente_gps:
@@ -3308,6 +3352,17 @@ app.get(
                     asbuilt:
                         asbuiltFeatures.length,
 
+                    asbuilt_non_collegati:
+                        asbuiltFeatures
+                            .filter(
+                                feature=>
+                                    feature
+                                        .properties
+                                        .intervento_collegato !==
+                                    true
+                            )
+                            .length,
+
                     progetti:
                         projectFeatures.length,
 
@@ -3355,6 +3410,243 @@ app.get(
                 ok:false,
                 error:
                     'Errore Spatial Twin'
+            });
+        }
+    }
+);
+
+
+
+// ============================================================
+// NMA BUILD OS — ASBUILT RECONCILIATION v1
+//
+// Read-only.
+// Un tratto geometrico senza InterventoCampo viene identificato
+// come DA_RICONCILIARE. Nessun dato viene creato o cancellato.
+// ============================================================
+
+app.get(
+    '/api/asbuilt-reconciliation/:id',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const raw=
+                String(
+                    req.params.id ||
+                    ''
+                )
+                .trim()
+                .slice(
+                    0,
+                    180
+                );
+
+
+            if(!raw){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Identificativo As-Built mancante'
+                });
+            }
+
+
+            const candidati=
+                raw.startsWith('ASB-')
+                    ? [raw]
+                    : [
+                        raw,
+                        'ASB-'+raw
+                    ];
+
+
+            const tratto=
+                await TrattoRete
+                    .findOne({
+                        id_tratto:{
+                            $in:candidati
+                        }
+                    })
+                    .lean();
+
+
+            if(!tratto){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Tratto As-Built non trovato'
+                });
+            }
+
+
+            const riferimento=
+                String(
+                    tratto.id_tratto ||
+                    ''
+                )
+                .replace(
+                    /^ASB-/,
+                    ''
+                );
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            riferimento
+                    })
+                    .select({
+                        _id:0,
+                        id_intervento:1,
+                        id_cantiere:1,
+                        stato:1
+                    })
+                    .lean();
+
+
+            const collegato=
+                Boolean(intervento);
+
+
+            return res.json({
+
+                ok:true,
+
+                read_only:true,
+
+                stato_riconciliazione:
+                    collegato
+                        ? 'COLLEGATO'
+                        : 'DA_RICONCILIARE',
+
+                intervento_collegato:
+                    collegato,
+
+                asset:{
+
+                    id_tratto:
+                        String(
+                            tratto.id_tratto ||
+                            ''
+                        ),
+
+                    riferimento_intervento:
+                        riferimento,
+
+                    id_intervento:
+                        intervento
+                            ?.id_intervento ||
+                        null,
+
+                    id_cantiere:
+                        String(
+                            tratto.id_cantiere ||
+                            ''
+                        ),
+
+                    stato:
+                        collegato
+                            ? String(
+                                intervento.stato ||
+                                'COLLEGATO'
+                            )
+                            : 'AS-BUILT NON COLLEGATO',
+
+                    operatore:
+                        String(
+                            tratto.operatore ||
+                            ''
+                        ),
+
+                    descrizione:
+                        String(
+                            tratto.descrizione ||
+                            ''
+                        ),
+
+                    pressione:
+                        Number(
+                            tratto.pressione ||
+                            0
+                        ),
+
+                    sorgente_gps:
+                        String(
+                            tratto.sorgente_gps ||
+                            ''
+                        ),
+
+                    qualita_gps:
+                        String(
+                            tratto.qualita_gps ||
+                            ''
+                        ),
+
+                    accuratezza_media_m:
+                        Number(
+                            tratto.accuratezza_media_m ||
+                            0
+                        ),
+
+                    lunghezza_gps_m:
+                        Number(
+                            tratto.lunghezza_gps_m ||
+                            0
+                        ),
+
+                    lunghezza_misurata_m:
+                        Number(
+                            tratto.lunghezza_misurata_m ||
+                            0
+                        ),
+
+                    ultimo_aggiornamento:
+                        tratto
+                            .ultimo_aggiornamento ||
+                        null
+                },
+
+                nota:
+                    collegato
+                        ? 'As-Built collegato a un intervento.'
+                        : 'La geometria esiste nel GIS, ma non '+
+                          'ha un InterventoCampo corrispondente. '+
+                          'Il dato viene preservato e segnalato '+
+                          'per riconciliazione.',
+
+                links:{
+
+                    spatial:
+                        '/spatial-twin',
+
+                    network:
+                        '/network-memory'
+                }
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore As-Built Reconciliation:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore riconciliazione As-Built'
             });
         }
     }
