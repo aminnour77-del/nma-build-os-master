@@ -1415,6 +1415,40 @@ input{
 
 </style>
 
+
+<style id="nma-hero-final-css">
+
+/* NMA HERO PIPE FINAL VISUAL v1 */
+
+.mapWrap{
+ box-shadow:
+  inset 0 0 90px rgba(0,10,16,.18);
+}
+
+.demoWatermark{
+ top:auto !important;
+ bottom:66px !important;
+
+ background:
+  rgba(2,17,24,.88) !important;
+
+ border-color:
+  rgba(255,173,34,.52) !important;
+}
+
+.assetLabel{
+ padding:9px 12px;
+
+ background:
+  rgba(1,15,22,.96);
+
+ box-shadow:
+  0 10px 25px rgba(0,0,0,.42),
+  0 0 13px rgba(0,207,255,.12);
+}
+
+</style>
+
 </head>
 
 <body>
@@ -2159,6 +2193,7 @@ const T={
    ROAD GEOMETRY
    ========================================================= */
 
+async
 async function loadRoadGeometry(){
 
  const a=
@@ -2173,6 +2208,142 @@ async function loadRoadGeometry(){
   a[0]+','+a[1]+';'+
   b[0]+','+b[1]+
   '?overview=full&geometries=geojson';
+
+
+ /*
+  Mantiene circa TARGET metri attorno alla parte
+  centrale del percorso.
+
+  Questo serve soltanto alla composizione visiva:
+  non modifica né crea infrastrutture reali.
+ */
+
+ function cropByDistance(
+  coordinates,
+  TARGET=245
+ ){
+
+  if(
+   !Array.isArray(coordinates) ||
+   coordinates.length<3
+  ){
+   return coordinates;
+  }
+
+
+  const cum=[0];
+
+
+  for(
+   let i=1;
+   i<coordinates.length;
+   i++
+  ){
+
+   cum[i]=
+    cum[i-1]+
+    geoDistance(
+     coordinates[i-1],
+     coordinates[i]
+    );
+  }
+
+
+  const total=
+   cum[cum.length-1];
+
+
+  if(total<=TARGET){
+   return coordinates;
+  }
+
+
+  const center=
+   total*.52;
+
+
+  const start=
+   Math.max(
+    0,
+    center-
+    TARGET*.5
+   );
+
+
+  const end=
+   Math.min(
+    total,
+    center+
+    TARGET*.5
+   );
+
+
+  let i0=0;
+  let i1=coordinates.length-1;
+
+
+  while(
+   i0<cum.length-1 &&
+   cum[i0]<start
+  ){
+   i0++;
+  }
+
+
+  while(
+   i1>0 &&
+   cum[i1]>end
+  ){
+   i1--;
+  }
+
+
+  i0=
+   Math.max(
+    0,
+    i0-1
+   );
+
+
+  i1=
+   Math.min(
+    coordinates.length-1,
+    i1+1
+   );
+
+
+  let result=
+   coordinates.slice(
+    i0,
+    i1+1
+   );
+
+
+  /*
+   Limitiamo la densità soltanto per la GPU.
+   Manteniamo sempre primo e ultimo punto.
+  */
+
+  if(result.length>38){
+
+   const step=
+    Math.ceil(
+     result.length/36
+    );
+
+
+   result=
+    result.filter(
+     (_,index)=>
+      index===0 ||
+      index===result.length-1 ||
+      index%step===0
+    );
+  }
+
+
+  return result;
+ }
 
 
  try{
@@ -2208,7 +2379,7 @@ async function loadRoadGeometry(){
 
   if(
    !Array.isArray(raw) ||
-   raw.length<8
+   raw.length<4
   ){
 
    throw new Error(
@@ -2221,30 +2392,10 @@ async function loadRoadGeometry(){
    'PUBLIC ROAD GEOMETRY · DEMO';
 
 
-  /*
-   Simplify only visually.
-   First and final coordinate are always preserved.
-  */
-
-  const stride=
-   Math.max(
-    1,
-    Math.floor(
-     raw.length/34
-    )
-   );
-
-
-  const points=
-   raw.filter(
-    (_,index)=>
-     index===0 ||
-     index===raw.length-1 ||
-     index%stride===0
-   );
-
-
-  return points;
+  return cropByDistance(
+   raw,
+   245
+  );
 
 
  }catch(error){
@@ -2259,30 +2410,21 @@ async function loadRoadGeometry(){
    'DEMO FALLBACK GEOMETRY';
 
 
-  /*
-   Fallback coordinates are synthetic.
-   They exist only so the demo remains usable.
-  */
-
   return [
 
-   [7.786278,45.223750],
-   [7.786254,45.224050],
-   [7.786225,45.224360],
-   [7.786194,45.224690],
-   [7.786164,45.225020],
-   [7.786145,45.225350],
-   [7.786137,45.225700],
-   [7.786129,45.226050],
-   [7.786120,45.226400],
-   [7.786112,45.226750],
-   [7.786105,45.227080],
-   [7.786101,45.227400],
-   [7.786100,45.227700],
-   [7.786100,45.228000]
+   [7.785620,45.226920],
+   [7.785730,45.227030],
+   [7.785845,45.227150],
+   [7.785960,45.227275],
+   [7.786075,45.227400],
+   [7.786180,45.227525],
+   [7.786270,45.227650],
+   [7.786340,45.227775],
+   [7.786390,45.227900]
   ];
  }
 }
+
 
 
 /* =========================================================
@@ -2984,49 +3126,53 @@ function addRing(
    PIPE
    ========================================================= */
 
+
 function createPipe(
  root,
- spec
+ spec,
+ radiusArg
 ){
 
  const radius=
-  spec.radius;
+  Number(
+   radiusArg ??
+   spec.radius ??
+   2.40
+  );
 
 
  const curve=
-  makeCurve(
-   spec.points,
-   radius
-  );
+  (
+   typeof makeCurve === 'function'
+   && makeCurve.length >= 2
+  )
+   ? makeCurve(
+      spec.points,
+      radius
+     )
+   : buildCurve(
+      spec.points,
+      radius
+     );
 
 
  /*
-  Lower dark structural body.
+  ==========================================================
+  TRUE HERO PIPE
+
+  Scala grafica DEMO.
+  NON rappresenta il diametro fisico della condotta.
+  ==========================================================
  */
 
- const structural=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    360,
-    radius*.95,
-    30,
-    false
-   ),
-
-   materialDark()
-  );
-
-
- root.add(
-  structural
- );
-
 
  /*
-  Transparent PE / glass-like outer shell,
-  so the cyan internal flow remains visible.
+  Corpo PE100 / industriale semitrasparente.
+
+  Deve far leggere contemporaneamente:
+  - volume esterno
+  - profondità
+  - core cyan interno
  */
 
  const shell=
@@ -3034,21 +3180,81 @@ function createPipe(
 
    new THREE.TubeGeometry(
     curve,
-    360,
+    320,
     radius,
     36,
     false
    ),
 
-   materialOuter()
+   new THREE.MeshPhysicalMaterial({
+
+    color:0x18343f,
+
+    roughness:.12,
+
+    metalness:.72,
+
+    transparent:true,
+
+    opacity:.54,
+
+    depthWrite:false,
+
+    side:
+     THREE.DoubleSide,
+
+    clearcoat:1,
+
+    clearcoatRoughness:.06
+   })
   );
 
+
+ shell.renderOrder=3;
 
  root.add(shell);
 
 
  /*
-  Internal cyan core.
+  Bordo esterno metallico leggero:
+  dà definizione cilindrica senza coprire il core.
+ */
+
+ const outerSkin=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    curve,
+    320,
+    radius*1.035,
+    30,
+    false
+   ),
+
+   new THREE.MeshStandardMaterial({
+
+    color:0x263b45,
+
+    roughness:.18,
+
+    metalness:.91,
+
+    transparent:true,
+
+    opacity:.25,
+
+    depthWrite:false
+   })
+  );
+
+
+ outerSkin.renderOrder=2;
+
+ root.add(outerSkin);
+
+
+ /*
+  CORE CYAN INTERNO
  */
 
  const core=
@@ -3056,31 +3262,33 @@ function createPipe(
 
    new THREE.TubeGeometry(
     curve,
-    360,
-    radius*.32,
-    18,
+    320,
+    radius*.27,
+    20,
     false
    ),
 
-   materialCyan()
+   cyanMaterial()
   );
 
+
+ core.renderOrder=1;
 
  root.add(core);
 
 
  /*
-  Cyan halo inside the pipe.
+  Glow attorno al core.
  */
 
- const halo=
+ const coreGlow=
   new THREE.Mesh(
 
    new THREE.TubeGeometry(
     curve,
-    320,
-    radius*.43,
-    16,
+    300,
+    radius*.48,
+    18,
     false
    ),
 
@@ -3090,7 +3298,7 @@ function createPipe(
 
     transparent:true,
 
-    opacity:.11,
+    opacity:.18,
 
     depthWrite:false,
 
@@ -3100,14 +3308,16 @@ function createPipe(
   );
 
 
- root.add(halo);
+ root.add(coreGlow);
 
 
  /*
-  Upper reflection.
+  Riflesso superiore.
+
+  Segue la stessa geometria GPS.
  */
 
- const shinePoints=
+ const highlightPoints=
   spec.points.map(
    point=>
     localPoint(
@@ -3118,21 +3328,21 @@ function createPipe(
   );
 
 
- const shineCurve=
+ const highlightCurve=
   new THREE.CatmullRomCurve3(
-   shinePoints,
+   highlightPoints,
    false,
    'centripetal',
    .12
   );
 
 
- const shine=
+ const highlight=
   new THREE.Mesh(
 
    new THREE.TubeGeometry(
-    shineCurve,
-    320,
+    highlightCurve,
+    280,
     radius*.055,
     9,
     false
@@ -3140,55 +3350,108 @@ function createPipe(
 
    new THREE.MeshBasicMaterial({
 
-    color:0xd8f8ff,
+    color:0xdaf8ff,
 
     transparent:true,
 
-    opacity:.68
+    opacity:.78,
+
+    depthWrite:false
    })
   );
 
 
- root.add(shine);
+ root.add(highlight);
 
 
  /*
-  Repeated collars + stronger flanges.
+  COLLARI + FLANGE
  */
 
  const joints=[
-  .05,
-  .13,
-  .22,
-  .31,
-  .40,
-  .49,
+  .04,
+  .11,
+  .19,
+  .28,
+  .38,
+  .48,
   .58,
-  .67,
-  .76,
-  .85,
-  .94
+  .68,
+  .78,
+  .88,
+  .96
  ];
 
 
  joints.forEach(
   (t,index)=>{
 
-   addRing(
-
-    root,
-    curve,
-    t,
-    radius,
-
+   const major=
     (
      index===2 ||
      index===5 ||
      index===8
-    )
-     ? 'flange'
-     : 'collar'
-   );
+    );
+
+
+   if(
+    typeof addRing ===
+    'function'
+   ){
+
+    addRing(
+     root,
+     curve,
+     t,
+     radius,
+     major
+      ? 'flange'
+      : 'collar'
+    );
+
+   }else{
+
+    const ring=
+     new THREE.Mesh(
+
+      new THREE.TorusGeometry(
+
+       radius*
+       (
+        major
+         ? 1.40
+         : 1.18
+       ),
+
+       radius*
+       (
+        major
+         ? .22
+         : .11
+       ),
+
+       14,
+
+       major
+        ? 48
+        : 36
+      ),
+
+      major
+       ? collarMaterial()
+       : darkMaterial()
+     );
+
+
+    orientAlong(
+     ring,
+     curve,
+     t
+    );
+
+
+    root.add(ring);
+   }
   }
  );
 
@@ -3208,6 +3471,7 @@ function createPipe(
 
  return pipeline;
 }
+
 
 
 /* =========================================================
@@ -4241,6 +4505,7 @@ function addLabels(){
    FIT CAMERA
    ========================================================= */
 
+
 function fitDemoCamera(){
 
  const points=
@@ -4267,11 +4532,10 @@ function fitDemoCamera(){
      coordinate
     ),
 
-   new maplibregl
-    .LngLatBounds(
-     points[0],
-     points[0]
-    )
+   new maplibregl.LngLatBounds(
+    points[0],
+    points[0]
+   )
   );
 
 
@@ -4281,22 +4545,23 @@ function fitDemoCamera(){
 
   {
    padding:{
-    top:105,
-    right:105,
-    bottom:90,
-    left:100
+    top:70,
+    right:70,
+    bottom:65,
+    left:70
    },
 
-   maxZoom:18.15,
+   maxZoom:18.60,
 
-   pitch:58,
+   pitch:66,
 
-   bearing:-24,
+   bearing:-27,
 
    duration:1100
   }
  );
 }
+
 
 
 /* =========================================================
@@ -4330,7 +4595,7 @@ map.on(
     id:
      'GAS-DEMO-SB-001',
 
-    radius:.88,
+    radius:2.40,
 
     points:
      road
@@ -4340,7 +4605,7 @@ map.on(
     id:
      'GAS-DEMO-SB-002',
 
-    radius:.63,
+    radius:1.40,
 
     points:
      branch
@@ -4412,5 +4677,6 @@ document
 
 
 <!-- NMA FINAL REFERENCE ENGINE v1 -->
+<!-- NMA HERO PIPE FINAL VISUAL v1 -->
 </body>
 </html>
