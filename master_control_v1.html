@@ -2344,6 +2344,103 @@ body.asset-selected .rightPanel{
 
 </style>
 
+
+<script
+ src="https://unpkg.com/three@0.160.0/build/three.min.js">
+</script>
+
+
+<style id="nma-true-pipe-3d-css">
+
+/* =========================================================
+   NMA TRUE PIPE 3D ENGINE v1
+   ========================================================= */
+
+.true3dBadge{
+ position:fixed;
+
+ z-index:880;
+
+ left:50%;
+
+ bottom:105px;
+
+ transform:translateX(-50%);
+
+ display:flex;
+ align-items:center;
+ gap:8px;
+
+ padding:8px 12px;
+
+ border:
+ 1px solid rgba(255,172,36,.52);
+
+ border-radius:999px;
+
+ background:
+ rgba(3,17,23,.88);
+
+ color:#ffbd45;
+
+ font-size:9px;
+ font-weight:900;
+
+ letter-spacing:.06em;
+
+ backdrop-filter:blur(14px);
+
+ box-shadow:
+ 0 8px 26px rgba(0,0,0,.35);
+}
+
+.true3dBadge:before{
+ content:"";
+
+ width:7px;
+ height:7px;
+
+ border-radius:50%;
+
+ background:currentColor;
+
+ box-shadow:
+ 0 0 10px currentColor;
+}
+
+.true3dBadge.connected{
+ color:#23e6a1;
+
+ border-color:
+ rgba(35,230,161,.5);
+}
+
+@media(max-width:980px){
+
+ .true3dBadge{
+  position:absolute;
+
+  bottom:auto;
+
+  top:
+   calc(
+    88px +
+    62dvh -
+    82px
+   );
+
+  font-size:8px;
+
+  max-width:80vw;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+ }
+}
+
+</style>
+
 </head>
 
 <body>
@@ -2889,7 +2986,11 @@ const map=
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
      ],
 
-     tileSize:256
+     tileSize:256,
+
+     maxzoom:18
+
+     /* NMA_SATELLITE_MAXZOOM */
     }
    },
 
@@ -6198,6 +6299,1525 @@ setInterval(
 </script>
 
 <!-- NMA RC3 VISUAL MATCH -->
+
+
+<script id="nma-true-pipe-3d-engine">
+
+/* =========================================================
+   NMA TRUE PIPE 3D ENGINE v1
+
+   IMPORTANTE:
+   - la centerline resta la GeoJSON registrata;
+   - nessuna coordinata viene alterata;
+   - il diametro visuale NON viene registrato nel database;
+   - i collari sono decorazione grafica;
+   - nessun collare equivale a un raccordo fisico registrato.
+   ========================================================= */
+
+(function(){
+
+ const STATE={
+
+  layerId:
+   'nma-true-pipe-3d',
+
+  scene:null,
+  camera:null,
+  renderer:null,
+
+  root:null,
+
+  originLngLat:null,
+  originMercator:null,
+  mercatorPerMeter:null,
+
+  selectedId:null,
+
+  ready:false,
+
+  materials:[],
+
+  badge:null
+ };
+
+
+ /* =======================================================
+    HELPERS
+    ======================================================= */
+
+ function normId(value){
+
+  return String(
+   value || ''
+  )
+  .replace(
+   /^ASB-/,
+   ''
+  );
+ }
+
+
+ function idOf(feature){
+
+  return normId(
+   feature
+    ?.properties
+    ?.id_intervento
+   ||
+   feature
+    ?.properties
+    ?.id_tratto
+   ||
+   ''
+  );
+ }
+
+
+ function hasValidLine(feature){
+
+  return (
+   feature
+    ?.geometry
+    ?.type ===
+   'LineString'
+   &&
+   Array.isArray(
+    feature.geometry.coordinates
+   )
+   &&
+   feature.geometry.coordinates.length >= 2
+  );
+ }
+
+
+ function firstCoordinate(){
+
+  const features=
+   spatial
+    ?.feature_collections
+    ?.asbuilt
+    ?.features ||
+   [];
+
+
+  const first=
+   features.find(
+    hasValidLine
+   );
+
+
+  return (
+   first
+    ?.geometry
+    ?.coordinates
+    ?.[0]
+   ||
+   null
+  );
+ }
+
+
+ function metersFromOrigin(coord){
+
+  const origin=
+   STATE.originLngLat;
+
+
+  const lat0=
+   Number(origin[1]) *
+   Math.PI /
+   180;
+
+
+  const east=
+   (
+    Number(coord[0]) -
+    Number(origin[0])
+   ) *
+   111320 *
+   Math.cos(lat0);
+
+
+  /*
+   Mercator Y aumenta verso sud.
+   Nord = Y negativa nel sistema locale.
+  */
+
+  const south=
+   -(
+    Number(coord[1]) -
+    Number(origin[1])
+   ) *
+   110540;
+
+
+  return new THREE.Vector3(
+   east,
+   south,
+   1.05
+  );
+ }
+
+
+ function distanceMeters(a,b){
+
+  const lat=
+   (
+    Number(a[1]) +
+    Number(b[1])
+   ) /
+   2;
+
+
+  const dx=
+   (
+    Number(b[0]) -
+    Number(a[0])
+   ) *
+   111320 *
+   Math.cos(
+    lat *
+    Math.PI /
+    180
+   );
+
+
+  const dy=
+   (
+    Number(b[1]) -
+    Number(a[1])
+   ) *
+   110540;
+
+
+  return Math.sqrt(
+   dx*dx +
+   dy*dy
+  );
+ }
+
+
+ function totalGeoLength(coords){
+
+  let total=0;
+
+
+  for(
+   let i=1;
+   i<coords.length;
+   i++
+  ){
+
+   total+=
+    distanceMeters(
+     coords[i-1],
+     coords[i]
+    );
+  }
+
+
+  return total;
+ }
+
+
+ /* =======================================================
+    MATERIAL
+    ======================================================= */
+
+ function pipeMaterial(
+  linked,
+  selected
+ ){
+
+  const color=
+   linked
+    ? 0x12d98d
+    : 0xff8a00;
+
+
+  const material=
+   new THREE.MeshStandardMaterial({
+
+    color,
+
+    roughness:
+     selected
+      ? .18
+      : .25,
+
+    metalness:.72,
+
+    emissive:
+     new THREE.Color(color),
+
+    emissiveIntensity:
+     selected
+      ? .68
+      : .32
+   });
+
+
+  STATE.materials.push(
+   material
+  );
+
+
+  return material;
+ }
+
+
+ function collarMaterial(
+  linked,
+  selected
+ ){
+
+  const color=
+   linked
+    ? 0x40ffc0
+    : 0xffbd38;
+
+
+  const material=
+   new THREE.MeshStandardMaterial({
+
+    color,
+
+    roughness:.15,
+    metalness:.86,
+
+    emissive:
+     new THREE.Color(color),
+
+    emissiveIntensity:
+     selected
+      ? .85
+      : .48
+   });
+
+
+  STATE.materials.push(
+   material
+  );
+
+
+  return material;
+ }
+
+
+ function glowMaterial(
+  linked
+ ){
+
+  const color=
+   linked
+    ? 0x1cffaa
+    : 0xffa014;
+
+
+  const material=
+   new THREE.MeshBasicMaterial({
+
+    color,
+
+    transparent:true,
+
+    opacity:.12,
+
+    depthWrite:false,
+
+    blending:
+     THREE.AdditiveBlending
+   });
+
+
+  STATE.materials.push(
+   material
+  );
+
+
+  return material;
+ }
+
+
+ /* =======================================================
+    PIPE GEOMETRY
+    ======================================================= */
+
+ function makePipe(
+  feature
+ ){
+
+  const coords=
+   feature.geometry.coordinates;
+
+
+  const points=
+   coords.map(
+    metersFromOrigin
+   );
+
+
+  const selected=
+   idOf(feature) ===
+   STATE.selectedId;
+
+
+  const linked=
+   feature
+    ?.properties
+    ?.intervento_collegato ===
+   true;
+
+
+  /*
+   Visualizzazione, non diametro tecnico.
+
+   Se un diametro reale è disponibile viene usato
+   solo per proporzionare la grafica.
+
+   Senza diametro:
+   fallback visuale = 0.42 m di raggio grafico.
+  */
+
+  const recordedDiameter=
+   Number(
+    feature
+     ?.properties
+     ?.diametro_mm ||
+    0
+   );
+
+
+  let radius=.42;
+
+
+  if(recordedDiameter>0){
+
+   const realRadius=
+    recordedDiameter /
+    1000 /
+    2;
+
+
+   radius=
+    Math.max(
+     .24,
+     Math.min(
+      .65,
+      realRadius * 7
+     )
+    );
+  }
+
+
+  if(selected){
+   radius*=1.08;
+  }
+
+
+  const curve=
+   new THREE.CatmullRomCurve3(
+    points,
+    false,
+    'centripetal',
+    .22
+   );
+
+
+  const geoLength=
+   totalGeoLength(
+    coords
+   );
+
+
+  const segments=
+   Math.max(
+    24,
+    Math.min(
+     220,
+     Math.round(
+      geoLength * 2.2
+     )
+    )
+   );
+
+
+  const radialSegments=
+   selected
+    ? 20
+    : 14;
+
+
+  const group=
+   new THREE.Group();
+
+
+  group.userData={
+   id:idOf(feature),
+   visualRadius:radius,
+   linked
+  };
+
+
+  /*
+   Glow esterno
+  */
+
+  const glowGeometry=
+   new THREE.TubeGeometry(
+    curve,
+    segments,
+    radius * 1.18,
+    radialSegments,
+    false
+   );
+
+
+  const glow=
+   new THREE.Mesh(
+    glowGeometry,
+    glowMaterial(
+     linked
+    )
+   );
+
+
+  group.add(glow);
+
+
+  /*
+   Corpo metallico vero
+  */
+
+  const tubeGeometry=
+   new THREE.TubeGeometry(
+    curve,
+    segments,
+    radius,
+    radialSegments,
+    false
+   );
+
+
+  const tube=
+   new THREE.Mesh(
+    tubeGeometry,
+    pipeMaterial(
+     linked,
+     selected
+    )
+   );
+
+
+  tube.castShadow=false;
+  tube.receiveShadow=false;
+
+
+  group.add(tube);
+
+
+  /*
+   Highlight longitudinale.
+   Una seconda mesh più piccola crea riflesso centrale.
+  */
+
+  const highlightGeometry=
+   new THREE.TubeGeometry(
+    curve,
+    segments,
+    radius * .72,
+    radialSegments,
+    false
+   );
+
+
+  const highlightMaterial=
+   new THREE.MeshStandardMaterial({
+
+    color:
+     linked
+      ? 0x76ffd1
+      : 0xffd071,
+
+    roughness:.12,
+    metalness:.72,
+
+    transparent:true,
+    opacity:.56,
+
+    emissive:
+     new THREE.Color(
+      linked
+       ? 0x1ee69e
+       : 0xff8700
+     ),
+
+    emissiveIntensity:.38
+   });
+
+
+  STATE.materials.push(
+   highlightMaterial
+  );
+
+
+  const highlight=
+   new THREE.Mesh(
+    highlightGeometry,
+    highlightMaterial
+   );
+
+
+  group.add(
+   highlight
+  );
+
+
+  /*
+   COLLARI / GIUNTI VISUALI.
+
+   Questi oggetti NON sono raccordi registrati.
+   Sono esclusivamente una resa grafica del tubo.
+  */
+
+  const collarDistance=
+   selected
+    ? 4.5
+    : 7.0;
+
+
+  const collarCount=
+   Math.max(
+    0,
+    Math.min(
+     14,
+     Math.floor(
+      geoLength /
+      collarDistance
+     ) - 1
+    )
+   );
+
+
+  const zAxis=
+   new THREE.Vector3(
+    0,
+    0,
+    1
+   );
+
+
+  for(
+   let i=1;
+   i<=collarCount;
+   i++
+  ){
+
+   const t=
+    i /
+    (
+     collarCount + 1
+    );
+
+
+   const position=
+    curve.getPointAt(t);
+
+
+   const tangent=
+    curve
+     .getTangentAt(t)
+     .normalize();
+
+
+   const geometry=
+    new THREE.TorusGeometry(
+
+     radius * 1.16,
+
+     radius * .17,
+
+     10,
+
+     selected
+      ? 28
+      : 20
+    );
+
+
+   const collar=
+    new THREE.Mesh(
+     geometry,
+     collarMaterial(
+      linked,
+      selected
+     )
+    );
+
+
+   collar.position.copy(
+    position
+   );
+
+
+   collar.quaternion
+    .setFromUnitVectors(
+     zAxis,
+     tangent
+    );
+
+
+   group.add(
+    collar
+   );
+  }
+
+
+  /*
+   Terminali tecnici
+  */
+
+  for(
+   const t
+   of [
+    0.015,
+    .985
+   ]
+  ){
+
+   const position=
+    curve.getPointAt(t);
+
+
+   const tangent=
+    curve
+     .getTangentAt(t)
+     .normalize();
+
+
+   const geometry=
+    new THREE.TorusGeometry(
+
+     radius * 1.19,
+
+     radius * .20,
+
+     10,
+
+     28
+    );
+
+
+   const ring=
+    new THREE.Mesh(
+     geometry,
+     collarMaterial(
+      linked,
+      selected
+     )
+    );
+
+
+   ring.position.copy(
+    position
+   );
+
+
+   ring.quaternion
+    .setFromUnitVectors(
+     zAxis,
+     tangent
+    );
+
+
+   group.add(ring);
+  }
+
+
+  return group;
+ }
+
+
+ /* =======================================================
+    SCENE BUILD
+    ======================================================= */
+
+ function disposeRoot(){
+
+  if(!STATE.root){
+   return;
+  }
+
+
+  STATE.root.traverse(
+   object=>{
+
+    if(object.geometry){
+
+     object.geometry.dispose();
+    }
+   }
+  );
+
+
+  for(
+   const material
+   of STATE.materials
+  ){
+
+   material.dispose();
+  }
+
+
+  STATE.materials=[];
+
+
+  STATE.scene.remove(
+   STATE.root
+  );
+
+
+  STATE.root=null;
+ }
+
+
+ function buildScene(){
+
+  if(
+   !STATE.ready ||
+   !spatial
+  ){
+   return;
+  }
+
+
+  const features=
+   spatial
+    ?.feature_collections
+    ?.asbuilt
+    ?.features ||
+   [];
+
+
+  const valid=
+   features.filter(
+    hasValidLine
+   );
+
+
+  if(!valid.length){
+
+   disposeRoot();
+
+   updateBadge(
+    0,
+    false
+   );
+
+   return;
+  }
+
+
+  const origin=
+   firstCoordinate();
+
+
+  if(!origin){
+   return;
+  }
+
+
+  STATE.originLngLat=[
+   Number(origin[0]),
+   Number(origin[1])
+  ];
+
+
+  STATE.originMercator=
+   maplibregl
+    .MercatorCoordinate
+    .fromLngLat(
+     {
+      lng:
+       STATE.originLngLat[0],
+
+      lat:
+       STATE.originLngLat[1]
+     },
+
+     0
+    );
+
+
+  STATE.mercatorPerMeter=
+   STATE.originMercator
+    .meterInMercatorCoordinateUnits();
+
+
+  disposeRoot();
+
+
+  STATE.root=
+   new THREE.Group();
+
+
+  for(
+   const feature
+   of valid
+  ){
+
+   try{
+
+    STATE.root.add(
+     makePipe(
+      feature
+     )
+    );
+
+   }catch(error){
+
+    console.error(
+     'True Pipe geometry:',
+     error
+    );
+   }
+  }
+
+
+  STATE.scene.add(
+   STATE.root
+  );
+
+
+  /*
+   Le vecchie linee MapLibre rimangono nel codice
+   come fallback ma vengono nascoste quando il motore
+   3D è disponibile.
+  */
+
+  const lineLayers=[
+   'asbuilt-shadow',
+   'asbuilt-glow',
+   'asbuilt-shell',
+   'asbuilt-core',
+   'asbuilt-highlight',
+   'asbuilt-line',
+   'selected-glow',
+   'selected-core'
+  ];
+
+
+  for(
+   const layer
+   of lineLayers
+  ){
+
+   if(
+    map.getLayer(layer)
+   ){
+
+    map.setLayoutProperty(
+     layer,
+     'visibility',
+     'none'
+    );
+   }
+  }
+
+
+  updateBadge(
+   valid.length,
+   valid.some(
+    feature=>
+     feature
+      ?.properties
+      ?.intervento_collegato ===
+     true
+   )
+  );
+
+
+  map.triggerRepaint();
+ }
+
+
+ /* =======================================================
+    CUSTOM MAPLIBRE 3D LAYER
+    ======================================================= */
+
+ const customLayer={
+
+  id:
+   STATE.layerId,
+
+  type:'custom',
+
+  renderingMode:'3d',
+
+
+  onAdd(mapInstance,gl){
+
+   if(
+    typeof THREE ===
+    'undefined'
+   ){
+
+    throw new Error(
+     'Three.js non disponibile'
+    );
+   }
+
+
+   STATE.camera=
+    new THREE.Camera();
+
+
+   STATE.scene=
+    new THREE.Scene();
+
+
+   /*
+    Luci industriali.
+   */
+
+   const hemi=
+    new THREE.HemisphereLight(
+     0xb8eaff,
+     0x061018,
+     2.15
+    );
+
+
+   STATE.scene.add(
+    hemi
+   );
+
+
+   const key=
+    new THREE.DirectionalLight(
+     0xffffff,
+     3.2
+    );
+
+
+   key.position.set(
+    -80,
+    -120,
+    220
+   );
+
+
+   STATE.scene.add(
+    key
+   );
+
+
+   const rim=
+    new THREE.DirectionalLight(
+     0x36d9ff,
+     2.0
+    );
+
+
+   rim.position.set(
+    140,
+    100,
+    90
+   );
+
+
+   STATE.scene.add(
+    rim
+   );
+
+
+   STATE.renderer=
+    new THREE.WebGLRenderer({
+
+     canvas:
+      mapInstance.getCanvas(),
+
+     context:gl,
+
+     antialias:true
+    });
+
+
+   STATE.renderer
+    .autoClear=false;
+
+
+   if(
+    'outputColorSpace'
+    in STATE.renderer
+   ){
+
+    STATE.renderer
+     .outputColorSpace=
+      THREE.SRGBColorSpace;
+   }
+
+
+   STATE.ready=true;
+
+
+   setTimeout(
+    buildScene,
+    100
+   );
+  },
+
+
+  render(gl,matrix){
+
+   if(
+    !STATE.ready ||
+    !STATE.root ||
+    !STATE.originMercator
+   ){
+    return;
+   }
+
+
+   const transform=
+    new THREE.Matrix4()
+     .makeTranslation(
+
+      STATE
+       .originMercator
+       .x,
+
+      STATE
+       .originMercator
+       .y,
+
+      STATE
+       .originMercator
+       .z
+     );
+
+
+   transform.scale(
+    new THREE.Vector3(
+
+     STATE.mercatorPerMeter,
+
+     STATE.mercatorPerMeter,
+
+     STATE.mercatorPerMeter
+    )
+   );
+
+
+   const projection=
+    new THREE.Matrix4()
+     .fromArray(
+      matrix
+     );
+
+
+   STATE.camera
+    .projectionMatrix=
+     projection.multiply(
+      transform
+     );
+
+
+   STATE.renderer
+    .resetState();
+
+
+   STATE.renderer
+    .render(
+     STATE.scene,
+     STATE.camera
+    );
+
+
+   map.triggerRepaint();
+  }
+ };
+
+
+ /* =======================================================
+    INSTALL CUSTOM LAYER
+    ======================================================= */
+
+ function install(){
+
+  if(
+   map.getLayer(
+    STATE.layerId
+   )
+  ){
+   STATE.ready=true;
+   buildScene();
+   return;
+  }
+
+
+  const before=
+   map.getLayer(
+    'asset-points'
+   )
+    ? 'asset-points'
+    : undefined;
+
+
+  if(before){
+
+   map.addLayer(
+    customLayer,
+    before
+   );
+
+  }else{
+
+   map.addLayer(
+    customLayer
+   );
+  }
+ }
+
+
+ if(map.loaded()){
+
+  install();
+
+ }else{
+
+  map.on(
+   'load',
+   install
+  );
+ }
+
+
+ /* =======================================================
+    REBUILD WHEN GEOJSON CHANGES
+    ======================================================= */
+
+ const originalRenderSpatial=
+  window.renderSpatial;
+
+
+ if(
+  typeof originalRenderSpatial ===
+  'function'
+ ){
+
+  window.renderSpatial=
+   function(){
+
+    const result=
+     originalRenderSpatial
+      .apply(
+       this,
+       arguments
+      );
+
+
+    setTimeout(
+     buildScene,
+     80
+    );
+
+
+    return result;
+   };
+ }
+
+
+ /* =======================================================
+    SELECTED TUBE
+    ======================================================= */
+
+ const originalLoadAsset=
+  window.loadAsset;
+
+
+ if(
+  typeof originalLoadAsset ===
+  'function'
+ ){
+
+  window.loadAsset=
+   async function(id){
+
+    STATE.selectedId=
+     normId(id);
+
+
+    const result=
+     await originalLoadAsset
+      .apply(
+       this,
+       arguments
+      );
+
+
+    buildScene();
+
+
+    return result;
+   };
+ }
+
+
+ /* =======================================================
+    3D FOCUS INSIDE MASTER
+    ======================================================= */
+
+ window.nmaTruePipeFocus=
+  function(id){
+
+   const assetId=
+    normId(
+     id ||
+     STATE.selectedId ||
+     selectedId ||
+     ''
+    );
+
+
+   STATE.selectedId=
+    assetId;
+
+
+   if(
+    typeof setView ===
+    'function'
+   ){
+
+    setView('3d');
+   }
+
+
+   if(
+    assetId &&
+    typeof zoomToAsset ===
+    'function'
+   ){
+
+    zoomToAsset(
+     assetId
+    );
+   }
+
+
+   setTimeout(
+    ()=>{
+
+     map.easeTo({
+
+      pitch:68,
+
+      bearing:
+       map.getBearing(),
+
+      zoom:
+       Math.min(
+        19.25,
+        Math.max(
+         17.6,
+         map.getZoom()
+        )
+       ),
+
+      duration:850
+     });
+
+
+     buildScene();
+
+    },
+    120
+   );
+  };
+
+
+ /* =======================================================
+    INTERCEPT OLD "VISUALIZZA IN 3D"
+    Do not leave MASTER anymore.
+    ======================================================= */
+
+ document.addEventListener(
+  'click',
+  event=>{
+
+   const link=
+    event.target.closest(
+     'a,button'
+    );
+
+
+   if(!link){
+    return;
+   }
+
+
+   const text=
+    String(
+     link.textContent ||
+     ''
+    )
+    .trim()
+    .toUpperCase();
+
+
+   const insideAsset=
+    Boolean(
+     link.closest(
+      '#assetBody,.assetBody'
+     )
+    );
+
+
+   if(
+    insideAsset &&
+    (
+     text.includes(
+      'VISUALIZZA IN 3D'
+     )
+     ||
+     text ===
+      'SPATIAL TWIN'
+    )
+   ){
+
+    event.preventDefault();
+
+
+    window.nmaTruePipeFocus(
+     STATE.selectedId ||
+     selectedId
+    );
+   }
+  },
+  true
+ );
+
+
+ /* =======================================================
+    AS-BUILT TOGGLE -> TRUE 3D
+    ======================================================= */
+
+ const originalToggleLayer=
+  window.toggleLayer;
+
+
+ if(
+  typeof originalToggleLayer ===
+  'function'
+ ){
+
+  window.toggleLayer=
+   function(type){
+
+    const result=
+     originalToggleLayer
+      .apply(
+       this,
+       arguments
+      );
+
+
+    if(
+     type==='asbuilt' &&
+     map.getLayer(
+      STATE.layerId
+     )
+    ){
+
+     map.setLayoutProperty(
+      STATE.layerId,
+      'visibility',
+      visibility.asbuilt
+       ? 'visible'
+       : 'none'
+     );
+    }
+
+
+    return result;
+   };
+ }
+
+
+ /* =======================================================
+    BADGE
+    ======================================================= */
+
+ function updateBadge(
+  count,
+  connected
+ ){
+
+  if(!STATE.badge){
+
+   STATE.badge=
+    document.createElement(
+     'div'
+    );
+
+
+   STATE.badge.className=
+    'true3dBadge';
+
+
+   document.body.appendChild(
+    STATE.badge
+   );
+  }
+
+
+  STATE.badge
+   .classList.toggle(
+    'connected',
+    connected
+   );
+
+
+  STATE.badge.textContent=
+   count+
+   (
+    count===1
+     ? ' TUBAZIONE'
+     : ' TUBAZIONI'
+   )+
+   ' · TRUE 3D';
+ }
+
+
+ /* =======================================================
+    TILE / ZOOM PROTECTION AT RUNTIME
+    ======================================================= */
+
+ try{
+
+  map.setMaxZoom(
+   20
+  );
+
+ }catch(error){}
+
+
+ window.addEventListener(
+  'resize',
+  ()=>{
+
+   setTimeout(
+    ()=>map.resize(),
+    80
+   );
+  }
+ );
+
+})();
+
+</script>
+
+<!-- NMA TRUE PIPE 3D ENGINE v1 -->
 
 </body>
 </html>
