@@ -323,7 +323,8 @@ app.get('/api/health', async (req, res) => {
         // NMA_SERVER_GUARD_CAPABILITY_V1
         capabilities: {
             server_guard_v1: true,
-            resilience_v1: true
+            resilience_v1: true,
+            master_foundation_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -5707,6 +5708,24 @@ app.get(
 
 
 // ============================================================
+// NMA BUILD OS — MASTER FOUNDATION v1
+// Home unica + Digital Twin + Asset Memory
+// ============================================================
+
+app.get(
+    '/master',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    (req,res)=>{
+        res.sendFile(
+            __dirname+
+            '/master_v1.html'
+        );
+    }
+);
+
+
+// ============================================================
 // NMA BUILD OS — COMMAND CENTER v1
 // Pilot Readiness — sola lettura.
 // Nessuna scrittura MongoDB.
@@ -6215,12 +6234,12 @@ app.get('/', (req, res) => {
 <body>
     <div class="login-box">
         <h1>NMA BUILD OS</h1>
-        <div class="subtitle">Accesso Direzione</div>
+        <div class="subtitle">Accesso NMA BUILD OS</div>
 
         <input
             type="password"
             id="pin"
-            placeholder="PIN Direzionale"
+            placeholder="PIN di accesso"
             autocomplete="current-password"
         >
 
@@ -6259,7 +6278,10 @@ async function login() {
 
         pinInput.value = '';
 
-        window.location.href = '/ufficio';
+        window.location.href =
+            data.role === 'operatore'
+                ? '/cantiere'
+                : '/master';
 
     } catch (error) {
         message.textContent = error.message;

@@ -1,0 +1,2375 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>NMA BUILD OS — MASTER</title>
+
+<script
+  src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js">
+</script>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css"
+>
+
+<style>
+
+:root{
+    --bg:#041017;
+    --panel:#081c25;
+    --panel2:#0b2530;
+    --line:#17495a;
+
+    --cyan:#22c7ed;
+    --green:#22e39b;
+    --orange:#ff9f1c;
+    --red:#ff5964;
+
+    --text:#edf9fc;
+    --muted:#86a6b2;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+    min-height:100%;
+    background:var(--bg);
+    color:var(--text);
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body{
+    padding-bottom:
+        env(safe-area-inset-bottom);
+}
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+header{
+    position:sticky;
+    top:0;
+    z-index:1000;
+
+    padding:
+        calc(13px + env(safe-area-inset-top))
+        max(16px,env(safe-area-inset-right))
+        13px
+        max(16px,env(safe-area-inset-left));
+
+    background:
+        rgba(3,15,21,.95);
+
+    border-bottom:
+        1px solid var(--line);
+
+    backdrop-filter:
+        blur(16px);
+}
+
+.top{
+    max-width:1500px;
+    margin:auto;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+}
+
+.brand{
+    font-weight:950;
+    letter-spacing:.09em;
+    font-size:21px;
+}
+
+.brand small{
+    display:block;
+
+    margin-top:3px;
+
+    font-size:10px;
+    letter-spacing:.16em;
+
+    color:var(--cyan);
+}
+
+.system{
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+
+.badge{
+    display:inline-flex;
+    align-items:center;
+
+    padding:7px 10px;
+
+    border-radius:999px;
+
+    font-size:10px;
+    font-weight:900;
+
+    border:
+        1px solid var(--line);
+
+    background:#08202a;
+}
+
+.badge.live{
+    color:var(--green);
+}
+
+.logout{
+    border:1px solid #394c55;
+    background:#111d23;
+    color:white;
+
+    padding:8px 11px;
+
+    border-radius:10px;
+
+    font-weight:800;
+}
+
+/* ==========================================================
+   LAYOUT
+   ========================================================== */
+
+main{
+    max-width:1500px;
+    margin:auto;
+
+    padding:
+        18px
+        max(18px,env(safe-area-inset-right))
+        30px
+        max(18px,env(safe-area-inset-left));
+}
+
+.hero{
+    display:grid;
+
+    grid-template-columns:
+        minmax(0,1.5fr)
+        minmax(280px,.7fr);
+
+    gap:14px;
+
+    margin-bottom:14px;
+}
+
+.card{
+    border:
+        1px solid var(--line);
+
+    background:
+        linear-gradient(
+            145deg,
+            #09222c,
+            #06171e
+        );
+
+    border-radius:19px;
+
+    padding:17px;
+}
+
+.eyebrow{
+    color:var(--cyan);
+
+    font-size:10px;
+    font-weight:950;
+
+    letter-spacing:.16em;
+}
+
+h1{
+    margin:7px 0 7px;
+
+    font-size:
+        clamp(25px,4vw,45px);
+
+    line-height:1.04;
+}
+
+.heroText{
+    color:#a9c3cd;
+
+    max-width:780px;
+
+    line-height:1.5;
+
+    margin:0;
+}
+
+.statusGrid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.statusBox{
+    background:#06171e;
+
+    border:
+        1px solid #164252;
+
+    border-radius:13px;
+
+    padding:11px;
+}
+
+.statusBox small{
+    color:var(--muted);
+
+    display:block;
+
+    font-size:9px;
+
+    letter-spacing:.1em;
+}
+
+.statusBox strong{
+    display:block;
+
+    margin-top:6px;
+
+    font-size:14px;
+}
+
+/* ==========================================================
+   NAV MASTER
+   ========================================================== */
+
+.masterNav{
+    display:grid;
+
+    grid-template-columns:
+        repeat(8,minmax(120px,1fr));
+
+    gap:8px;
+
+    margin-bottom:14px;
+
+    overflow:auto;
+}
+
+.masterNav a{
+    text-decoration:none;
+
+    color:#d9edf4;
+
+    background:#071b24;
+
+    border:
+        1px solid #164353;
+
+    padding:12px 11px;
+
+    border-radius:13px;
+
+    font-size:11px;
+    font-weight:900;
+
+    text-align:center;
+
+    white-space:nowrap;
+}
+
+.masterNav a:hover{
+    border-color:var(--cyan);
+}
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+.kpis{
+    display:grid;
+
+    grid-template-columns:
+        repeat(7,minmax(130px,1fr));
+
+    gap:9px;
+
+    margin-bottom:14px;
+
+    overflow:auto;
+}
+
+.kpi{
+    min-width:130px;
+
+    background:#071b23;
+
+    border:
+        1px solid #164454;
+
+    border-radius:15px;
+
+    padding:13px;
+}
+
+.kpi small{
+    color:var(--muted);
+
+    display:block;
+
+    font-size:9px;
+
+    letter-spacing:.09em;
+}
+
+.kpi b{
+    display:block;
+
+    margin-top:6px;
+
+    font-size:24px;
+}
+
+.green{color:var(--green);}
+.orange{color:var(--orange);}
+.cyan{color:var(--cyan);}
+.red{color:var(--red);}
+
+/* ==========================================================
+   DIGITAL TWIN
+   ========================================================== */
+
+.twin{
+    display:grid;
+
+    grid-template-columns:
+        minmax(0,1.6fr)
+        minmax(300px,.62fr);
+
+    gap:14px;
+
+    margin-bottom:14px;
+}
+
+.mapCard{
+    position:relative;
+
+    min-height:660px;
+
+    overflow:hidden;
+
+    padding:0;
+}
+
+#map{
+    position:absolute;
+    inset:0;
+}
+
+.mapToolbar{
+    position:absolute;
+
+    top:13px;
+    left:13px;
+    right:13px;
+
+    z-index:10;
+
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    align-items:center;
+
+    pointer-events:none;
+}
+
+.mapToolbar > *{
+    pointer-events:auto;
+}
+
+.select{
+    background:
+        rgba(4,19,25,.94);
+
+    color:white;
+
+    border:
+        1px solid #286176;
+
+    min-height:43px;
+
+    border-radius:11px;
+
+    padding:0 12px;
+
+    font-size:13px;
+}
+
+.layerButton{
+    border:
+        1px solid #286176;
+
+    background:
+        rgba(4,19,25,.94);
+
+    color:#d9edf4;
+
+    min-height:43px;
+
+    border-radius:11px;
+
+    padding:0 12px;
+
+    font-weight:850;
+}
+
+.layerButton.on{
+    border-color:var(--green);
+    color:var(--green);
+}
+
+.mapLegend{
+    position:absolute;
+
+    left:13px;
+    bottom:13px;
+
+    z-index:10;
+
+    padding:10px 12px;
+
+    border-radius:12px;
+
+    background:
+        rgba(4,19,25,.94);
+
+    border:
+        1px solid #245568;
+
+    font-size:11px;
+}
+
+.legendLine{
+    display:inline-block;
+
+    width:26px;
+    height:4px;
+
+    border-radius:4px;
+
+    margin-right:6px;
+
+    vertical-align:middle;
+}
+
+.side{
+    display:grid;
+    gap:12px;
+    align-content:start;
+}
+
+.side h2{
+    margin:0 0 12px;
+
+    color:var(--cyan);
+
+    font-size:15px;
+
+    letter-spacing:.08em;
+}
+
+.assetEmpty{
+    color:var(--muted);
+
+    line-height:1.5;
+
+    font-size:13px;
+}
+
+.assetTitle{
+    font-size:18px;
+    font-weight:900;
+
+    word-break:break-word;
+}
+
+.assetGrid{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:8px;
+
+    margin-top:12px;
+}
+
+.assetField{
+    background:#061820;
+
+    border:
+        1px solid #174354;
+
+    border-radius:12px;
+
+    padding:10px;
+}
+
+.assetField small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:9px;
+
+    margin-bottom:5px;
+}
+
+.assetField strong{
+    font-size:13px;
+}
+
+.actions{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:7px;
+
+    margin-top:12px;
+}
+
+.actions a{
+    text-decoration:none;
+
+    text-align:center;
+
+    border-radius:11px;
+
+    padding:11px 8px;
+
+    background:#0d3240;
+
+    color:white;
+
+    border:
+        1px solid #235b6e;
+
+    font-size:11px;
+    font-weight:900;
+}
+
+/* ==========================================================
+   NETWORK FOUNDATION
+   ========================================================== */
+
+.networkState{
+    display:grid;
+    gap:8px;
+}
+
+.networkRow{
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:12px;
+
+    background:#061820;
+
+    border:
+        1px solid #174354;
+
+    border-radius:11px;
+
+    padding:10px;
+}
+
+.networkRow span{
+    color:var(--muted);
+
+    font-size:11px;
+}
+
+.networkRow strong{
+    font-size:11px;
+
+    text-align:right;
+}
+
+/* ==========================================================
+   ASSETS / RECENTI
+   ========================================================== */
+
+.lower{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:14px;
+}
+
+.assetList,
+.recentList{
+    display:grid;
+    gap:7px;
+
+    max-height:420px;
+
+    overflow:auto;
+}
+
+.assetRow,
+.recentRow{
+    display:grid;
+
+    grid-template-columns:
+        1.2fr .9fr .8fr;
+
+    gap:8px;
+
+    align-items:center;
+
+    background:#061820;
+
+    border:
+        1px solid #153d4b;
+
+    border-radius:12px;
+
+    padding:10px;
+
+    font-size:11px;
+}
+
+.assetRow{
+    cursor:pointer;
+}
+
+.assetRow:hover{
+    border-color:var(--cyan);
+}
+
+.assetRow strong,
+.recentRow strong{
+    word-break:break-word;
+}
+
+.muted{
+    color:var(--muted);
+}
+
+.sectionTitle{
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:12px;
+}
+
+.sectionTitle h2{
+    margin:0;
+
+    color:var(--cyan);
+
+    font-size:15px;
+
+    letter-spacing:.08em;
+}
+
+.counter{
+    color:var(--muted);
+
+    font-size:11px;
+}
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media(max-width:900px){
+
+    .hero,
+    .twin,
+    .lower{
+        grid-template-columns:1fr;
+    }
+
+    .masterNav{
+        grid-template-columns:
+            repeat(4,minmax(130px,1fr));
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(3,minmax(130px,1fr));
+    }
+
+    .mapCard{
+        min-height:590px;
+    }
+
+}
+
+@media(max-width:600px){
+
+    main{
+        padding:
+            10px
+            max(10px,env(safe-area-inset-right))
+            24px
+            max(10px,env(safe-area-inset-left));
+    }
+
+    .top{
+        align-items:flex-start;
+    }
+
+    .brand{
+        font-size:17px;
+    }
+
+    .system{
+        flex-direction:column;
+        align-items:flex-end;
+    }
+
+    .masterNav{
+        grid-template-columns:
+            repeat(2,minmax(140px,1fr));
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(2,minmax(130px,1fr));
+    }
+
+    .mapCard{
+        min-height:560px;
+    }
+
+    .mapToolbar{
+        top:9px;
+        left:9px;
+        right:9px;
+    }
+
+    .select{
+        width:100%;
+    }
+
+    .assetGrid,
+    .actions{
+        grid-template-columns:1fr;
+    }
+
+    .assetRow,
+    .recentRow{
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+
+<div class="top">
+
+    <div class="brand">
+        NMA BUILD OS
+        <small>MASTER — INFRASTRUCTURE MEMORY SYSTEM</small>
+    </div>
+
+    <div class="system">
+
+        <span
+          id="systemBadge"
+          class="badge">
+          ● CHECK
+        </span>
+
+        <span
+          id="roleBadge"
+          class="badge">
+          ROLE
+        </span>
+
+        <button
+          class="logout"
+          onclick="logout()">
+          ESCI
+        </button>
+
+    </div>
+
+</div>
+
+</header>
+
+<main>
+
+<section class="hero">
+
+    <div class="card">
+
+        <div class="eyebrow">
+            BUILD OS MASTER FOUNDATION
+        </div>
+
+        <h1>
+            Dal cantiere al Digital Twin.
+        </h1>
+
+        <p class="heroText">
+            Un'unica piattaforma collega attività di campo,
+            geometria As-Built, progetto, controllo,
+            validazione, Audit, SAL, Passaporto e memoria
+            permanente dell'infrastruttura.
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div class="statusGrid">
+
+            <div class="statusBox">
+                <small>SERVER</small>
+                <strong id="serverState">—</strong>
+            </div>
+
+            <div class="statusBox">
+                <small>MONGODB</small>
+                <strong id="mongoState">—</strong>
+            </div>
+
+            <div class="statusBox">
+                <small>DIGITAL TWIN</small>
+                <strong class="green">
+                    ATTIVO
+                </strong>
+            </div>
+
+            <div class="statusBox">
+                <small>TELEMETRIA SENSORI</small>
+                <strong class="orange">
+                    NON COLLEGATA
+                </strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<nav class="masterNav">
+
+    <a href="/cantiere">
+        CAMPO
+    </a>
+
+    <a href="/supervisore">
+        SUPERVISORE
+    </a>
+
+    <a href="/workflow">
+        WORKFLOW
+    </a>
+
+    <a href="/quality">
+        QUALITY GATE
+    </a>
+
+    <a href="/direzione">
+        CONTROL ROOM
+    </a>
+
+    <a href="/sal-v2">
+        SAL
+    </a>
+
+    <a href="/audit">
+        AUDIT
+    </a>
+
+    <a href="/asset-memory">
+        ASSET MEMORY
+    </a>
+
+</nav>
+
+<section class="kpis">
+
+    <div class="kpi">
+        <small>INTERVENTI</small>
+        <b id="kInterventi">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>VALIDATI</small>
+        <b
+          id="kValidati"
+          class="green">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>DA CORREGGERE</small>
+        <b
+          id="kCorrezioni"
+          class="orange">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>METRI MISURATI</small>
+        <b id="kMetri">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>ANOMALIE</small>
+        <b
+          id="kAnomalie"
+          class="red">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>EVIDENZE</small>
+        <b id="kEvidenze">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>EVENTI AUDIT</small>
+        <b id="kAudit">—</b>
+    </div>
+
+</section>
+
+<section class="twin">
+
+<div class="card mapCard">
+
+    <div id="map"></div>
+
+    <div class="mapToolbar">
+
+        <select
+          id="cantiere"
+          class="select">
+            <option value="">
+                Tutti i cantieri
+            </option>
+        </select>
+
+        <button
+          id="btnAsbuilt"
+          class="layerButton on"
+          onclick="toggleLayer('asbuilt')">
+            AS-BUILT
+        </button>
+
+        <button
+          id="btnProgetto"
+          class="layerButton on"
+          onclick="toggleLayer('progetto')">
+            PROGETTO
+        </button>
+
+    </div>
+
+    <div class="mapLegend">
+
+        <div>
+            <span
+              class="legendLine"
+              style="background:#23e399">
+            </span>
+            As-Built
+        </div>
+
+        <div style="margin-top:6px">
+            <span
+              class="legendLine"
+              style="background:#22c7ed">
+            </span>
+            Progetto
+        </div>
+
+    </div>
+
+</div>
+
+<aside class="side">
+
+    <section class="card">
+
+        <h2>
+            DIGITAL TWIN / ASSET
+        </h2>
+
+        <div
+          id="assetDetail"
+          class="assetEmpty">
+            Seleziona un tratto sulla mappa
+            oppure un asset dalla memoria.
+        </div>
+
+    </section>
+
+    <section class="card">
+
+        <h2>
+            NETWORK CONTROL
+        </h2>
+
+        <div class="networkState">
+
+            <div class="networkRow">
+                <span>Sorgente sensori</span>
+                <strong class="orange">
+                    NON COLLEGATA
+                </strong>
+            </div>
+
+            <div class="networkRow">
+                <span>Pressione live</span>
+                <strong>
+                    NON DISPONIBILE
+                </strong>
+            </div>
+
+            <div class="networkRow">
+                <span>Flusso live</span>
+                <strong>
+                    NON DISPONIBILE
+                </strong>
+            </div>
+
+            <div class="networkRow">
+                <span>Dispersioni automatiche</span>
+                <strong>
+                    NON CALCOLATE
+                </strong>
+            </div>
+
+            <div class="networkRow">
+                <span>Base Digital Twin</span>
+                <strong class="green">
+                    PRONTA
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="notice"
+          style="
+            margin-top:12px;
+            color:#ffc76a;
+            font-size:11px;
+            line-height:1.45;
+          ">
+            Nessun valore di telemetria viene simulato come dato
+            reale. Questo modulo sarà collegato a sensori/Gateway
+            quando l'hardware sarà disponibile.
+        </div>
+
+    </section>
+
+</aside>
+
+</section>
+
+<section class="lower">
+
+    <div class="card">
+
+        <div class="sectionTitle">
+
+            <h2>
+                ASSET MEMORY
+            </h2>
+
+            <span
+              id="assetCounter"
+              class="counter">
+              —
+            </span>
+
+        </div>
+
+        <div
+          id="assetList"
+          class="assetList">
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="sectionTitle">
+
+            <h2>
+                ULTIMI INTERVENTI
+            </h2>
+
+            <span class="counter">
+                LIVE DB
+            </span>
+
+        </div>
+
+        <div
+          id="recentList"
+          class="recentList">
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+<script>
+
+/* ==========================================================
+   NMA BUILD OS — MASTER FOUNDATION v1
+   Tutti i dati derivano dalle API reali.
+   Nessuna scrittura operativa.
+   ========================================================== */
+
+let map;
+
+let asbuiltVisible=true;
+let progettoVisible=true;
+
+let currentAssets=[];
+let assetMap=new Map();
+
+let mapReady=false;
+
+
+/* ==========================================================
+   MAP
+   ========================================================== */
+
+map=
+    new maplibregl.Map({
+
+        container:'map',
+
+        style:{
+            version:8,
+
+            sources:{
+                satellite:{
+                    type:'raster',
+
+                    tiles:[
+                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    ],
+
+                    tileSize:256
+                }
+            },
+
+            layers:[
+                {
+                    id:'satellite-base',
+                    type:'raster',
+                    source:'satellite'
+                }
+            ]
+        },
+
+        center:[
+            7.68625,
+            45.07035
+        ],
+
+        zoom:12,
+
+        pitch:45,
+
+        bearing:-15,
+
+        antialias:true
+    });
+
+
+map.addControl(
+    new maplibregl.NavigationControl(),
+    'bottom-right'
+);
+
+
+map.on('load',()=>{
+
+    mapReady=true;
+
+    map.addSource(
+        'nma-asbuilt',
+        {
+            type:'geojson',
+            data:{
+                type:'FeatureCollection',
+                features:[]
+            }
+        }
+    );
+
+    map.addLayer({
+        id:'nma-asbuilt-shadow',
+        type:'line',
+        source:'nma-asbuilt',
+
+        paint:{
+            'line-color':'#032c22',
+            'line-width':11,
+            'line-opacity':.88
+        }
+    });
+
+    map.addLayer({
+        id:'nma-asbuilt-line',
+        type:'line',
+        source:'nma-asbuilt',
+
+        paint:{
+            'line-color':'#22e39b',
+            'line-width':6,
+            'line-opacity':1
+        }
+    });
+
+
+    map.addSource(
+        'nma-project',
+        {
+            type:'geojson',
+            data:{
+                type:'FeatureCollection',
+                features:[]
+            }
+        }
+    );
+
+    map.addLayer({
+        id:'nma-project-line',
+        type:'line',
+        source:'nma-project',
+
+        paint:{
+            'line-color':'#22c7ed',
+            'line-width':4,
+            'line-opacity':.9,
+            'line-dasharray':[2,2]
+        }
+    });
+
+
+    map.on(
+        'click',
+        'nma-asbuilt-line',
+        event=>{
+            const feature=
+                event.features?.[0];
+
+            if(!feature){
+                return;
+            }
+
+            const raw=
+                String(
+                    feature.properties
+                        ?.id_tratto ||
+                    ''
+                );
+
+            const id=
+                raw.replace(
+                    /^ASB-/,
+                    ''
+                );
+
+            showAsset(
+                assetMap.get(id),
+                feature.properties
+            );
+        }
+    );
+
+
+    map.on(
+        'mouseenter',
+        'nma-asbuilt-line',
+        ()=>{
+            map.getCanvas().style.cursor=
+                'pointer';
+        }
+    );
+
+    map.on(
+        'mouseleave',
+        'nma-asbuilt-line',
+        ()=>{
+            map.getCanvas().style.cursor=
+                '';
+        }
+    );
+
+
+    map.on(
+        'click',
+        'nma-project-line',
+        event=>{
+            const feature=
+                event.features?.[0];
+
+            const id=
+                String(
+                    feature
+                        ?.properties
+                        ?.id_intervento ||
+                    ''
+                );
+
+            showAsset(
+                assetMap.get(id)
+            );
+        }
+    );
+
+
+    refreshAll();
+
+});
+
+
+/* ==========================================================
+   FETCH
+   ========================================================== */
+
+async function api(url){
+
+    const response=
+        await fetch(
+            url,
+            {
+                credentials:
+                    'same-origin'
+            }
+        );
+
+    if(response.status===401){
+
+        location.href='/';
+        throw new Error(
+            'Sessione scaduta'
+        );
+    }
+
+    if(!response.ok){
+
+        throw new Error(
+            url+
+            ' HTTP '+
+            response.status
+        );
+    }
+
+    return response.json();
+}
+
+
+/* ==========================================================
+   REFRESH MASTER
+   ========================================================== */
+
+async function refreshAll(){
+
+    try{
+
+        const filter=
+            document
+                .getElementById('cantiere')
+                .value;
+
+        const query=
+            filter
+                ? '?cantiere='+
+                    encodeURIComponent(
+                        filter
+                    )
+                : '';
+
+
+        const [
+            health,
+            session,
+            summary,
+            assets,
+            tubes
+        ]=
+            await Promise.all([
+
+                api('/api/health'),
+
+                api('/api/session'),
+
+                api(
+                    '/api/operations-summary'
+                ),
+
+                api(
+                    '/api/asset-memory'+
+                    query
+                ),
+
+                api(
+                    '/api/tubi'+
+                    query
+                )
+            ]);
+
+
+        renderHealth(
+            health,
+            session
+        );
+
+        renderKpi(summary);
+
+        renderAssets(assets);
+
+        renderRecent(
+            summary
+                .ultimi_interventi ||
+            []
+        );
+
+        renderMap(
+            tubes,
+            assets
+        );
+
+    }catch(error){
+
+        console.error(error);
+
+        document
+            .getElementById(
+                'systemBadge'
+            )
+            .textContent=
+                '● DEGRADED';
+
+        document
+            .getElementById(
+                'systemBadge'
+            )
+            .classList
+            .remove('live');
+    }
+}
+
+
+/* ==========================================================
+   HEALTH
+   ========================================================== */
+
+function renderHealth(
+    health,
+    session
+){
+
+    const ok=
+        health?.ok===true;
+
+    const badge=
+        document.getElementById(
+            'systemBadge'
+        );
+
+    badge.textContent=
+        ok
+            ? '● OPERATIONAL'
+            : '● DEGRADED';
+
+    badge.classList.toggle(
+        'live',
+        ok
+    );
+
+    document
+        .getElementById(
+            'serverState'
+        )
+        .textContent=
+            health?.server ||
+            '—';
+
+    document
+        .getElementById(
+            'mongoState'
+        )
+        .textContent=
+            health?.mongodb ||
+            '—';
+
+    document
+        .getElementById(
+            'roleBadge'
+        )
+        .textContent=
+            String(
+                session?.role ||
+                'ROLE'
+            ).toUpperCase();
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+function renderKpi(data){
+
+    const k=
+        data?.kpi ||
+        {};
+
+    setText(
+        'kInterventi',
+        k.interventi_totali
+    );
+
+    setText(
+        'kValidati',
+        k.validati
+    );
+
+    setText(
+        'kCorrezioni',
+        k.da_correggere
+    );
+
+    setText(
+        'kMetri',
+        formatNumber(
+            k.metri,
+            2
+        )+' m'
+    );
+
+    setText(
+        'kAnomalie',
+        k.anomalie
+    );
+
+    setText(
+        'kEvidenze',
+        k.evidenze
+    );
+
+    setText(
+        'kAudit',
+        k.eventi_audit
+    );
+}
+
+
+/* ==========================================================
+   ASSET MEMORY
+   ========================================================== */
+
+function renderAssets(data){
+
+    currentAssets=
+        Array.isArray(
+            data?.assets
+        )
+            ? data.assets
+            : [];
+
+    assetMap=
+        new Map(
+            currentAssets.map(
+                asset=>[
+                    String(
+                        asset.id_intervento ||
+                        asset.id_asset ||
+                        ''
+                    ),
+                    asset
+                ]
+            )
+        );
+
+    setText(
+        'assetCounter',
+        String(
+            data?.totale_asset ??
+            currentAssets.length
+        )+
+        ' asset'
+    );
+
+    const list=
+        document.getElementById(
+            'assetList'
+        );
+
+    list.innerHTML='';
+
+    if(!currentAssets.length){
+
+        list.innerHTML=
+            '<div class="assetEmpty">'+
+            'Nessun asset validato nel filtro selezionato.'+
+            '</div>';
+
+        return;
+    }
+
+
+    currentAssets
+        .slice(0,100)
+        .forEach(asset=>{
+
+            const row=
+                document.createElement(
+                    'div'
+                );
+
+            row.className=
+                'assetRow';
+
+            row.innerHTML=
+                '<strong>'+
+                escapeHtml(
+                    asset.id_intervento ||
+                    '—'
+                )+
+                '</strong>'+
+
+                '<span>'+
+                escapeHtml(
+                    asset.id_cantiere ||
+                    '—'
+                )+
+                '</span>'+
+
+                '<span class="muted">'+
+                escapeHtml(
+                    asset.stato ||
+                    '—'
+                )+
+                '</span>';
+
+            row.onclick=
+                ()=>{
+                    showAsset(asset);
+                    flyToAsset(asset);
+                };
+
+            list.appendChild(row);
+        });
+}
+
+
+/* ==========================================================
+   ASSET DETAIL
+   ========================================================== */
+
+function showAsset(
+    asset,
+    fallback={}
+){
+
+    const el=
+        document.getElementById(
+            'assetDetail'
+        );
+
+
+    if(!asset){
+
+        el.innerHTML=
+            '<div class="assetTitle">'+
+            escapeHtml(
+                fallback?.id_tratto ||
+                'Tratto rete'
+            )+
+            '</div>'+
+            '<p class="assetEmpty">'+
+            'Geometria presente nel GIS, ma nessun Asset Memory validato collegato.'+
+            '</p>';
+
+        return;
+    }
+
+
+    const id=
+        String(
+            asset.id_intervento ||
+            ''
+        );
+
+    const materiale=
+        asset.tubazione
+            ?.materiale ||
+        '—';
+
+    const diametro=
+        Number(
+            asset.tubazione
+                ?.diametro_mm ||
+            0
+        );
+
+    const metri=
+        Number(
+            asset.tubazione
+                ?.metri_misurati ||
+            0
+        );
+
+    const gps=
+        asset.asbuilt
+            ?.sorgente_gps ||
+        '—';
+
+    const progetto=
+        asset
+            .progetto_riferimento
+            ?.presente === true;
+
+
+    el.innerHTML=
+
+        '<div class="assetTitle">'+
+        escapeHtml(id)+
+        '</div>'+
+
+        '<div class="assetGrid">'+
+
+            field(
+                'CANTIERE',
+                asset.id_cantiere
+            )+
+
+            field(
+                'STATO',
+                asset.stato
+            )+
+
+            field(
+                'MATERIALE',
+                materiale
+            )+
+
+            field(
+                'DIAMETRO',
+                diametro
+                    ? diametro+' mm'
+                    : '—'
+            )+
+
+            field(
+                'METRI MISURATI',
+                formatNumber(
+                    metri,
+                    2
+                )+' m'
+            )+
+
+            field(
+                'GPS',
+                gps
+            )+
+
+            field(
+                'EVIDENZE',
+                asset.evidenze ??
+                0
+            )+
+
+            field(
+                'EVENTI AUDIT',
+                asset.audit
+                    ?.eventi ??
+                0
+            )+
+
+            field(
+                'PROGETTO',
+                progetto
+                    ? 'COLLEGATO'
+                    : 'NON COLLEGATO'
+            )+
+
+            field(
+                'DOSSIER',
+                asset.dossier_chiuso
+                    ? 'CHIUSO'
+                    : 'APERTO'
+            )+
+
+        '</div>'+
+
+        '<div class="actions">'+
+
+            '<a href="/passaporto/'+
+            encodeURIComponent(id)+
+            '">PASSAPORTO</a>'+
+
+            '<a href="/confronto/'+
+            encodeURIComponent(id)+
+            '">PROGETTO ↔ AS-BUILT</a>'+
+
+            '<a href="/audit?intervento='+
+            encodeURIComponent(id)+
+            '">AUDIT</a>'+
+
+            '<a href="/asset-memory">'+
+            'ASSET MEMORY</a>'+
+
+        '</div>';
+}
+
+
+/* ==========================================================
+   MAP DATA
+   ========================================================== */
+
+function renderMap(
+    tubes,
+    assetsResponse
+){
+
+    if(!mapReady){
+        return;
+    }
+
+
+    const asbuilt=
+        tubes &&
+        tubes.type===
+            'FeatureCollection'
+            ? tubes
+            : {
+                type:'FeatureCollection',
+                features:[]
+            };
+
+
+    map
+        .getSource('nma-asbuilt')
+        ?.setData(asbuilt);
+
+
+    const assets=
+        Array.isArray(
+            assetsResponse?.assets
+        )
+            ? assetsResponse.assets
+            : [];
+
+
+    const projectFeatures=
+        assets
+            .filter(asset=>
+                asset
+                    ?.progetto_riferimento
+                    ?.presente ===
+                true
+                &&
+                asset
+                    ?.progetto_riferimento
+                    ?.geometry
+                    ?.type ===
+                'LineString'
+            )
+            .map(asset=>({
+
+                type:'Feature',
+
+                geometry:
+                    asset
+                        .progetto_riferimento
+                        .geometry,
+
+                properties:{
+                    id_intervento:
+                        asset.id_intervento,
+
+                    cantiere:
+                        asset.id_cantiere
+                }
+            }));
+
+
+    map
+        .getSource('nma-project')
+        ?.setData({
+
+            type:'FeatureCollection',
+
+            features:
+                projectFeatures
+        });
+
+
+    fitFeatures(
+        asbuilt.features
+    );
+}
+
+
+/* ==========================================================
+   FLY / BOUNDS
+   ========================================================== */
+
+function fitFeatures(features){
+
+    const coords=[];
+
+    for(const feature of features||[]){
+
+        const points=
+            feature
+                ?.geometry
+                ?.coordinates;
+
+        if(
+            !Array.isArray(points)
+        ){
+            continue;
+        }
+
+        for(const p of points){
+
+            if(
+                Array.isArray(p) &&
+                Number.isFinite(
+                    Number(p[0])
+                ) &&
+                Number.isFinite(
+                    Number(p[1])
+                )
+            ){
+                coords.push([
+                    Number(p[0]),
+                    Number(p[1])
+                ]);
+            }
+        }
+    }
+
+
+    if(!coords.length){
+        return;
+    }
+
+
+    const bounds=
+        coords.reduce(
+            (
+                b,
+                coord
+            )=>
+                b.extend(coord),
+            new maplibregl
+                .LngLatBounds(
+                    coords[0],
+                    coords[0]
+                )
+        );
+
+
+    map.fitBounds(
+        bounds,
+        {
+            padding:60,
+            maxZoom:18,
+            duration:700
+        }
+    );
+}
+
+
+function flyToAsset(asset){
+
+    const geometry=
+        asset
+            ?.asbuilt
+            ?.geometry;
+
+    const coords=
+        geometry
+            ?.coordinates;
+
+    if(
+        !Array.isArray(coords) ||
+        !coords.length
+    ){
+        return;
+    }
+
+    const point=
+        coords[
+            Math.floor(
+                coords.length/2
+            )
+        ];
+
+    map.flyTo({
+        center:point,
+        zoom:18,
+        pitch:55,
+        duration:700
+    });
+}
+
+
+/* ==========================================================
+   RECENTI
+   ========================================================== */
+
+function renderRecent(items){
+
+    const list=
+        document.getElementById(
+            'recentList'
+        );
+
+    list.innerHTML='';
+
+    if(!items.length){
+
+        list.innerHTML=
+            '<div class="assetEmpty">'+
+            'Nessun intervento disponibile.'+
+            '</div>';
+
+        return;
+    }
+
+    items.forEach(item=>{
+
+        const row=
+            document.createElement(
+                'div'
+            );
+
+        row.className=
+            'recentRow';
+
+        row.innerHTML=
+
+            '<strong>'+
+            escapeHtml(
+                item.id_intervento ||
+                '—'
+            )+
+            '</strong>'+
+
+            '<span>'+
+            escapeHtml(
+                item.id_cantiere ||
+                '—'
+            )+
+            '</span>'+
+
+            '<span class="muted">'+
+            escapeHtml(
+                item.stato ||
+                '—'
+            )+
+            '</span>';
+
+        list.appendChild(row);
+    });
+}
+
+
+/* ==========================================================
+   CANTIERI
+   ========================================================== */
+
+async function loadCantieri(){
+
+    try{
+
+        const cantieri=
+            await api(
+                '/api/cantieri'
+            );
+
+        const select=
+            document
+                .getElementById(
+                    'cantiere'
+                );
+
+        const current=
+            select.value;
+
+        select.innerHTML=
+            '<option value="">'+
+            'Tutti i cantieri'+
+            '</option>';
+
+
+        for(const name of cantieri){
+
+            const option=
+                document.createElement(
+                    'option'
+                );
+
+            option.value=name;
+            option.textContent=name;
+
+            if(name===current){
+                option.selected=true;
+            }
+
+            select.appendChild(
+                option
+            );
+        }
+
+    }catch(error){
+        console.error(error);
+    }
+}
+
+
+/* ==========================================================
+   LAYERS
+   ========================================================== */
+
+function toggleLayer(type){
+
+    if(type==='asbuilt'){
+
+        asbuiltVisible=
+            !asbuiltVisible;
+
+        for(const id of [
+            'nma-asbuilt-shadow',
+            'nma-asbuilt-line'
+        ]){
+
+            if(map.getLayer(id)){
+
+                map.setLayoutProperty(
+                    id,
+                    'visibility',
+                    asbuiltVisible
+                        ? 'visible'
+                        : 'none'
+                );
+            }
+        }
+
+        document
+            .getElementById(
+                'btnAsbuilt'
+            )
+            .classList
+            .toggle(
+                'on',
+                asbuiltVisible
+            );
+    }
+
+
+    if(type==='progetto'){
+
+        progettoVisible=
+            !progettoVisible;
+
+        if(
+            map.getLayer(
+                'nma-project-line'
+            )
+        ){
+
+            map.setLayoutProperty(
+                'nma-project-line',
+                'visibility',
+                progettoVisible
+                    ? 'visible'
+                    : 'none'
+            );
+        }
+
+        document
+            .getElementById(
+                'btnProgetto'
+            )
+            .classList
+            .toggle(
+                'on',
+                progettoVisible
+            );
+    }
+}
+
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
+
+function setText(
+    id,
+    value
+){
+
+    document
+        .getElementById(id)
+        .textContent=
+            value ?? '—';
+}
+
+
+function formatNumber(
+    value,
+    decimals=0
+){
+
+    const n=
+        Number(value||0);
+
+    return n.toLocaleString(
+        'it-IT',
+        {
+            maximumFractionDigits:
+                decimals
+        }
+    );
+}
+
+
+function field(
+    label,
+    value
+){
+
+    return (
+        '<div class="assetField">'+
+            '<small>'+
+            escapeHtml(label)+
+            '</small>'+
+            '<strong>'+
+            escapeHtml(
+                String(
+                    value ??
+                    '—'
+                )
+            )+
+            '</strong>'+
+        '</div>'
+    );
+}
+
+
+function escapeHtml(value){
+
+    return String(value ?? '')
+        .replaceAll(
+            '&',
+            '&amp;'
+        )
+        .replaceAll(
+            '<',
+            '&lt;'
+        )
+        .replaceAll(
+            '>',
+            '&gt;'
+        )
+        .replaceAll(
+            '"',
+            '&quot;'
+        )
+        .replaceAll(
+            "'",
+            '&#039;'
+        );
+}
+
+
+async function logout(){
+
+    await fetch(
+        '/api/logout',
+        {
+            method:'POST',
+            headers:{
+                'Content-Type':
+                    'application/json'
+            },
+            body:'{}'
+        }
+    );
+
+    location.href='/';
+}
+
+
+/* ==========================================================
+   START
+   ========================================================== */
+
+document
+    .getElementById(
+        'cantiere'
+    )
+    .addEventListener(
+        'change',
+        refreshAll
+    );
+
+
+loadCantieri();
+
+setInterval(
+    refreshAll,
+    30000
+);
+
+</script>
+
+</body>
+</html>
