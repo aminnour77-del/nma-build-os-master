@@ -10,9 +10,9 @@
  content="width=device-width,initial-scale=1,viewport-fit=cover"
 >
 
-<meta name="theme-color" content="#020b10">
+<meta name="theme-color" content="#020a0f">
 
-<title>NMA BUILD OS — Infrastructure Control</title>
+<title>NMA BUILD OS — Digital Twin Control</title>
 
 <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
 
@@ -24,19 +24,28 @@
 <style>
 
 :root{
- --bg:#020b10;
- --glass:rgba(3,17,23,.91);
- --glass2:rgba(4,24,31,.94);
- --line:rgba(66,174,202,.25);
+ --bg:#020a0f;
+ --panel:rgba(3,16,23,.94);
+ --panel2:rgba(4,24,33,.95);
+ --panel3:rgba(5,31,41,.88);
 
- --cyan:#25d5ff;
- --green:#23e6a1;
- --orange:#ffab32;
- --red:#ff5968;
- --violet:#c47cff;
+ --line:rgba(40,177,215,.30);
+ --line2:rgba(39,207,246,.52);
 
- --text:#effbff;
- --muted:#86a8b3;
+ --cyan:#24d4ff;
+ --cyan2:#009dff;
+ --green:#20e79e;
+ --orange:#ffac24;
+ --red:#ff5263;
+ --violet:#c778ff;
+
+ --text:#f1fbff;
+ --muted:#83a9b6;
+
+ --left:318px;
+ --right:405px;
+ --top:142px;
+ --bottom:76px;
 }
 
 *{
@@ -54,10 +63,10 @@ body{
  color:var(--text);
 
  font-family:
-  -apple-system,
-  BlinkMacSystemFont,
-  "Segoe UI",
-  sans-serif;
+ -apple-system,
+ BlinkMacSystemFont,
+ "Segoe UI",
+ sans-serif;
 }
 
 button,
@@ -66,64 +75,80 @@ select{
  font:inherit;
 }
 
-/* ======================================================
+/* =========================================================
    MAP
-   ====================================================== */
+   ========================================================= */
 
 #map{
  position:fixed;
- inset:0;
 
- background:#07151a;
+ top:var(--top);
+ left:var(--left);
+ right:var(--right);
+ bottom:var(--bottom);
+
+ background:#06161c;
 }
 
-/* ======================================================
-   TOP COMMAND BAR
-   ====================================================== */
+#map:after{
+ content:"";
 
-.command{
+ position:absolute;
+ inset:0;
+
+ pointer-events:none;
+
+ background:
+ radial-gradient(
+  circle at 50% 45%,
+  transparent 40%,
+  rgba(0,8,12,.18) 100%
+ );
+
+ z-index:2;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.topbar{
  position:fixed;
+ z-index:1000;
 
  top:0;
  left:0;
  right:0;
 
- z-index:100;
-
- min-height:72px;
-
- padding:
-  calc(11px + env(safe-area-inset-top))
-  max(14px,env(safe-area-inset-right))
-  10px
-  max(14px,env(safe-area-inset-left));
+ height:70px;
 
  display:flex;
  align-items:center;
- gap:14px;
 
  background:
-  linear-gradient(
-   180deg,
-   rgba(1,10,14,.98),
-   rgba(1,10,14,.90)
-  );
+ linear-gradient(
+  180deg,
+  rgba(1,9,14,.99),
+  rgba(2,14,20,.97)
+ );
 
  border-bottom:1px solid var(--line);
 
- backdrop-filter:blur(20px);
+ box-shadow:
+ 0 8px 30px rgba(0,0,0,.35);
 }
 
-.brand{
- min-width:220px;
+.logo{
+ width:318px;
 
+ padding:0 22px;
+
+ font-size:18px;
  font-weight:950;
- letter-spacing:.11em;
-
- font-size:17px;
+ letter-spacing:.10em;
 }
 
-.brand span{
+.logo span{
  display:block;
 
  margin-top:3px;
@@ -131,186 +156,432 @@ select{
  color:var(--cyan);
 
  font-size:8px;
- letter-spacing:.18em;
+ letter-spacing:.17em;
 }
 
-.commandKpi{
+.mainnav{
  flex:1;
 
- display:grid;
-
- grid-template-columns:
-  repeat(6,minmax(90px,1fr));
-
- gap:5px;
-}
-
-.miniKpi{
- min-width:0;
-
- padding:7px 9px;
-
- border:1px solid var(--line);
-
- border-radius:10px;
-
- background:
-  rgba(5,25,32,.72);
-}
-
-.miniKpi small{
- display:block;
-
- overflow:hidden;
- white-space:nowrap;
- text-overflow:ellipsis;
-
- color:var(--muted);
-
- font-size:7px;
- letter-spacing:.10em;
-}
-
-.miniKpi b{
- display:block;
-
- margin-top:2px;
-
- font-size:14px;
-}
-
-.status{
- flex:none;
+ height:100%;
 
  display:flex;
- align-items:center;
- gap:6px;
+ align-items:stretch;
 
- padding:8px 10px;
-
- border:1px solid rgba(35,230,161,.4);
-
- border-radius:999px;
-
- background:
-  rgba(4,37,29,.75);
-
- color:var(--green);
-
- font-size:9px;
- font-weight:900;
+ gap:1px;
 }
 
-.statusDot{
- width:7px;
- height:7px;
+.mainnav a{
+ min-width:78px;
 
- border-radius:50%;
-
- background:currentColor;
-
- box-shadow:
-  0 0 10px currentColor;
-}
-
-/* ======================================================
-   LEFT RAIL
-   ====================================================== */
-
-.leftRail{
- position:fixed;
-
- z-index:90;
-
- top:84px;
- left:14px;
-
- width:290px;
-
- max-height:
-  calc(
-   100dvh -
-   180px -
-   env(safe-area-inset-top)
-  );
+ padding:0 13px;
 
  display:flex;
  flex-direction:column;
- gap:8px;
-}
 
-.glass{
- border:1px solid var(--line);
-
- border-radius:15px;
-
- background:var(--glass);
-
- box-shadow:
-  0 18px 45px rgba(0,0,0,.28);
-
- backdrop-filter:blur(18px);
-}
-
-.searchBox{
- padding:11px;
-}
-
-.panelTitle{
- display:flex;
-
- justify-content:space-between;
+ justify-content:center;
  align-items:center;
 
- gap:8px;
+ gap:4px;
 
- margin-bottom:8px;
+ color:#a7c3cc;
 
+ text-decoration:none;
+
+ border-left:
+ 1px solid rgba(36,113,136,.14);
+
+ font-size:8px;
+ font-weight:850;
+
+ transition:.18s ease;
+}
+
+.mainnav a .navIcon{
+ font-size:18px;
+
+ color:#b7d7e2;
+}
+
+.mainnav a:hover,
+.mainnav a.active{
+ color:white;
+
+ background:
+ linear-gradient(
+  180deg,
+  rgba(14,90,117,.42),
+  rgba(6,43,58,.25)
+ );
+
+ box-shadow:
+ inset 0 -2px 0 var(--cyan);
+}
+
+.mainnav a.active .navIcon{
  color:var(--cyan);
 
- font-size:9px;
- font-weight:950;
- letter-spacing:.12em;
+ filter:
+ drop-shadow(
+  0 0 7px
+  rgba(36,212,255,.75)
+ );
 }
 
-.searchRow{
- display:grid;
+.globalSearch{
+ width:285px;
 
- grid-template-columns:1fr 42px;
+ padding:0 12px;
 
- gap:5px;
+ display:flex;
+ align-items:center;
 }
 
-.searchRow input{
- min-width:0;
- height:40px;
+.globalSearch input{
+ width:100%;
+ height:38px;
 
- border:1px solid #245466;
-
- border-radius:9px;
+ border:1px solid #27596c;
+ border-radius:10px;
 
  outline:none;
 
  background:#04151c;
  color:white;
 
- padding:0 10px;
+ padding:0 13px;
 
- font-size:13px;
+ font-size:11px;
 }
 
-.searchButton{
- border:0;
+.topStatus{
+ margin-right:16px;
+
+ flex:none;
+
+ display:flex;
+ align-items:center;
+
+ gap:8px;
+
+ padding:8px 12px;
+
+ border:
+ 1px solid rgba(32,231,158,.45);
+
+ border-radius:999px;
+
+ background:
+ rgba(5,49,36,.72);
+
+ color:var(--green);
+
+ font-size:9px;
+ font-weight:950;
+}
+
+.dot{
+ width:8px;
+ height:8px;
+
+ border-radius:50%;
+
+ background:currentColor;
+
+ box-shadow:
+ 0 0 11px currentColor;
+}
+
+/* =========================================================
+   KPI STRIP
+   ========================================================= */
+
+.kpiStrip{
+ position:fixed;
+
+ z-index:950;
+
+ top:70px;
+ left:0;
+ right:0;
+
+ height:72px;
+
+ padding:7px 10px;
+
+ display:grid;
+
+ grid-template-columns:
+ repeat(8,minmax(0,1fr));
+
+ gap:6px;
+
+ background:
+ rgba(1,12,17,.97);
+
+ border-bottom:1px solid var(--line);
+}
+
+.kpi{
+ min-width:0;
+
+ padding:8px 11px;
+
+ border:
+ 1px solid var(--line);
 
  border-radius:9px;
 
- background:var(--cyan);
- color:#021116;
+ background:
+ linear-gradient(
+  145deg,
+  rgba(5,28,37,.96),
+  rgba(3,17,23,.96)
+ );
 
- font-size:16px;
+ overflow:hidden;
+}
+
+.kpi small{
+ display:block;
+
+ color:var(--muted);
+
+ font-size:7px;
+ letter-spacing:.10em;
+
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+
+.kpi strong{
+ display:block;
+
+ margin-top:3px;
+
+ font-size:17px;
+}
+
+.kpi.green{
+ border-color:
+ rgba(32,231,158,.36);
+}
+
+.kpi.orange{
+ border-color:
+ rgba(255,172,36,.45);
+}
+
+.kpi.orange strong{
+ color:var(--orange);
+}
+
+.kpi.red{
+ border-color:
+ rgba(255,82,99,.38);
+}
+
+.kpi.red strong{
+ color:var(--red);
+}
+
+.kpi.system{
+ display:flex;
+ align-items:center;
+
+ gap:10px;
+}
+
+.systemPulse{
+ width:28px;
+ height:28px;
+
+ flex:none;
+
+ display:grid;
+ place-items:center;
+
+ border-radius:50%;
+
+ color:var(--green);
+
+ background:
+ rgba(4,63,44,.72);
+
+ border:
+ 1px solid rgba(32,231,158,.55);
+
+ box-shadow:
+ 0 0 18px
+ rgba(32,231,158,.25);
+}
+
+.systemPulse:before{
+ content:"";
+
+ width:9px;
+ height:9px;
+
+ border-radius:50%;
+
+ background:var(--green);
+
+ box-shadow:
+ 0 0 12px var(--green);
+}
+
+/* =========================================================
+   LEFT SIDEBAR
+   ========================================================= */
+
+.leftPanel{
+ position:fixed;
+ z-index:900;
+
+ top:142px;
+ left:0;
+ bottom:76px;
+
+ width:318px;
+
+ overflow:auto;
+
+ background:
+ linear-gradient(
+  180deg,
+  rgba(2,15,21,.98),
+  rgba(2,12,18,.98)
+ );
+
+ border-right:1px solid var(--line);
+}
+
+.leftInner{
+ padding:10px;
+}
+
+.tabs{
+ display:grid;
+
+ grid-template-columns:
+ repeat(3,1fr);
+
+ margin-bottom:10px;
+
+ border:
+ 1px solid var(--line);
+
+ border-radius:9px;
+
+ overflow:hidden;
+}
+
+.tabs button{
+ min-height:38px;
+
+ border:0;
+
+ background:#041820;
+ color:#88aab5;
+
+ font-size:9px;
+ font-weight:900;
+
+ cursor:pointer;
+}
+
+.tabs button.active{
+ color:white;
+
+ background:#092f3d;
+
+ box-shadow:
+ inset 0 -2px 0 var(--cyan);
+}
+
+.section{
+ margin-bottom:11px;
+
+ border:
+ 1px solid var(--line);
+
+ border-radius:10px;
+
+ background:
+ rgba(4,22,29,.82);
+
+ overflow:hidden;
+}
+
+.sectionHead{
+ padding:10px 11px;
+
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+
+ color:var(--cyan);
+
+ font-size:9px;
+ font-weight:950;
+ letter-spacing:.09em;
+
+ border-bottom:
+ 1px solid rgba(38,142,169,.17);
+}
+
+.sectionBody{
+ padding:10px;
+}
+
+.searchRow{
+ display:grid;
+
+ grid-template-columns:
+ 1fr 42px;
+
+ gap:6px;
+}
+
+.searchRow input{
+ width:100%;
+ height:40px;
+
+ border:1px solid #24596c;
+ border-radius:8px;
+
+ outline:none;
+
+ background:#03151c;
+ color:white;
+
+ padding:0 10px;
+
+ font-size:12px;
+}
+
+.searchBtn{
+ border:0;
+
+ border-radius:8px;
+
+ background:
+ linear-gradient(
+  135deg,
+  #18bde9,
+  #28d8ff
+ );
+
+ color:#001117;
+
+ font-size:17px;
  font-weight:950;
 
  cursor:pointer;
+
+ box-shadow:
+ 0 0 15px
+ rgba(36,212,255,.16);
 }
 
 .siteSelect{
@@ -319,85 +590,303 @@ select{
 
  margin-top:6px;
 
- border:1px solid #245466;
+ padding:0 9px;
 
- border-radius:9px;
+ border:1px solid #24596c;
+ border-radius:8px;
 
- background:#04151c;
+ background:#041820;
  color:white;
 
- padding:0 8px;
-
- font-size:11px;
+ font-size:10px;
 }
 
 .results{
+ margin-top:8px;
+
  display:grid;
 
  gap:5px;
 
- margin-top:8px;
-
- max-height:250px;
+ max-height:230px;
 
  overflow:auto;
 }
 
 .result{
- padding:9px;
+ position:relative;
 
- border:1px solid #174252;
+ padding:9px 10px;
 
- border-radius:9px;
+ border:
+ 1px solid rgba(37,95,113,.70);
 
- background:#04151c;
+ border-radius:8px;
+
+ background:#04161d;
 
  cursor:pointer;
+
+ transition:.16s ease;
 }
 
 .result:hover{
  border-color:var(--cyan);
+
+ transform:
+ translateX(2px);
+}
+
+.result.selected{
+ border-color:var(--orange);
+
+ background:
+ rgba(57,34,4,.62);
+
+ box-shadow:
+ inset 3px 0 0 var(--orange);
 }
 
 .result strong{
  display:block;
 
  font-size:10px;
-
- word-break:break-word;
 }
 
 .resultMeta{
  margin-top:3px;
 
- color:var(--muted);
+ color:#8fb0bb;
 
  font-size:8px;
 
- line-height:1.4;
+ line-height:1.45;
 }
 
-.layerBox{
- padding:11px;
+.treeSummary{
+ margin-top:9px;
+
+ padding-top:8px;
+
+ border-top:
+ 1px solid rgba(43,113,133,.23);
+
+ color:#7398a4;
+
+ font-size:8px;
 }
+
+/* =========================================================
+   LAYERS
+   ========================================================= */
 
 .layers{
  display:grid;
-
- grid-template-columns:1fr 1fr;
 
  gap:5px;
 }
 
 .layer{
- min-height:36px;
+ min-height:37px;
 
- border:1px solid #285568;
+ padding:0 10px;
 
- border-radius:9px;
+ display:flex;
+ align-items:center;
+ gap:9px;
 
- background:#061b23;
- color:#9cbac4;
+ border:
+ 1px solid #235365;
+
+ border-radius:8px;
+
+ background:#051a22;
+ color:#acc6ce;
+
+ font-size:9px;
+ font-weight:850;
+
+ cursor:pointer;
+
+ text-align:left;
+}
+
+.layerIndicator{
+ width:15px;
+ height:15px;
+
+ flex:none;
+
+ display:grid;
+ place-items:center;
+
+ border:
+ 1px solid #3b6a79;
+ border-radius:4px;
+
+ font-size:9px;
+}
+
+.layer.on{
+ color:var(--green);
+
+ border-color:
+ rgba(32,231,158,.55);
+
+ background:
+ rgba(4,47,35,.63);
+}
+
+.layer.project.on{
+ color:var(--cyan);
+
+ border-color:
+ rgba(36,212,255,.55);
+
+ background:
+ rgba(5,47,63,.60);
+}
+
+.layer.spatial.on{
+ color:var(--violet);
+}
+
+.layer.anomaly.on{
+ color:var(--red);
+}
+
+.reconcile{
+ margin-top:6px;
+
+ padding:9px;
+
+ display:flex;
+ align-items:center;
+ gap:8px;
+
+ border:
+ 1px solid
+  rgba(255,172,36,.55);
+
+ border-radius:8px;
+
+ background:
+ rgba(66,39,3,.74);
+
+ color:var(--orange);
+
+ font-size:9px;
+ font-weight:900;
+}
+
+/* =========================================================
+   RIGHT INSPECTOR
+   ========================================================= */
+
+.rightPanel{
+ position:fixed;
+ z-index:900;
+
+ top:142px;
+ right:0;
+ bottom:76px;
+
+ width:405px;
+
+ display:flex;
+ flex-direction:column;
+
+ overflow:hidden;
+
+ background:
+ linear-gradient(
+  180deg,
+  rgba(2,16,23,.985),
+  rgba(2,12,18,.985)
+ );
+
+ border-left:1px solid var(--line);
+}
+
+.inspectorHead{
+ padding:12px 14px 10px;
+
+ border-bottom:
+ 1px solid var(--line);
+}
+
+.inspectorTop{
+ display:flex;
+
+ justify-content:space-between;
+ align-items:center;
+
+ gap:8px;
+
+ color:var(--cyan);
+
+ font-size:9px;
+ font-weight:950;
+ letter-spacing:.10em;
+}
+
+.assetName{
+ margin-top:7px;
+
+ font-size:19px;
+ font-weight:950;
+
+ word-break:break-word;
+}
+
+.assetSub{
+ margin-top:4px;
+
+ color:#84a8b3;
+
+ font-size:9px;
+}
+
+.assetStatus{
+ margin-top:8px;
+
+ display:inline-flex;
+ align-items:center;
+
+ gap:7px;
+
+ padding:6px 9px;
+
+ border:
+ 1px solid rgba(255,172,36,.55);
+
+ border-radius:7px;
+
+ background:
+ rgba(65,38,2,.82);
+
+ color:var(--orange);
+
+ font-size:9px;
+ font-weight:950;
+}
+
+.inspectorTabs{
+ display:grid;
+
+ grid-template-columns:
+ repeat(4,1fr);
+
+ border-bottom:1px solid var(--line);
+}
+
+.inspectorTabs button{
+ height:39px;
+
+ border:0;
+
+ background:#03151c;
+ color:#829faa;
 
  font-size:8px;
  font-weight:900;
@@ -405,149 +894,66 @@ select{
  cursor:pointer;
 }
 
-.layer.on{
- border-color:var(--green);
- color:var(--green);
+.inspectorTabs button.active{
+ color:white;
 
- background:
-  rgba(5,43,33,.86);
-}
-
-.layer.project.on{
- color:var(--cyan);
- border-color:var(--cyan);
-}
-
-.layer.spatial.on{
- color:var(--orange);
- border-color:var(--orange);
-}
-
-/* ======================================================
-   RIGHT ASSET INSPECTOR
-   ====================================================== */
-
-.assetPanel{
- position:fixed;
-
- z-index:90;
-
- top:84px;
- right:14px;
-
- width:350px;
-
- max-height:
-  calc(
-   100dvh -
-   180px -
-   env(safe-area-inset-top)
-  );
-
- overflow:hidden;
-
- display:flex;
- flex-direction:column;
-}
-
-.assetHead{
- padding:13px;
-
- border-bottom:1px solid var(--line);
-}
-
-.assetHead small{
- color:var(--cyan);
-
- font-size:8px;
- font-weight:950;
-
- letter-spacing:.14em;
-}
-
-.assetName{
- margin-top:4px;
-
- font-size:17px;
- font-weight:950;
-
- word-break:break-word;
-}
-
-.assetSub{
- margin-top:3px;
-
- color:var(--muted);
-
- font-size:9px;
+ box-shadow:
+ inset 0 -2px 0 var(--cyan);
 }
 
 .assetBody{
- padding:11px;
+ flex:1;
+
+ padding:12px 13px 20px;
 
  overflow:auto;
 }
 
-.assetEmpty{
- min-height:210px;
+.emptyAsset{
+ height:100%;
 
- display:flex;
- flex-direction:column;
+ min-height:320px;
 
- justify-content:center;
- align-items:center;
+ display:grid;
+ place-items:center;
 
  text-align:center;
 
- color:var(--muted);
+ color:#7b9da8;
 
  font-size:10px;
 
  line-height:1.55;
 }
 
-.assetEmptyIcon{
- width:50px;
- height:50px;
-
- margin-bottom:12px;
-
- display:grid;
- place-items:center;
-
- border:1px solid var(--line);
-
- border-radius:50%;
-
- color:var(--cyan);
-
- font-size:22px;
-}
-
 .assetGrid{
  display:grid;
 
- grid-template-columns:1fr 1fr;
+ grid-template-columns:
+ repeat(2,1fr);
 
- gap:5px;
+ gap:6px;
 
  margin-bottom:10px;
 }
 
 .assetField{
+ min-width:0;
+
  padding:8px;
 
- border:1px solid #174252;
+ border:
+ 1px solid rgba(36,87,103,.68);
 
- border-radius:9px;
+ border-radius:7px;
 
- background:#04151c;
+ background:#04161d;
 }
 
 .assetField small{
  display:block;
 
- color:var(--muted);
+ color:#6d9aa8;
 
  font-size:7px;
  letter-spacing:.08em;
@@ -558,77 +964,290 @@ select{
 
  margin-top:3px;
 
+ overflow:hidden;
+
+ color:#f1fbff;
+
  font-size:10px;
+
+ text-overflow:ellipsis;
 }
 
 .warning{
- margin-bottom:9px;
+ margin:9px 0;
 
- padding:9px;
+ padding:10px;
 
- border:1px solid rgba(255,89,104,.45);
+ border:
+ 1px solid rgba(255,172,36,.56);
+
+ border-radius:8px;
+
+ background:
+ linear-gradient(
+  135deg,
+  rgba(73,42,2,.88),
+  rgba(49,29,3,.80)
+ );
+
+ color:#ffd18b;
+
+ font-size:9px;
+
+ line-height:1.45;
+}
+
+.warning b{
+ color:var(--orange);
+}
+
+.actionRow{
+ display:grid;
+
+ grid-template-columns:
+ 1fr 1fr;
+
+ gap:6px;
+
+ margin:9px 0;
+}
+
+.actionRow a,
+.actionRow button{
+ min-height:38px;
+
+ display:flex;
+ align-items:center;
+ justify-content:center;
+
+ border:
+ 1px solid #23647a;
+
+ border-radius:8px;
+
+ background:
+ #072633;
+
+ color:white;
+
+ text-decoration:none;
+
+ font-size:8px;
+ font-weight:900;
+}
+
+.actionRow .primary{
+ border-color:var(--cyan);
+
+ background:
+ linear-gradient(
+  135deg,
+  #0b95be,
+  #1fcff9
+ );
+
+ color:#001117;
+}
+
+/* =========================================================
+   PIPE TECHNICAL SECTION
+   ========================================================= */
+
+.pipeSection{
+ margin-top:10px;
+
+ padding:10px;
+
+ border:
+ 1px solid rgba(37,96,114,.63);
 
  border-radius:9px;
 
  background:
-  rgba(66,15,22,.68);
-
- color:#ff9aa2;
-
- font-size:9px;
-
- line-height:1.4;
+ #03151c;
 }
 
-.assetLinks{
- display:grid;
-
- grid-template-columns:
-  repeat(3,1fr);
-
- gap:4px;
-
- margin-bottom:10px;
-}
-
-.assetLinks a{
- padding:7px 4px;
-
- text-align:center;
- text-decoration:none;
-
- border:1px solid #215467;
-
- border-radius:8px;
-
- background:#082631;
- color:white;
-
- font-size:7px;
- font-weight:900;
-}
-
-.timelineTitle{
- margin:
-  11px 0
-  7px;
-
+.pipeTitle{
  color:var(--cyan);
 
  font-size:8px;
  font-weight:950;
 
- letter-spacing:.12em;
+ letter-spacing:.10em;
+}
+
+.pipeVisual{
+ position:relative;
+
+ height:72px;
+
+ margin-top:9px;
+
+ overflow:hidden;
+
+ border-radius:8px;
+
+ background:
+ radial-gradient(
+  circle at 50% 50%,
+  rgba(28,77,91,.26),
+  rgba(2,14,19,.5)
+ );
+}
+
+.pipeCylinder{
+ position:absolute;
+
+ left:14px;
+ right:14px;
+
+ top:25px;
+
+ height:24px;
+
+ border-radius:999px;
+
+ background:
+ linear-gradient(
+  180deg,
+  #65808a 0%,
+  #263a42 28%,
+  #0e1b20 55%,
+  #55747f 80%,
+  #98b8c1 100%
+ );
+
+ box-shadow:
+ 0 7px 17px rgba(0,0,0,.5);
+}
+
+.pipeCylinder:before{
+ content:"";
+
+ position:absolute;
+
+ right:-3px;
+ top:-6px;
+
+ width:34px;
+ height:34px;
+
+ border-radius:50%;
+
+ border:4px solid #7596a2;
+
+ background:
+ radial-gradient(
+  circle,
+  #02090d 0 52%,
+  #3d5963 53% 66%,
+  #0b171c 67%
+ );
+}
+
+.pipeBand{
+ position:absolute;
+
+ left:40%;
+
+ top:0;
+ bottom:0;
+
+ width:24px;
+
+ background:
+ linear-gradient(
+  90deg,
+  #a56700,
+  #ffc33d,
+  #8b5300
+ );
+}
+
+.pipeLabels{
+ margin-top:7px;
+
+ color:#8baab5;
+
+ font-size:8px;
+
+ line-height:1.55;
+}
+
+/* =========================================================
+   MEDIA / TIMELINE
+   ========================================================= */
+
+.mediaTitle,
+.timelineTitle{
+ margin:
+ 12px 0
+ 7px;
+
+ color:var(--cyan);
+
+ font-size:8px;
+ font-weight:950;
+ letter-spacing:.10em;
+}
+
+.media{
+ display:grid;
+
+ grid-template-columns:
+ repeat(3,1fr);
+
+ gap:5px;
+}
+
+.media a{
+ display:block;
+
+ min-height:56px;
+
+ overflow:hidden;
+
+ border:
+ 1px solid #24586a;
+
+ border-radius:7px;
+
+ background:#061a22;
+
+ color:#a8c3cb;
+
+ text-decoration:none;
+
+ font-size:7px;
+}
+
+.media img{
+ display:block;
+
+ width:100%;
+ height:55px;
+
+ object-fit:cover;
+}
+
+.media span{
+ display:block;
+
+ padding:5px;
+
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
 }
 
 .timeline{
  position:relative;
 
+ padding-left:15px;
+
  display:grid;
 
  gap:6px;
-
- padding-left:14px;
 }
 
 .timeline:before{
@@ -636,13 +1255,13 @@ select{
 
  position:absolute;
 
- left:3px;
- top:4px;
- bottom:4px;
+ left:4px;
+ top:5px;
+ bottom:5px;
 
  width:1px;
 
- background:#20566a;
+ background:#176d86;
 }
 
 .event{
@@ -650,11 +1269,12 @@ select{
 
  padding:8px;
 
- border:1px solid #164251;
+ border:
+ 1px solid rgba(37,88,104,.70);
 
- border-radius:9px;
+ border-radius:7px;
 
- background:#04151c;
+ background:#04161d;
 }
 
 .event:before{
@@ -673,7 +1293,11 @@ select{
  background:var(--cyan);
 
  box-shadow:
-  0 0 8px var(--cyan);
+ 0 0 8px var(--cyan);
+}
+
+.event[data-type="asbuilt"]:before{
+ background:var(--green);
 }
 
 .event[data-type="maintenance"]:before{
@@ -684,12 +1308,8 @@ select{
  background:var(--violet);
 }
 
-.event[data-type="asbuilt"]:before{
- background:var(--green);
-}
-
 .eventTime{
- color:var(--muted);
+ color:#6f98a5;
 
  font-size:7px;
 }
@@ -704,176 +1324,426 @@ select{
 .eventText{
  margin-top:3px;
 
- color:#9db6bf;
+ color:#91adb6;
 
  font-size:8px;
-
  line-height:1.4;
 }
 
-/* ======================================================
-   BOTTOM CONTROL DECK
-   ====================================================== */
+/* =========================================================
+   MAP HUD
+   ========================================================= */
 
-.bottomDeck{
+.mapHudTop{
  position:fixed;
 
- z-index:90;
+ z-index:850;
 
- left:14px;
- right:14px;
+ top:153px;
+ left:calc(var(--left) + 12px);
 
- bottom:
-  calc(
-   12px +
-   env(safe-area-inset-bottom)
-  );
+ display:flex;
 
- display:grid;
+ gap:6px;
 
- grid-template-columns:
-  minmax(520px,1fr)
-  auto;
-
- gap:8px;
+ pointer-events:none;
 }
 
-.telemetry{
- display:grid;
+.hudPill{
+ padding:8px 10px;
 
- grid-template-columns:
-  repeat(5,1fr);
+ border:
+ 1px solid rgba(36,129,156,.50);
 
- overflow:hidden;
+ border-radius:8px;
+
+ background:
+ rgba(2,19,26,.90);
+
+ color:#c1d8df;
+
+ font-size:9px;
+
+ backdrop-filter:blur(12px);
+
+ pointer-events:auto;
 }
 
-.telemetryBox{
- min-width:0;
+.viewMode{
+ position:fixed;
 
- padding:9px 11px;
+ z-index:850;
 
- border-right:1px solid var(--line);
+ right:calc(var(--right) + 12px);
+ bottom:calc(var(--bottom) + 12px);
+
+ display:flex;
+
+ gap:4px;
+
+ padding:5px;
+
+ border:
+ 1px solid var(--line);
+
+ border-radius:9px;
+
+ background:
+ rgba(2,17,24,.91);
 }
 
-.telemetryBox:last-child{
- border-right:0;
+.viewMode button{
+ min-width:43px;
+ height:31px;
+
+ border:0;
+
+ border-radius:6px;
+
+ background:#08212b;
+ color:#89aab5;
+
+ font-size:8px;
+ font-weight:900;
+
+ cursor:pointer;
 }
 
-.telemetryBox small{
- display:block;
+.viewMode button.active{
+ background:#0d4e64;
+ color:var(--cyan);
 
- color:var(--muted);
+ box-shadow:
+ inset 0 -2px 0 var(--cyan);
+}
+
+.mapLegend{
+ position:fixed;
+
+ z-index:850;
+
+ right:calc(var(--right) + 12px);
+ top:153px;
+
+ width:118px;
+
+ padding:9px;
+
+ border:
+ 1px solid var(--line);
+
+ border-radius:9px;
+
+ background:
+ rgba(2,17,24,.88);
+
+ backdrop-filter:blur(12px);
 
  font-size:7px;
+}
+
+.legendRow{
+ display:flex;
+ align-items:center;
+
+ gap:7px;
+
+ margin:5px 0;
+
+ color:#a8c2cb;
+}
+
+.legendLine{
+ width:24px;
+ height:4px;
+
+ border-radius:999px;
+
+ box-shadow:
+ 0 0 8px currentColor;
+
+ background:currentColor;
+}
+
+.legendLine.green{
+ color:var(--green);
+}
+
+.legendLine.orange{
+ color:var(--orange);
+}
+
+.legendLine.cyan{
+ color:var(--cyan);
+}
+
+/* =========================================================
+   BOTTOM STATUS
+   ========================================================= */
+
+.bottomBar{
+ position:fixed;
+
+ z-index:1000;
+
+ left:0;
+ right:0;
+ bottom:0;
+
+ height:76px;
+
+ padding:7px 10px;
+
+ display:grid;
+
+ grid-template-columns:
+ 220px
+ repeat(5,minmax(0,1fr))
+ 240px;
+
+ gap:6px;
+
+ background:
+ rgba(1,11,16,.985);
+
+ border-top:1px solid var(--line);
+
+ box-shadow:
+ 0 -10px 30px rgba(0,0,0,.35);
+}
+
+.bottomBrand{
+ display:flex;
+ align-items:center;
+
+ padding:0 12px;
+
+ border:
+ 1px solid rgba(32,91,108,.35);
+
+ border-radius:9px;
+
+ font-size:16px;
+ font-weight:950;
 
  letter-spacing:.08em;
 }
 
-.telemetryBox strong{
+.bottomBrand span{
  display:block;
 
- margin-top:3px;
+ margin-left:10px;
+ padding-left:10px;
 
- overflow:hidden;
+ border-left:2px solid var(--orange);
+
+ color:var(--cyan);
+
+ font-size:7px;
+ line-height:1.45;
+
+ letter-spacing:.10em;
+}
+
+.telemetry{
+ min-width:0;
+
+ padding:8px 10px;
+
+ border:
+ 1px solid rgba(38,92,108,.50);
+
+ border-radius:9px;
+
+ background:#04161d;
+}
+
+.telemetry small{
+ display:block;
+
+ color:#7094a0;
+
+ font-size:7px;
+ letter-spacing:.08em;
+}
+
+.telemetry strong{
+ display:block;
+
+ margin-top:4px;
+
+ font-size:9px;
+
  white-space:nowrap;
+ overflow:hidden;
  text-overflow:ellipsis;
+}
+
+.telemetry.good strong{
+ color:var(--green);
+}
+
+.telemetry.warn strong{
+ color:var(--orange);
+}
+
+.systemMessages{
+ padding:8px 10px;
+
+ border:
+ 1px solid rgba(38,92,108,.50);
+
+ border-radius:9px;
+
+ background:#04161d;
+
+ color:#819faa;
+
+ font-size:8px;
+
+ line-height:1.55;
+}
+
+.systemMessages b{
+ color:var(--green);
+}
+
+/* =========================================================
+   MAPLIBRE
+   ========================================================= */
+
+.maplibregl-ctrl-bottom-right{
+ right:10px;
+ bottom:10px;
+}
+
+.maplibregl-ctrl-group{
+ overflow:hidden;
+
+ border:
+ 1px solid var(--line) !important;
+
+ background:
+ rgba(2,17,23,.92) !important;
+
+ box-shadow:none !important;
+}
+
+.maplibregl-ctrl button{
+ filter:invert(1);
+}
+
+.maplibregl-popup-content{
+ border:
+ 1px solid var(--line);
+
+ border-radius:8px !important;
+
+ background:#03161e !important;
+ color:white !important;
 
  font-size:9px;
 }
 
-.telemetryBox.disconnected strong{
- color:var(--orange);
-}
-
-.quickNav{
- display:flex;
-
- align-items:center;
-
- gap:4px;
-
- padding:6px;
-}
-
-.quickNav a{
- min-width:62px;
-
- padding:8px 7px;
-
- text-align:center;
- text-decoration:none;
-
- border:1px solid #205166;
-
- border-radius:8px;
-
- background:#07212a;
- color:white;
-
- font-size:7px;
- font-weight:900;
-}
-
-/* ======================================================
-   MAP DETAILS
-   ====================================================== */
-
-.maplibregl-ctrl-bottom-right{
- bottom:95px;
- right:380px;
-}
-
-.maplibregl-popup-content{
- background:#061820 !important;
- color:white !important;
-
- border:1px solid var(--line);
-
- border-radius:10px !important;
-
- font-size:10px;
-}
-
 .maplibregl-popup-tip{
- border-top-color:#061820 !important;
+ border-top-color:#03161e !important;
 }
 
-/* ======================================================
+/* =========================================================
    MOBILE
-   ====================================================== */
+   ========================================================= */
 
-@media(max-width:900px){
+.mobileNav{
+ display:none;
+}
+
+@media(max-width:980px){
+
+ :root{
+  --top:82px;
+  --bottom:0px;
+ }
 
  html,
  body{
   overflow:auto;
+
+  background:#020b10;
+ }
+
+ .topbar{
+  position:fixed;
+
+  height:82px;
+
+  padding-top:
+  env(safe-area-inset-top);
+ }
+
+ .logo{
+  width:auto;
+  flex:1;
+
+  padding-left:
+  max(
+   18px,
+   env(safe-area-inset-left)
+  );
+
+  font-size:18px;
+ }
+
+ .mainnav,
+ .globalSearch{
+  display:none;
+ }
+
+ .topStatus{
+  margin-right:
+  max(
+   15px,
+   env(safe-area-inset-right)
+  );
+ }
+
+ .kpiStrip{
+  display:none;
  }
 
  #map{
   position:relative;
 
+  top:auto;
+  left:auto;
+  right:auto;
+  bottom:auto;
+
   width:100%;
   height:58dvh;
 
-  margin-top:67px;
+  margin-top:82px;
  }
 
- .command{
-  min-height:64px;
- }
-
- .brand{
-  min-width:auto;
-  font-size:14px;
- }
-
- .commandKpi{
+ .mapHudTop,
+ .mapLegend{
   display:none;
  }
 
- .leftRail,
- .assetPanel,
- .bottomDeck{
+ .viewMode{
+  position:absolute;
+
+  right:10px;
+  top:calc(
+   82px +
+   58dvh -
+   47px
+  );
+
+  bottom:auto;
+ }
+
+ .leftPanel,
+ .rightPanel{
   position:relative;
 
   top:auto;
@@ -882,259 +1752,130 @@ select{
   bottom:auto;
 
   width:auto;
-  max-height:none;
 
   margin:
-   9px
-   max(
-    9px,
-    env(safe-area-inset-right)
-   )
-   0
-   max(
-    9px,
-    env(safe-area-inset-left)
-   );
+  10px
+  max(
+   10px,
+   env(safe-area-inset-right)
+  )
+  0
+  max(
+   10px,
+   env(safe-area-inset-left)
+  );
+
+  border:
+  1px solid var(--line);
+
+  border-radius:16px;
  }
 
- .assetBody{
+ .leftPanel{
   max-height:none;
  }
 
- .results{
-  max-height:220px;
+ .rightPanel{
+  min-height:450px;
  }
 
- .bottomDeck{
+ .rightPanel .assetBody{
+  max-height:none;
+ }
+
+ .tabs{
+  display:none;
+ }
+
+ .bottomBar{
+  position:relative;
+
+  height:auto;
+
+  margin:10px;
+
+  padding:8px;
+
+  grid-template-columns:
+  repeat(2,1fr);
+
+  border:
+  1px solid var(--line);
+
+  border-radius:16px;
+ }
+
+ .bottomBrand,
+ .systemMessages{
+  grid-column:1 / -1;
+ }
+
+ .mobileNav{
+  position:sticky;
+
+  z-index:1200;
+
+  bottom:0;
+
+  margin-top:10px;
+
+  padding:
+  8px
+  max(
+   8px,
+   env(safe-area-inset-right)
+  )
+  calc(
+   8px +
+   env(safe-area-inset-bottom)
+  )
+  max(
+   8px,
+   env(safe-area-inset-left)
+  );
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(5,1fr);
+
+  background:
+  rgba(1,11,16,.98);
+
+  border-top:1px solid var(--line);
+ }
+
+ .mobileNav a{
+  padding:8px 2px;
+
+  text-align:center;
+  text-decoration:none;
+
+  color:#89aab5;
+
+  font-size:8px;
+  font-weight:850;
+ }
+
+ .mobileNav a.active{
+  color:var(--cyan);
+ }
+
+ .mobileNav a span{
   display:block;
 
-  padding-bottom:
-   calc(
-    12px +
-    env(safe-area-inset-bottom)
-   );
- }
+  margin-bottom:3px;
 
- .telemetry{
-  grid-template-columns:
-   repeat(2,1fr);
-
-  margin-bottom:8px;
- }
-
- .quickNav{
-  flex-wrap:wrap;
- }
-
- .maplibregl-ctrl-bottom-right{
-  right:6px;
-  bottom:6px;
- }
-}
-
-@media(max-width:480px){
-
- .status{
-  padding:7px 8px;
-  font-size:7px;
+  font-size:17px;
  }
 
  .assetGrid{
   grid-template-columns:
-   repeat(2,1fr);
+  repeat(2,1fr);
  }
 
- .assetLinks{
-  grid-template-columns:1fr;
- }
-}
-
-</style>
-
-
-<style id="nma-final-polish-style">
-
-/* FINAL EXPERIENCE POLISH v1 */
-
-.reconcileBanner{
- margin-top:8px;
-
- display:flex;
- align-items:center;
- gap:7px;
-
- padding:9px 10px;
-
- border:
-  1px solid
-  rgba(35,230,161,.40);
-
- border-radius:9px;
-
- background:
-  rgba(4,34,27,.82);
-
- color:var(--green);
-
- font-size:10px;
- font-weight:900;
-
- line-height:1.3;
-}
-
-.reconcileBanner.warn{
- border-color:
-  rgba(255,171,50,.60);
-
- background:
-  rgba(58,36,4,.90);
-
- color:var(--orange);
-}
-
-.reconcileDot{
- flex:none;
-
- width:7px;
- height:7px;
-
- border-radius:50%;
-
- background:currentColor;
-
- box-shadow:
-  0 0 9px currentColor;
-}
-
-.legacyWarning{
- margin-bottom:10px;
-
- padding:11px;
-
- border:
-  1px solid
-  rgba(255,171,50,.58);
-
- border-radius:10px;
-
- background:
-  rgba(58,36,4,.90);
-
- color:#ffd089;
-
- font-size:11px;
-
- line-height:1.5;
-}
-
-.legacyWarning b{
- color:var(--orange);
-}
-
-.legacyLinks{
- display:grid;
-
- grid-template-columns:
-  1fr 1fr;
-
- gap:5px;
-
- margin-top:10px;
-}
-
-.legacyLinks a{
- padding:9px 6px;
-
- text-align:center;
- text-decoration:none;
-
- border:
-  1px solid #27596b;
-
- border-radius:8px;
-
- background:#082631;
-
- color:white;
-
- font-size:9px;
- font-weight:900;
-}
-
-/* desktop readability */
-
-@media(min-width:901px){
-
- .miniKpi small{
-  font-size:9px;
- }
-
- .miniKpi b{
-  font-size:17px;
- }
-
- .panelTitle{
-  font-size:11px;
- }
-
- .layer{
-  font-size:10px;
- }
-
- .result strong{
-  font-size:12px;
- }
-
- .resultMeta{
-  font-size:10px;
- }
-
- .assetHead small{
-  font-size:10px;
- }
-
- .assetName{
-  font-size:20px;
- }
-
- .assetSub{
-  font-size:11px;
- }
-
- .assetEmpty{
-  font-size:11px;
- }
-
- .assetField small{
-  font-size:9px;
- }
-
- .assetField b{
-  font-size:12px;
- }
-
- .telemetryBox small{
-  font-size:9px;
- }
-
- .telemetryBox strong{
-  font-size:11px;
- }
-
- .quickNav a{
-  font-size:9px;
- }
-
- .eventTime{
-  font-size:9px;
- }
-
- .eventTitle{
-  font-size:11px;
- }
-
- .eventText{
-  font-size:10px;
+ .pipeVisual{
+  height:90px;
  }
 }
 
@@ -1146,165 +1887,289 @@ select{
 
 <div id="map"></div>
 
+<header class="topbar">
 
-<header class="command">
-
- <div class="brand">
-
+ <div class="logo">
   NMA BUILD OS
-
   <span>
    INFRASTRUCTURE CONTROL SYSTEM
   </span>
-
  </div>
 
+ <nav class="mainnav">
 
- <div class="commandKpi">
+  <a class="active" href="/master">
+   <span class="navIcon">◈</span>
+   MAPPA
+  </a>
 
-  <div class="miniKpi">
-   <small>INTERVENTI</small>
-   <b id="kInterventi">—</b>
-  </div>
+  <a href="/cantiere">
+   <span class="navIcon">⌖</span>
+   CAMPO
+  </a>
 
-  <div class="miniKpi">
-   <small>VALIDATI</small>
-   <b id="kValidati">—</b>
-  </div>
+  <a href="/asset-memory">
+   <span class="navIcon">⬡</span>
+   ASSET
+  </a>
 
-  <div class="miniKpi">
-   <small>METRI REALI</small>
-   <b id="kMetri">—</b>
-  </div>
+  <a href="/network-memory">
+   <span class="navIcon">⌁</span>
+   NETWORK
+  </a>
 
-  <div class="miniKpi">
-   <small>ANOMALIE</small>
-   <b id="kAnomalie">—</b>
-  </div>
+  <a href="/quality">
+   <span class="navIcon">✓</span>
+   QUALITY
+  </a>
 
-  <div class="miniKpi">
-   <small>MANUTENZIONI</small>
-   <b id="kMaintenance">—</b>
-  </div>
+  <a href="/audit">
+   <span class="navIcon">▣</span>
+   AUDIT
+  </a>
 
-  <div class="miniKpi">
-   <small>AS-BUILT</small>
-   <b id="kAsbuilt">—</b>
-  </div>
+  <a href="/sal-v2">
+   <span class="navIcon">▤</span>
+   SAL
+  </a>
 
+ </nav>
+
+ <div class="globalSearch">
+  <input
+   id="globalSearch"
+   type="search"
+   placeholder="Cerca asset, cantiere, materiale..."
+  >
  </div>
-
 
  <div
   id="systemStatus"
-  class="status">
-
-  <span class="statusDot"></span>
-
-  <span>CHECK</span>
-
+  class="topStatus">
+  <span class="dot"></span>
+  CHECK
  </div>
 
 </header>
 
+<section class="kpiStrip">
 
-<aside class="leftRail">
+ <div class="kpi">
+  <small>INTERVENTI</small>
+  <strong id="kInterventi">—</strong>
+ </div>
 
- <section class="glass searchBox">
+ <div class="kpi">
+  <small>CANTIERI</small>
+  <strong id="kCantieri">—</strong>
+ </div>
 
-  <div class="panelTitle">
+ <div class="kpi">
+  <small>METRI REALI</small>
+  <strong id="kMetri">—</strong>
+ </div>
 
-   <span>INFRASTRUCTURE SEARCH</span>
+ <div class="kpi green">
+  <small>VALIDATI</small>
+  <strong id="kValidati">—</strong>
+ </div>
 
-   <span id="resultCount">—</span>
+ <div class="kpi orange">
+  <small>DA RICONCILIARE</small>
+  <strong id="kReconcile">—</strong>
+ </div>
 
+ <div class="kpi red">
+  <small>ANOMALIE</small>
+  <strong id="kAnomalie">—</strong>
+ </div>
+
+ <div class="kpi">
+  <small>MANUTENZIONI</small>
+  <strong id="kMaintenance">—</strong>
+ </div>
+
+ <div class="kpi system">
+
+  <div class="systemPulse"></div>
+
+  <div>
+   <small>SISTEMA</small>
+   <strong id="kSystem">
+    CHECK
+   </strong>
   </div>
 
-  <div class="searchRow">
+ </div>
 
-   <input
-    id="search"
-    type="search"
-    placeholder="Asset, cantiere, materiale..."
-   >
+</section>
 
-   <button
-    class="searchButton"
-    onclick="runSearch()">
-    ⌕
+<aside class="leftPanel">
+
+ <div class="leftInner">
+
+  <div class="tabs">
+
+   <button class="active">
+    RICERCA
+   </button>
+
+   <button>
+    LIVELLI
+   </button>
+
+   <button>
+    FILTRI
    </button>
 
   </div>
 
-  <select
-   id="site"
-   class="siteSelect"
-   onchange="refreshAll()">
+  <section class="section">
 
-   <option value="">
-    Tutta la rete
-   </option>
+   <div class="sectionHead">
+    <span>INFRASTRUCTURE SEARCH</span>
+    <span id="resultCount">—</span>
+   </div>
 
-  </select>
+   <div class="sectionBody">
 
+    <div class="searchRow">
 
-  <div
-   id="results"
-   class="results">
-  </div>
+     <input
+      id="search"
+      type="search"
+      placeholder="Asset, cantiere, materiale..."
+     >
 
- </section>
+     <button
+      class="searchBtn"
+      onclick="runSearch()">
+      ⌕
+     </button>
 
+    </div>
 
- <section class="glass layerBox">
+    <select
+     id="site"
+     class="siteSelect"
+     onchange="refreshAll()">
 
-  <div class="panelTitle">
-   <span>DIGITAL TWIN LAYERS</span>
-  </div>
+     <option value="">
+      Tutta la rete
+     </option>
 
-  <div class="layers">
+    </select>
 
-   <button
-    id="layerAsbuilt"
-    class="layer on"
-    onclick="toggleLayer('asbuilt')">
-    AS-BUILT
-   </button>
+    <div
+     id="results"
+     class="results">
+    </div>
 
-   <button
-    id="layerProject"
-    class="layer project on"
-    onclick="toggleLayer('project')">
-    PROGETTO
-   </button>
+    <div
+     id="treeSummary"
+     class="treeSummary">
+     Memoria infrastrutturale
+    </div>
 
-   <button
-    id="layerSpatial"
-    class="layer spatial on"
-    onclick="toggleLayer('anchors')">
-    ASSET / EVIDENZE
-   </button>
+   </div>
 
-   <button
-    class="layer"
-    onclick="location.href='/network-memory'">
-    NETWORK MEMORY
-   </button>
+  </section>
 
-  </div>
+  <section class="section">
 
- </section>
+   <div class="sectionHead">
+    <span>DIGITAL TWIN LAYERS</span>
+   </div>
+
+   <div class="sectionBody">
+
+    <div class="layers">
+
+     <button
+      id="layerAsbuilt"
+      class="layer on"
+      onclick="toggleLayer('asbuilt')">
+
+      <span class="layerIndicator">✓</span>
+      AS-BUILT
+
+     </button>
+
+     <button
+      id="layerProject"
+      class="layer project on"
+      onclick="toggleLayer('project')">
+
+      <span class="layerIndicator">✓</span>
+      PROGETTO
+
+     </button>
+
+     <button
+      id="layerSpatial"
+      class="layer spatial on"
+      onclick="toggleLayer('anchors')">
+
+      <span class="layerIndicator">✓</span>
+      ASSET / EVIDENZE
+
+     </button>
+
+     <button
+      id="layerAnomaly"
+      class="layer anomaly on"
+      onclick="toggleLayer('anomaly')">
+
+      <span class="layerIndicator">✓</span>
+      ANOMALIE
+
+     </button>
+
+     <button
+      class="layer"
+      onclick="location.href='/network-memory'">
+
+      <span class="layerIndicator">↗</span>
+      NETWORK MEMORY
+
+     </button>
+
+    </div>
+
+    <div
+     id="reconcileBanner"
+     class="reconcile">
+
+     <span class="dot"></span>
+     <span>
+      VERIFICA AS-BUILT
+     </span>
+
+    </div>
+
+   </div>
+
+  </section>
+
+ </div>
 
 </aside>
 
+<aside class="rightPanel">
 
-<aside class="assetPanel glass">
+ <div class="inspectorHead">
 
- <div class="assetHead">
+  <div class="inspectorTop">
 
-  <small>
-   ASSET INTELLIGENCE
-  </small>
+   <span>
+    ASSET INTELLIGENCE
+   </span>
+
+   <span>
+    •••
+   </span>
+
+  </div>
 
   <div
    id="assetName"
@@ -1318,22 +2183,52 @@ select{
    Seleziona un elemento della rete
   </div>
 
+  <div
+   id="assetStatus"
+   class="assetStatus"
+   style="display:none">
+   ⚠ DA RICONCILIARE
+  </div>
+
  </div>
 
+ <div class="inspectorTabs">
+
+  <button class="active">
+   DETTAGLI
+  </button>
+
+  <button>
+   TIMELINE
+  </button>
+
+  <button>
+   RETE
+  </button>
+
+  <button>
+   DOCUMENTI
+  </button>
+
+ </div>
 
  <div
   id="assetBody"
   class="assetBody">
 
-  <div class="assetEmpty">
+  <div class="emptyAsset">
 
-   <div class="assetEmptyIcon">
-    ⌁
+   <div>
+    <div style="
+     font-size:34px;
+     color:var(--cyan);
+     margin-bottom:12px;">
+     ⌁
+    </div>
+
+    Tocca un tratto della rete<br>
+    oppure utilizza la ricerca.
    </div>
-
-   Tocca un tratto As-Built,
-   un asset sulla mappa
-   oppure utilizza la ricerca.
 
   </div>
 
@@ -1341,85 +2236,153 @@ select{
 
 </aside>
 
+<div class="mapHudTop">
 
-<footer class="bottomDeck">
+ <div class="hudPill">
+  ◉ DIGITAL TWIN
+ </div>
 
- <section class="glass telemetry">
+ <div
+  id="hudSelection"
+  class="hudPill">
+  Nessun asset selezionato
+ </div>
 
-  <div class="telemetryBox">
-   <small>DATABASE</small>
-   <strong id="dbState">
-    CHECK
-   </strong>
-  </div>
+</div>
 
-  <div class="telemetryBox disconnected">
-   <small>PRESSIONE LIVE</small>
-   <strong id="pressure">
-    NON COLLEGATA
-   </strong>
-  </div>
+<div class="mapLegend">
 
-  <div class="telemetryBox disconnected">
-   <small>FLUSSO LIVE</small>
-   <strong id="flow">
-    NON COLLEGATO
-   </strong>
-  </div>
+ <div style="
+  color:var(--cyan);
+  font-weight:950;
+  margin-bottom:6px;">
+  RETE
+ </div>
 
-  <div class="telemetryBox disconnected">
-   <small>DISPERSIONI</small>
-   <strong id="leaks">
-    NON CALCOLATE
-   </strong>
-  </div>
+ <div class="legendRow">
+  <span class="legendLine cyan"></span>
+  Progetto
+ </div>
 
-  <div class="telemetryBox">
-   <small>PILOT</small>
-   <strong id="pilotState">
-    DA ESEGUIRE
-   </strong>
-  </div>
+ <div class="legendRow">
+  <span class="legendLine green"></span>
+  As-Built
+ </div>
 
- </section>
+ <div class="legendRow">
+  <span class="legendLine orange"></span>
+  Da riconciliare
+ </div>
 
+</div>
 
- <nav class="glass quickNav">
+<div class="viewMode">
 
-  <a href="/cantiere">
-   CAMPO
-  </a>
+ <button onclick="setView('2d')">
+  2D
+ </button>
 
-  <a href="/supervisore">
-   SUPERVISORE
-  </a>
+ <button
+  id="mode3d"
+  class="active"
+  onclick="setView('3d')">
+  3D
+ </button>
 
-  <a href="/quality">
-   QUALITY
-  </a>
+ <button onclick="setView('underground')">
+  UNDERGROUND
+ </button>
 
-  <a href="/sal-v2">
-   SAL
-  </a>
+</div>
 
-  <a href="/audit">
-   AUDIT
-  </a>
+<footer class="bottomBar">
 
-  <a href="/asset-memory">
-   MEMORY
-  </a>
+ <div class="bottomBrand">
+  NMA
+  <span>
+   BUILDING A MORE<br>
+   RESILIENT TOMORROW
+  </span>
+ </div>
 
-  <a href="/spatial-twin">
-   SPATIAL
-  </a>
+ <div class="telemetry good">
+  <small>DATABASE</small>
+  <strong id="dbState">
+   CHECK
+  </strong>
+ </div>
 
- </nav>
+ <div class="telemetry warn">
+  <small>PRESSIONE LIVE</small>
+  <strong id="pressure">
+   NON COLLEGATA
+  </strong>
+ </div>
+
+ <div class="telemetry warn">
+  <small>FLUSSO LIVE</small>
+  <strong id="flow">
+   NON COLLEGATO
+  </strong>
+ </div>
+
+ <div class="telemetry warn">
+  <small>DISPERSIONI</small>
+  <strong id="leaks">
+   NON CALCOLATE
+  </strong>
+ </div>
+
+ <div class="telemetry">
+  <small>PILOT</small>
+  <strong id="pilotState">
+   DA ESEGUIRE
+  </strong>
+ </div>
+
+ <div class="systemMessages">
+  <b>● SISTEMA</b><br>
+  Dati reali disponibili · nessuna telemetria simulata
+ </div>
 
 </footer>
 
+<nav class="mobileNav">
+
+ <a
+  class="active"
+  href="/master">
+  <span>◈</span>
+  TWIN
+ </a>
+
+ <a href="#search">
+  <span>⌕</span>
+  RICERCA
+ </a>
+
+ <a href="/asset-memory">
+  <span>⬡</span>
+  ASSET
+ </a>
+
+ <a href="/network-memory">
+  <span>⌁</span>
+  RETE
+ </a>
+
+ <a href="/cantiere">
+  <span>＋</span>
+  CAMPO
+ </a>
+
+</nav>
 
 <script>
+
+/* =========================================================
+   STATE
+   ========================================================= */
 
 const EMPTY={
  type:'FeatureCollection',
@@ -1428,19 +2391,23 @@ const EMPTY={
 
 let control=null;
 let spatial=null;
+let network=null;
 
 let currentSearch=[];
+let selectedId=null;
+let selectedFeature=null;
 
 const visibility={
  asbuilt:true,
  project:true,
- anchors:true
+ anchors:true,
+ anomaly:true
 };
 
 
-/* =====================================================
+/* =========================================================
    MAP
-   ===================================================== */
+   ========================================================= */
 
 const map=
  new maplibregl.Map({
@@ -1467,7 +2434,14 @@ const map=
     {
      id:'satellite',
      type:'raster',
-     source:'satellite'
+     source:'satellite',
+
+     paint:{
+      'raster-saturation':-.08,
+      'raster-contrast':.08,
+      'raster-brightness-min':.05,
+      'raster-brightness-max':.90
+     }
     }
    ]
   },
@@ -1479,7 +2453,7 @@ const map=
 
   zoom:13,
 
-  pitch:56,
+  pitch:57,
 
   bearing:-18,
 
@@ -1497,6 +2471,8 @@ map.on(
  'load',
  ()=>{
 
+  /* AS-BUILT */
+
   map.addSource(
    'asbuilt',
    {
@@ -1508,35 +2484,204 @@ map.on(
 
   map.addLayer({
 
-   id:'asbuilt-glow',
+   id:'asbuilt-shadow',
 
    type:'line',
 
    source:'asbuilt',
 
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
    paint:{
-    'line-color':'#052f25',
-    'line-width':13,
-    'line-opacity':.75
+
+    'line-color':'#001014',
+
+    'line-opacity':.80,
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,4,
+     13,7,
+     16,14,
+     19,28
+    ]
    }
   });
 
 
   map.addLayer({
 
-   id:'asbuilt-line',
+   id:'asbuilt-glow',
 
    type:'line',
 
    source:'asbuilt',
 
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
    paint:{
-    'line-color':'#23e6a1',
-    'line-width':6,
-    'line-opacity':1
+
+    'line-color':[
+     'case',
+
+     [
+      '==',
+      ['get','intervento_collegato'],
+      true
+     ],
+
+     '#20e79e',
+
+     '#ffac24'
+    ],
+
+    'line-opacity':.28,
+
+    'line-blur':7,
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,5,
+     13,9,
+     16,18,
+     19,34
+    ]
    }
   });
 
+
+  map.addLayer({
+
+   id:'asbuilt-shell',
+
+   type:'line',
+
+   source:'asbuilt',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':[
+     'case',
+
+     [
+      '==',
+      ['get','intervento_collegato'],
+      true
+     ],
+
+     '#08a86e',
+
+     '#d06b00'
+    ],
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,2.0,
+     13,3.5,
+     16,8,
+     19,17
+    ]
+   }
+  });
+
+
+  map.addLayer({
+
+   id:'asbuilt-core',
+
+   type:'line',
+
+   source:'asbuilt',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':[
+     'case',
+
+     [
+      '==',
+      ['get','intervento_collegato'],
+      true
+     ],
+
+     '#42ffbc',
+
+     '#ffc14d'
+    ],
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,.8,
+     13,1.5,
+     16,3.5,
+     19,8
+    ]
+   }
+  });
+
+
+  map.addLayer({
+
+   id:'asbuilt-highlight',
+
+   type:'line',
+
+   source:'asbuilt',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':'#ffffff',
+
+    'line-opacity':.32,
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,.20,
+     13,.45,
+     16,1,
+     19,2
+    ]
+   }
+  });
+
+
+  /* PROJECT */
 
   map.addSource(
    'project',
@@ -1549,19 +2694,74 @@ map.on(
 
   map.addLayer({
 
+   id:'project-glow',
+
+   type:'line',
+
+   source:'project',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':'#009dff',
+
+    'line-opacity':.26,
+
+    'line-blur':6,
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,4,
+     14,8,
+     18,17
+    ]
+   }
+  });
+
+
+  map.addLayer({
+
    id:'project-line',
 
    type:'line',
 
    source:'project',
 
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
    paint:{
-    'line-color':'#25d5ff',
-    'line-width':4,
-    'line-dasharray':[2,2]
+
+    'line-color':'#24d4ff',
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,1,
+     14,2,
+     18,5
+    ],
+
+    'line-dasharray':[
+     2,
+     1.3
+    ]
    }
   });
 
+
+  /* SPATIAL ASSETS */
 
   map.addSource(
    'anchors',
@@ -1574,31 +2774,79 @@ map.on(
 
   map.addLayer({
 
-   id:'anchors-circle',
+   id:'asset-points',
 
    type:'circle',
 
    source:'anchors',
 
+   filter:[
+    '!=',
+    ['get','entity_type'],
+    'anomaly'
+   ],
+
    paint:{
 
-    'circle-radius':8,
+    'circle-radius':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,4,
+     16,8,
+     20,13
+    ],
 
     'circle-color':[
      'match',
      ['get','entity_type'],
 
      'component',
-     '#ffab32',
+     '#24d4ff',
 
      'evidence',
-     '#c47cff',
-
-     'anomaly',
-     '#ff5968',
+     '#c778ff',
 
      '#ffffff'
     ],
+
+    'circle-stroke-color':
+     '#ffffff',
+
+    'circle-stroke-width':
+     1.5
+   }
+  });
+
+
+  map.addLayer({
+
+   id:'anomaly-points',
+
+   type:'circle',
+
+   source:'anchors',
+
+   filter:[
+    '==',
+    ['get','entity_type'],
+    'anomaly'
+   ],
+
+   paint:{
+
+    'circle-radius':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,5,
+     16,9,
+     20,14
+    ],
+
+    'circle-color':'#ff5263',
 
     'circle-stroke-color':
      '#ffffff',
@@ -1609,11 +2857,87 @@ map.on(
   });
 
 
+  /* SELECTED ASSET */
+
+  map.addSource(
+   'selected',
+   {
+    type:'geojson',
+    data:EMPTY
+   }
+  );
+
+
+  map.addLayer({
+
+   id:'selected-glow',
+
+   type:'line',
+
+   source:'selected',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':'#fff3b0',
+
+    'line-opacity':.46,
+
+    'line-blur':8,
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,8,
+     14,15,
+     18,30
+    ]
+   }
+  });
+
+
+  map.addLayer({
+
+   id:'selected-core',
+
+   type:'line',
+
+   source:'selected',
+
+   layout:{
+    'line-cap':'round',
+    'line-join':'round'
+   },
+
+   paint:{
+
+    'line-color':'#ffffff',
+
+    'line-width':[
+     'interpolate',
+     ['linear'],
+     ['zoom'],
+
+     10,1.5,
+     14,3,
+     18,7
+    ]
+   }
+  });
+
+
   for(
    const layer of [
-    'asbuilt-line',
+    'asbuilt-core',
     'project-line',
-    'anchors-circle'
+    'asset-points',
+    'anomaly-points'
    ]
   ){
 
@@ -1621,16 +2945,19 @@ map.on(
     'mouseenter',
     layer,
     ()=>{
-     map.getCanvas().style.cursor=
+     map.getCanvas()
+      .style.cursor=
       'pointer';
     }
    );
+
 
    map.on(
     'mouseleave',
     layer,
     ()=>{
-     map.getCanvas().style.cursor=
+     map.getCanvas()
+      .style.cursor=
       '';
     }
    );
@@ -1639,7 +2966,7 @@ map.on(
 
   map.on(
    'click',
-   'asbuilt-line',
+   'asbuilt-core',
    event=>{
 
     const feature=
@@ -1649,25 +2976,9 @@ map.on(
      return;
     }
 
-    const id=
-     String(
-      feature.properties
-       ?.id_intervento
-      ||
-      feature.properties
-       ?.id_tratto
-      ||
-      ''
-     )
-     .replace(
-      /^ASB-/,
-      ''
-     );
-
-
-    if(id){
-     loadAsset(id);
-    }
+    selectFeature(
+     feature
+    );
    }
   );
 
@@ -1677,27 +2988,6 @@ map.on(
    'project-line',
    event=>{
 
-    const id=
-     String(
-      event.features?.[0]
-       ?.properties
-       ?.id_intervento
-      ||
-      ''
-     );
-
-    if(id){
-     loadAsset(id);
-    }
-   }
-  );
-
-
-  map.on(
-   'click',
-   'anchors-circle',
-   event=>{
-
     const feature=
      event.features?.[0];
 
@@ -1705,40 +2995,78 @@ map.on(
      return;
     }
 
+
     const id=
      String(
       feature.properties
-       ?.id_intervento
-      ||
+       ?.id_intervento ||
       ''
      );
 
+
     if(id){
+
      loadAsset(id);
     }
-
-
-    new maplibregl
-     .Popup()
-     .setLngLat(
-      event.lngLat
-     )
-     .setHTML(
-      '<b>'+
-      esc(
-       feature.properties
-        ?.label
-       ||
-       feature.properties
-        ?.entity_type
-       ||
-       'Asset'
-      )+
-      '</b>'
-     )
-     .addTo(map);
    }
   );
+
+
+  for(
+   const layer
+   of [
+    'asset-points',
+    'anomaly-points'
+   ]
+  ){
+
+   map.on(
+    'click',
+    layer,
+    event=>{
+
+     const feature=
+      event.features?.[0];
+
+     if(!feature){
+      return;
+     }
+
+
+     const id=
+      String(
+       feature.properties
+        ?.id_intervento ||
+       ''
+      );
+
+
+     if(id){
+
+      loadAsset(id);
+     }
+
+
+     new maplibregl
+      .Popup()
+      .setLngLat(
+       event.lngLat
+      )
+      .setHTML(
+       '<b>'+
+       esc(
+        feature.properties
+         ?.label ||
+        feature.properties
+         ?.entity_type ||
+        'Asset'
+       )+
+       '</b>'
+      )
+      .addTo(map);
+    }
+   );
+  }
 
 
   refreshAll();
@@ -1746,9 +3074,9 @@ map.on(
 );
 
 
-/* =====================================================
+/* =========================================================
    API
-   ===================================================== */
+   ========================================================= */
 
 async function api(
  url,
@@ -1767,10 +3095,7 @@ async function api(
   );
 
 
- if(
-  response.status===
-  401
- ){
+ if(response.status===401){
 
   location.href='/';
 
@@ -1803,8 +3128,7 @@ async function api(
  if(!response.ok){
 
   throw new Error(
-   data.error
-   ||
+   data.error ||
    'HTTP '+response.status
   );
  }
@@ -1814,9 +3138,9 @@ async function api(
 }
 
 
-/* =====================================================
+/* =========================================================
    REFRESH
-   ===================================================== */
+   ========================================================= */
 
 async function refreshAll(){
 
@@ -1862,40 +3186,32 @@ async function refreshAll(){
 
   renderControl();
   renderSpatial();
-  renderNetwork(
-   network
-  );
+  renderNetwork();
 
   await runSearch();
 
 
-  document
-   .getElementById(
-    'systemStatus'
-   )
-   .innerHTML=
-    '<span class="statusDot"></span>'+
-    '<span>OPERATIONAL</span>';
+  setSystem(
+   'OPERATIONAL',
+   true
+  );
 
 
  }catch(error){
 
   console.error(error);
 
-  document
-   .getElementById(
-    'systemStatus'
-   )
-   .innerHTML=
-    '<span class="statusDot"></span>'+
-    '<span>DEGRADED</span>';
+  setSystem(
+   'DEGRADED',
+   false
+  );
  }
 }
 
 
-/* =====================================================
-   CONTROL ROOM
-   ===================================================== */
+/* =========================================================
+   SYSTEM / KPI
+   ========================================================= */
 
 function renderControl(){
 
@@ -1905,20 +3221,27 @@ function renderControl(){
 
  set(
   'kInterventi',
-  k.interventi
+  k.interventi ?? 0
+ );
+
+
+ set(
+  'kCantieri',
+  k.cantieri ?? 0
  );
 
 
  set(
   'kValidati',
-  k.validati
+  k.validati ?? 0
  );
 
 
  set(
   'kMetri',
   Number(
-   k.metri_misurati || 0
+   k.metri_misurati ||
+   0
   )
   .toLocaleString(
    'it-IT',
@@ -1932,19 +3255,13 @@ function renderControl(){
 
  set(
   'kAnomalie',
-  k.anomalie
+  k.anomalie ?? 0
  );
 
 
  set(
   'kMaintenance',
-  k.manutenzioni_aperte
- );
-
-
- set(
-  'kAsbuilt',
-  k.asbuilt
+  k.manutenzioni_aperte ?? 0
  );
 
 
@@ -1952,21 +3269,23 @@ function renderControl(){
   control?.readiness || [];
 
 
- const database=
+ const db=
   readiness.find(
-   x=>x.id==='database'
+   item=>
+    item.id==='database'
   );
 
 
  const pilot=
   readiness.find(
-   x=>x.id==='pilot'
+   item=>
+    item.id==='pilot'
   );
 
 
  set(
   'dbState',
-  database?.stato ||
+  db?.stato ||
   '—'
  );
 
@@ -1979,14 +3298,46 @@ function renderControl(){
 }
 
 
-/* =====================================================
-   NETWORK
-   ===================================================== */
+function setSystem(
+ state,
+ healthy
+){
 
-function renderNetwork(data){
+ const el=
+  document.getElementById(
+   'systemStatus'
+  );
+
+
+ if(el){
+
+  el.innerHTML=
+   '<span class="dot"></span>'+
+   esc(state);
+
+
+  el.style.color=
+   healthy
+    ? 'var(--green)'
+    : 'var(--red)';
+ }
+
+
+ set(
+  'kSystem',
+  state
+ );
+}
+
+
+/* =========================================================
+   NETWORK
+   ========================================================= */
+
+function renderNetwork(){
 
  const telemetry=
-  data?.telemetria || {};
+  network?.telemetria || {};
 
 
  set(
@@ -2024,16 +3375,16 @@ function renderNetwork(data){
 }
 
 
-/* =====================================================
-   SPATIAL / MAP
-   ===================================================== */
+/* =========================================================
+   SPATIAL
+   ========================================================= */
 
 function renderSpatial(){
 
  const collections=
   spatial
-   ?.feature_collections
-  || {};
+   ?.feature_collections ||
+  {};
 
 
  map
@@ -2060,7 +3411,57 @@ function renderSpatial(){
   );
 
 
- fitNetwork();
+ const total=
+  Number(
+   spatial
+    ?.totali
+    ?.asbuilt ||
+   0
+  );
+
+
+ const orphan=
+  Number(
+   spatial
+    ?.totali
+    ?.asbuilt_non_collegati ||
+   0
+  );
+
+
+ set(
+  'kReconcile',
+  orphan
+ );
+
+
+ const banner=
+  document
+   .getElementById(
+    'reconcileBanner'
+   );
+
+
+ if(banner){
+
+  banner.innerHTML=
+   '<span class="dot"></span>'+
+   '<span>'+
+   (
+    orphan>0
+     ? orphan+
+       ' AS-BUILT DA RICONCILIARE'
+     : 'AS-BUILT COLLEGATI: '+
+       total
+   )+
+   '</span>';
+ }
+
+
+ if(!selectedId){
+
+  fitNetwork();
+ }
 }
 
 
@@ -2091,26 +3492,26 @@ function fitNetwork(){
    of collection?.features || []
   ){
 
-   const g=
+   const geometry=
     feature.geometry;
 
 
    if(
-    g?.type==='Point'
+    geometry?.type==='Point'
    ){
 
     coords.push(
-     g.coordinates
+     geometry.coordinates
     );
    }
 
 
    if(
-    g?.type==='LineString'
+    geometry?.type==='LineString'
    ){
 
     coords.push(
-     ...g.coordinates
+     ...geometry.coordinates
     );
    }
   }
@@ -2119,15 +3520,15 @@ function fitNetwork(){
 
  const valid=
   coords.filter(
-   p=>
-    Array.isArray(p)
+   point=>
+    Array.isArray(point)
     &&
     Number.isFinite(
-     Number(p[0])
+     Number(point[0])
     )
     &&
     Number.isFinite(
-     Number(p[1])
+     Number(point[1])
     )
   );
 
@@ -2139,8 +3540,8 @@ function fitNetwork(){
 
  const bounds=
   valid.reduce(
-   (b,p)=>
-    b.extend(p),
+   (b,point)=>
+    b.extend(point),
 
    new maplibregl
     .LngLatBounds(
@@ -2153,24 +3554,99 @@ function fitNetwork(){
  map.fitBounds(
   bounds,
   {
-   padding:{
-    top:110,
-    left:325,
-    right:385,
-    bottom:125
-   },
-
-   maxZoom:18,
-
-   duration:800
+   padding:70,
+   maxZoom:17,
+   duration:700
   }
  );
 }
 
 
-/* =====================================================
+/* =========================================================
+   VIEW MODES
+   ========================================================= */
+
+function setView(mode){
+
+ document
+  .querySelectorAll(
+   '.viewMode button'
+  )
+  .forEach(
+   button=>
+    button.classList.remove(
+     'active'
+    )
+  );
+
+
+ if(mode==='2d'){
+
+  map.easeTo({
+   pitch:0,
+   bearing:0,
+   duration:650
+  });
+
+
+  map.setPaintProperty(
+   'satellite',
+   'raster-opacity',
+   1
+  );
+
+ }
+
+
+ if(mode==='3d'){
+
+  map.easeTo({
+   pitch:58,
+   bearing:-18,
+   duration:650
+  });
+
+
+  map.setPaintProperty(
+   'satellite',
+   'raster-opacity',
+   1
+  );
+
+
+  document
+   .getElementById(
+    'mode3d'
+   )
+   ?.classList.add(
+    'active'
+   );
+ }
+
+
+ if(
+  mode==='underground'
+ ){
+
+  map.easeTo({
+   pitch:65,
+   bearing:-18,
+   duration:650
+  });
+
+
+  map.setPaintProperty(
+   'satellite',
+   'raster-opacity',
+   .32
+  );
+ }
+}
+
+
+/* =========================================================
    LAYERS
-   ===================================================== */
+   ========================================================= */
 
 function toggleLayer(type){
 
@@ -2182,24 +3658,43 @@ function toggleLayer(type){
 
   asbuilt:{
    layers:[
+    'asbuilt-shadow',
     'asbuilt-glow',
-    'asbuilt-line'
+    'asbuilt-shell',
+    'asbuilt-core',
+    'asbuilt-highlight'
    ],
-   button:'layerAsbuilt'
+
+   button:
+    'layerAsbuilt'
   },
 
   project:{
    layers:[
+    'project-glow',
     'project-line'
    ],
-   button:'layerProject'
+
+   button:
+    'layerProject'
   },
 
   anchors:{
    layers:[
-    'anchors-circle'
+    'asset-points'
    ],
-   button:'layerSpatial'
+
+   button:
+    'layerSpatial'
+  },
+
+  anomaly:{
+   layers:[
+    'anomaly-points'
+   ],
+
+   button:
+    'layerAnomaly'
   }
  };
 
@@ -2232,17 +3727,16 @@ function toggleLayer(type){
   .getElementById(
    c.button
   )
-  .classList
-  .toggle(
+  ?.classList.toggle(
    'on',
    visibility[type]
   );
 }
 
 
-/* =====================================================
+/* =========================================================
    SEARCH
-   ===================================================== */
+   ========================================================= */
 
 async function runSearch(){
 
@@ -2276,7 +3770,6 @@ async function runSearch(){
 
 
  if(site){
-
   params.set(
    'cantiere',
    site
@@ -2295,6 +3788,119 @@ async function runSearch(){
 
   currentSearch=
    data.risultati || [];
+
+
+  const normalized=
+   q.toLowerCase();
+
+
+  const legacy=
+   (
+    spatial
+     ?.feature_collections
+     ?.asbuilt
+     ?.features ||
+    []
+   )
+   .filter(
+    feature=>
+     feature
+      ?.properties
+      ?.intervento_collegato !==
+     true
+   )
+   .map(
+    feature=>{
+
+     const props=
+      feature.properties || {};
+
+
+     return {
+
+      id_intervento:
+       String(
+        props.id_intervento ||
+        props.id_tratto ||
+        ''
+       )
+       .replace(
+        /^ASB-/,
+        ''
+       ),
+
+      id_cantiere:
+       String(
+        props.id_cantiere ||
+        ''
+       ),
+
+      materiale:
+       'AS-BUILT LEGACY',
+
+      anomalia:false,
+      legacy:true
+     };
+    }
+   )
+   .filter(
+    item=>{
+
+     if(
+      site &&
+      item.id_cantiere !==
+      site
+     ){
+      return false;
+     }
+
+
+     if(!normalized){
+      return true;
+     }
+
+
+     return (
+      item.id_intervento+
+      ' '+
+      item.id_cantiere+
+      ' '+
+      item.materiale
+     )
+     .toLowerCase()
+     .includes(
+      normalized
+     );
+    }
+   );
+
+
+  const modernIds=
+   new Set(
+    currentSearch.map(
+     item=>
+      String(
+       item.id_intervento
+      )
+    )
+   );
+
+
+  for(const item of legacy){
+
+   if(
+    !modernIds.has(
+     String(
+      item.id_intervento
+     )
+    )
+   ){
+
+    currentSearch.push(
+     item
+    );
+   }
+  }
 
 
   renderResults();
@@ -2325,11 +3931,18 @@ function renderResults(){
  );
 
 
+ set(
+  'treeSummary',
+  currentSearch.length+
+  ' asset nel filtro corrente'
+ );
+
+
  if(!currentSearch.length){
 
   box.innerHTML=
    '<div class="resultMeta">'+
-   'Nessun intervento nel filtro corrente.'+
+   'Nessun asset nel filtro corrente.'+
    '</div>';
 
   return;
@@ -2338,7 +3951,10 @@ function renderResults(){
 
  for(
   const item
-  of currentSearch.slice(0,30)
+  of currentSearch.slice(
+   0,
+   60
+  )
  ){
 
   const row=
@@ -2348,7 +3964,17 @@ function renderResults(){
 
 
   row.className=
-   'result';
+   'result'+
+   (
+    String(
+     item.id_intervento
+    )===
+    String(
+     selectedId
+    )
+     ? ' selected'
+     : ''
+   );
 
 
   row.innerHTML=
@@ -2360,11 +3986,14 @@ function renderResults(){
    '</strong>'+
 
    '<div class="resultMeta">'+
+
    esc(
-    item.id_cantiere
+    item.id_cantiere ||
+    '—'
    )+
 
    ' · '+
+
    esc(
     item.materiale ||
     '—'
@@ -2376,13 +4005,26 @@ function renderResults(){
      : ''
    )+
 
+   (
+    item.legacy
+     ? ' · ⚠ DA RICONCILIARE'
+     : ''
+   )+
+
    '</div>';
 
 
   row.onclick=
-   ()=>loadAsset(
-    item.id_intervento
-   );
+   ()=>{
+
+    loadAsset(
+     item.id_intervento
+    );
+
+    zoomToAsset(
+     item.id_intervento
+    );
+   };
 
 
   box.appendChild(row);
@@ -2390,17 +4032,253 @@ function renderResults(){
 }
 
 
-/* =====================================================
-   ASSET
-   ===================================================== */
+/* =========================================================
+   FEATURE SELECTION / ZOOM
+   ========================================================= */
+
+function featureId(feature){
+
+ return String(
+  feature
+   ?.properties
+   ?.id_intervento ||
+  feature
+   ?.properties
+   ?.id_tratto ||
+  ''
+ )
+ .replace(
+  /^ASB-/,
+  ''
+ );
+}
+
+
+function findAsbuiltFeature(id){
+
+ const normalized=
+  String(
+   id || ''
+  )
+  .replace(
+   /^ASB-/,
+   ''
+  );
+
+
+ return (
+  spatial
+   ?.feature_collections
+   ?.asbuilt
+   ?.features ||
+  []
+ )
+ .find(
+  feature=>
+   featureId(feature)===
+   normalized
+ );
+}
+
+
+function selectFeature(feature){
+
+ const id=
+  featureId(feature);
+
+
+ if(!id){
+  return;
+ }
+
+
+ selectedFeature=feature;
+ selectedId=id;
+
+
+ map
+  .getSource(
+   'selected'
+  )
+  ?.setData({
+   type:'FeatureCollection',
+   features:[
+    feature
+   ]
+  });
+
+
+ set(
+  'hudSelection',
+  id
+ );
+
+
+ loadAsset(id);
+ zoomFeature(feature);
+ renderResults();
+}
+
+
+function zoomToAsset(id){
+
+ const feature=
+  findAsbuiltFeature(id);
+
+
+ if(feature){
+
+  selectedFeature=feature;
+  selectedId=
+   featureId(feature);
+
+
+  map
+   .getSource(
+    'selected'
+   )
+   ?.setData({
+    type:'FeatureCollection',
+    features:[
+     feature
+    ]
+   });
+
+
+  set(
+   'hudSelection',
+   selectedId
+  );
+
+
+  zoomFeature(feature);
+  renderResults();
+ }
+}
+
+
+function zoomFeature(feature){
+
+ const geometry=
+  feature?.geometry;
+
+
+ if(
+  geometry?.type!==
+  'LineString'
+ ){
+
+  return;
+ }
+
+
+ const coords=
+  geometry.coordinates;
+
+
+ if(!coords?.length){
+  return;
+ }
+
+
+ const bounds=
+  coords.reduce(
+   (b,point)=>
+    b.extend(point),
+
+   new maplibregl
+    .LngLatBounds(
+     coords[0],
+     coords[0]
+    )
+  );
+
+
+ const mobile=
+  window.innerWidth<=980;
+
+
+ map.fitBounds(
+  bounds,
+  {
+   padding:
+    mobile
+     ? 70
+     : {
+        top:110,
+        right:100,
+        bottom:100,
+        left:100
+       },
+
+   maxZoom:
+    mobile
+     ? 18
+     : 19,
+
+   duration:850
+  }
+ );
+}
+
+
+/* =========================================================
+   ASSET INSPECTOR
+   ========================================================= */
 
 async function loadAsset(id){
 
+ const normalized=
+  String(
+   id || ''
+  )
+  .replace(
+   /^ASB-/,
+   ''
+  );
+
+
+ selectedId=normalized;
+
+
+ const feature=
+  findAsbuiltFeature(
+   normalized
+  );
+
+
+ const legacy=
+  feature &&
+  feature
+   ?.properties
+   ?.intervento_collegato !==
+  true;
+
+
+ if(legacy){
+
+  return loadLegacyAsset(
+   normalized
+  );
+ }
+
+
+ return loadModernAsset(
+  normalized
+ );
+}
+
+
+/* =========================================================
+   MODERN ASSET
+   ========================================================= */
+
+async function loadModernAsset(id){
+
  const body=
-  document
-   .getElementById(
-    'assetBody'
-   );
+  document.getElementById(
+   'assetBody'
+  );
 
 
  set(
@@ -2416,22 +4294,36 @@ async function loadAsset(id){
 
 
  body.innerHTML=
-  '<div class="assetEmpty">'+
+  '<div class="emptyAsset">'+
   'Caricamento...'+
   '</div>';
 
 
  try{
 
-  const data=
-   await api(
-    '/api/asset-timeline/'+
-    encodeURIComponent(id)
-   );
+  const [
+   timeline,
+   vision
+  ]=
+   await Promise.all([
+
+    api(
+     '/api/asset-timeline/'+
+     encodeURIComponent(id)
+    ),
+
+    api(
+     '/api/vision-context/'+
+     encodeURIComponent(id)
+    )
+    .catch(
+     ()=>null
+    )
+   ]);
 
 
   const a=
-   data.asset || {};
+   timeline.asset || {};
 
 
   set(
@@ -2455,25 +4347,65 @@ async function loadAsset(id){
   );
 
 
+  const status=
+   document.getElementById(
+    'assetStatus'
+   );
+
+
+  if(status){
+
+   if(
+    a.anomalia?.presente
+   ){
+
+    status.style.display=
+     'inline-flex';
+
+    status.innerHTML=
+     '⚠ ANOMALIA';
+   }else{
+
+    status.style.display=
+     'none';
+   }
+  }
+
+
   let html=
    '<div class="assetGrid">'+
 
    field(
+    'ID INTERVENTO',
+    a.id_intervento ||
+    '—'
+   )+
+
+   field(
+    'CANTIERE',
+    a.id_cantiere ||
+    '—'
+   )+
+
+   field(
     'MATERIALE',
-    a.materiale || '—'
+    a.materiale ||
+    '—'
    )+
 
    field(
     'DIAMETRO',
     a.diametro_mm
-     ? a.diametro_mm+' mm'
+     ? a.diametro_mm+
+       ' mm'
      : '—'
    )+
 
    field(
-    'METRI',
+    'METRI MISURATI',
     Number(
-     a.metri || 0
+     a.metri ||
+     0
     )
     .toLocaleString(
      'it-IT',
@@ -2486,29 +4418,33 @@ async function loadAsset(id){
 
    field(
     'EVIDENZE',
-    a.evidenze || 0
+    a.evidenze ??
+    0
    )+
 
    field(
     'MANUTENZIONI',
-    a.manutenzioni || 0
+    a.manutenzioni ??
+    0
    )+
 
    field(
     'SPATIAL POINTS',
-    a.spatial_anchors || 0
+    a.spatial_anchors ??
+    0
    )+
 
    '</div>';
 
 
   if(
-   a.anomalia?.presente===true
+   a.anomalia
+    ?.presente===true
   ){
 
    html+=
     '<div class="warning">'+
-    '<b>ANOMALIA REGISTRATA</b><br>'+
+    '<b>⚠ ANOMALIA REGISTRATA</b><br>'+
     esc(
      a.anomalia
       .descrizione ||
@@ -2519,100 +4455,40 @@ async function loadAsset(id){
 
 
   html+=
-   '<div class="assetLinks">'+
-
-   '<a href="'+
-   esc(
-    data.links.passaporto
-   )+
-   '">PASSAPORTO</a>'+
-
-   '<a href="'+
-   esc(
-    data.links.confronto
-   )+
-   '">PROGETTO ↔ AS-BUILT</a>'+
-
-   '<a href="'+
-   esc(
-    data.links.audit
-   )+
-   '">AUDIT</a>'+
-
-   '</div>';
+   actionRow(
+    timeline.links
+   );
 
 
   html+=
-   '<div class="timelineTitle">'+
-   'INFRASTRUCTURE TIMELINE'+
-   '</div>';
+   pipeSection(
+    a.materiale,
+    a.diametro_mm
+   );
 
 
   html+=
-   '<div class="timeline">';
+   mediaSection(
+    vision?.evidenze ||
+    []
+   );
 
 
-  for(
-   const event
-   of data.eventi || []
-  ){
-
-   html+=
-
-    '<div '+
-    'class="event" '+
-    'data-type="'+
-    esc(
-     event.tipo
-    )+
-    '">'+
-
-    '<div class="eventTime">'+
-    esc(
-     formatDate(
-      event.data_ora
-     )
-    )+
-    '</div>'+
-
-    '<div class="eventTitle">'+
-    esc(
-     event.titolo
-    )+
-    '</div>'+
-
-    (
-     event.dettagli
-      ?
-      '<div class="eventText">'+
-      esc(
-       event.dettagli
-      )+
-      '</div>'
-      :
-      ''
-    )+
-
-    '</div>';
-  }
+  html+=
+   timelineSection(
+    timeline.eventi ||
+    []
+   );
 
 
-  html+='</div>';
-
-
-  body.innerHTML=html;
+  body.innerHTML=
+   html;
 
 
  }catch(error){
 
-  set(
-   'assetSub',
-   'Errore lettura asset'
-  );
-
-
   body.innerHTML=
-   '<div class="assetEmpty">'+
+   '<div class="emptyAsset">'+
    esc(
     error.message
    )+
@@ -2621,9 +4497,458 @@ async function loadAsset(id){
 }
 
 
-/* =====================================================
+/* =========================================================
+   LEGACY / RECONCILIATION
+   ========================================================= */
+
+async function loadLegacyAsset(id){
+
+ const body=
+  document.getElementById(
+   'assetBody'
+  );
+
+
+ const data=
+  await api(
+   '/api/asbuilt-reconciliation/'+
+   encodeURIComponent(id)
+  );
+
+
+ const a=
+  data.asset || {};
+
+
+ set(
+  'assetName',
+  a.id_tratto ||
+  id
+ );
+
+
+ set(
+  'assetSub',
+  (
+   a.id_cantiere ||
+   '—'
+  )+
+  ' · '+
+  (
+   data.stato_riconciliazione ||
+   'DA RICONCILIARE'
+  )
+ );
+
+
+ const status=
+  document.getElementById(
+   'assetStatus'
+  );
+
+
+ if(status){
+
+  status.style.display=
+   'inline-flex';
+
+  status.innerHTML=
+   '⚠ DA RICONCILIARE';
+ }
+
+
+ let html=
+
+  '<div class="warning">'+
+  '<b>'+
+  '⚠ AS-BUILT PRESENTE · INTERVENTO NON COLLEGATO'+
+  '</b><br>'+
+  esc(
+   data.nota ||
+   ''
+  )+
+  '</div>'+
+
+
+  '<div class="assetGrid">'+
+
+  field(
+   'ID TRATTO',
+   a.id_tratto ||
+   '—'
+  )+
+
+  field(
+   'CANTIERE',
+   a.id_cantiere ||
+   '—'
+  )+
+
+  field(
+   'RIFERIMENTO',
+   a.riferimento_intervento ||
+   '—'
+  )+
+
+  field(
+   'OPERATORE LEGACY',
+   a.operatore ||
+   '—'
+  )+
+
+  field(
+   'GPS SOURCE',
+   a.sorgente_gps ||
+   '—'
+  )+
+
+  field(
+   'GPS QUALITY',
+   a.qualita_gps ||
+   '—'
+  )+
+
+  field(
+   'METRI MISURATI',
+   Number(
+    a.lunghezza_misurata_m ||
+    0
+   )
+   .toLocaleString(
+    'it-IT',
+    {
+     maximumFractionDigits:2
+    }
+   )+
+   ' m'
+  )+
+
+  field(
+   'LUNGHEZZA GPS',
+   Number(
+    a.lunghezza_gps_m ||
+    0
+   )
+   .toLocaleString(
+    'it-IT',
+    {
+     maximumFractionDigits:2
+    }
+   )+
+   ' m'
+  )+
+
+  '</div>'+
+
+
+  '<div class="actionRow">'+
+
+  '<a class="primary" '+
+  'href="/spatial-twin">'+
+  'VISUALIZZA IN 3D'+
+  '</a>'+
+
+  '<a href="/network-memory">'+
+  'NETWORK MEMORY'+
+  '</a>'+
+
+  '</div>'+
+
+
+  pipeSection(
+   '',
+   ''
+  )+
+
+
+  '<div class="timelineTitle">'+
+  'INFRASTRUCTURE TIMELINE'+
+  '</div>'+
+
+
+  '<div class="timeline">'+
+
+  '<div '+
+  'class="event" '+
+  'data-type="asbuilt">'+
+
+  '<div class="eventTime">'+
+  esc(
+   formatDate(
+    a.ultimo_aggiornamento
+   )
+  )+
+  '</div>'+
+
+  '<div class="eventTitle">'+
+  'As-Built presente nel GIS'+
+  '</div>'+
+
+  '<div class="eventText">'+
+  'Stato: DA RICONCILIARE. '+
+  'La geometria viene preservata senza creare '+
+  'artificialmente un intervento.'+
+  '</div>'+
+
+  '</div>'+
+
+  '</div>';
+
+
+ body.innerHTML=
+  html;
+}
+
+
+/* =========================================================
+   INSPECTOR BUILDERS
+   ========================================================= */
+
+function field(
+ label,
+ value
+){
+
+ return (
+  '<div class="assetField">'+
+  '<small>'+
+  esc(label)+
+  '</small>'+
+  '<b>'+
+  esc(
+   value ??
+   '—'
+  )+
+  '</b>'+
+  '</div>'
+ );
+}
+
+
+function actionRow(links){
+
+ if(!links){
+  return '';
+ }
+
+
+ return (
+  '<div class="actionRow">'+
+
+  '<a class="primary" href="'+
+  esc(
+   links.confronto ||
+   links.spatial ||
+   '#'
+  )+
+  '">'+
+  'VISUALIZZA RETE'+
+  '</a>'+
+
+  '<a href="'+
+  esc(
+   links.passaporto ||
+   links.audit ||
+   '#'
+  )+
+  '">'+
+  'PASSAPORTO / AUDIT'+
+  '</a>'+
+
+  '</div>'
+ );
+}
+
+
+function pipeSection(
+ material,
+ diameter
+){
+
+ const materialText=
+  material ||
+  'DATO NON DISPONIBILE';
+
+
+ const diameterText=
+  diameter
+   ? diameter+' mm'
+   : 'DATO NON DISPONIBILE';
+
+
+ return (
+  '<div class="pipeSection">'+
+
+  '<div class="pipeTitle">'+
+  'SEZIONE TUBO · RAPPRESENTAZIONE TECNICA'+
+  '</div>'+
+
+  '<div class="pipeVisual">'+
+
+   '<div class="pipeCylinder">'+
+    '<div class="pipeBand"></div>'+
+   '</div>'+
+
+  '</div>'+
+
+  '<div class="pipeLabels">'+
+  'Materiale: '+
+  esc(materialText)+
+  '<br>'+
+  'Diametro registrato: '+
+  esc(diameterText)+
+  '<br>'+
+  'La rappresentazione grafica non sostituisce '+
+  'il dato tecnico registrato.'+
+  '</div>'+
+
+  '</div>'
+ );
+}
+
+
+function mediaSection(items){
+
+ const photos=
+  (
+   Array.isArray(items)
+    ? items
+    : []
+  )
+  .filter(
+   item=>
+    item.tipo==='foto'
+  );
+
+
+ let html=
+  '<div class="mediaTitle">'+
+  'MEDIA / EVIDENZE'+
+  '</div>';
+
+
+ if(!photos.length){
+
+  return (
+   html+
+   '<div class="eventText">'+
+   'Nessuna fotografia disponibile.'+
+   '</div>'
+  );
+ }
+
+
+ html+=
+  '<div class="media">';
+
+
+ for(
+  const photo
+  of photos.slice(
+   0,
+   6
+  )
+ ){
+
+  html+=
+   '<a '+
+   'href="'+
+   esc(
+    photo.file_url
+   )+
+   '" target="_blank">'+
+
+   '<img '+
+   'src="'+
+   esc(
+    photo.file_url
+   )+
+   '" alt="">'+
+
+   '<span>'+
+   esc(
+    photo.nome_file ||
+    'Evidenza'
+   )+
+   '</span>'+
+
+   '</a>';
+ }
+
+
+ html+='</div>';
+
+
+ return html;
+}
+
+
+function timelineSection(events){
+
+ let html=
+  '<div class="timelineTitle">'+
+  'INFRASTRUCTURE TIMELINE'+
+  '</div>'+
+
+  '<div class="timeline">';
+
+
+ for(
+  const event
+  of events
+ ){
+
+  html+=
+   '<div '+
+   'class="event" '+
+   'data-type="'+
+   esc(
+    event.tipo ||
+    ''
+   )+
+   '">'+
+
+   '<div class="eventTime">'+
+   esc(
+    formatDate(
+     event.data_ora
+    )
+   )+
+   '</div>'+
+
+   '<div class="eventTitle">'+
+   esc(
+    event.titolo ||
+    'Evento'
+   )+
+   '</div>'+
+
+   (
+    event.dettagli
+     ?
+     '<div class="eventText">'+
+     esc(
+      event.dettagli
+     )+
+     '</div>'
+     :
+     ''
+   )+
+
+   '</div>';
+ }
+
+
+ html+='</div>';
+
+
+ return html;
+}
+
+
+/* =========================================================
    SITES
-   ===================================================== */
+   ========================================================= */
 
 async function loadSites(){
 
@@ -2636,10 +4961,9 @@ async function loadSites(){
 
 
   const select=
-   document
-    .getElementById(
-     'site'
-    );
+   document.getElementById(
+    'site'
+   );
 
 
   for(
@@ -2669,42 +4993,24 @@ async function loadSites(){
 }
 
 
-/* =====================================================
+/* =========================================================
    HELPERS
-   ===================================================== */
+   ========================================================= */
 
 function set(
  id,
  value
 ){
 
- const node=
+ const element=
   document.getElementById(id);
 
 
- if(node){
+ if(element){
 
-  node.textContent=
+  element.textContent=
    value ?? '—';
  }
-}
-
-
-function field(
- label,
- value
-){
-
- return (
-  '<div class="assetField">'+
-  '<small>'+
-  esc(label)+
-  '</small>'+
-  '<b>'+
-  esc(value)+
-  '</b>'+
-  '</div>'
- );
 }
 
 
@@ -2724,14 +5030,13 @@ function formatDate(value){
    date.getTime()
   )
  ){
-  return value;
+  return String(value);
  }
 
 
- return date
-  .toLocaleString(
-   'it-IT'
-  );
+ return date.toLocaleString(
+  'it-IT'
+ );
 }
 
 
@@ -2763,9 +5068,9 @@ function esc(value){
 }
 
 
-/* =====================================================
-   START
-   ===================================================== */
+/* =========================================================
+   INPUTS
+   ========================================================= */
 
 document
  .getElementById(
@@ -2778,6 +5083,31 @@ document
    if(
     event.key==='Enter'
    ){
+    runSearch();
+   }
+  }
+ );
+
+
+document
+ .getElementById(
+  'globalSearch'
+ )
+ .addEventListener(
+  'keydown',
+  event=>{
+
+   if(
+    event.key==='Enter'
+   ){
+
+    document
+     .getElementById(
+      'search'
+     )
+     .value=
+      event.target.value;
+
 
     runSearch();
    }
@@ -2795,782 +5125,7 @@ setInterval(
 
 </script>
 
-<!-- MASTER EXPERIENCE v1 -->
-
-
-<script id="nma-final-polish-script">
-
-/* =====================================================
-   FINAL EXPERIENCE POLISH v1
-   ===================================================== */
-
-(function(){
-
- /* ---------------------------------------------------
-    reconciliation banner
-    --------------------------------------------------- */
-
- const layerBox=
-  document.querySelector(
-   '.layerBox'
-  );
-
- if(
-  layerBox &&
-  !document.getElementById(
-   'reconcileBanner'
-  )
- ){
-
-  const banner=
-   document.createElement(
-    'div'
-   );
-
-  banner.id=
-   'reconcileBanner';
-
-  banner.className=
-   'reconcileBanner';
-
-  banner.innerHTML=
-   '<span class="reconcileDot"></span>'+
-   '<span>AS-BUILT: VERIFICA COLLEGAMENTI</span>';
-
-  layerBox.appendChild(
-   banner
-  );
- }
-
-
- /* ---------------------------------------------------
-    line style:
-    green = linked
-    orange = reconciliation required
-    --------------------------------------------------- */
-
- map.on(
-  'load',
-  ()=>{
-
-   if(
-    map.getLayer(
-     'asbuilt-line'
-    )
-   ){
-
-    map.setPaintProperty(
-     'asbuilt-line',
-     'line-color',
-     [
-      'case',
-
-      [
-       '==',
-       [
-        'get',
-        'intervento_collegato'
-       ],
-       true
-      ],
-
-      '#23e6a1',
-
-      '#ffab32'
-     ]
-    );
-   }
-  }
- );
-
-
- /* ---------------------------------------------------
-    renderSpatial override
-    --------------------------------------------------- */
-
- window.renderSpatial=
- function(){
-
-  const collections=
-   spatial
-    ?.feature_collections
-   || {};
-
-
-  const asbuiltTotal=
-   Number(
-    spatial
-     ?.totali
-     ?.asbuilt ||
-    0
-   );
-
-
-  const orphanCount=
-   Number(
-    spatial
-     ?.totali
-     ?.asbuilt_non_collegati ||
-    0
-   );
-
-
-  map
-   .getSource('asbuilt')
-   ?.setData(
-    collections.asbuilt ||
-    EMPTY
-   );
-
-
-  map
-   .getSource('project')
-   ?.setData(
-    collections.project ||
-    EMPTY
-   );
-
-
-  map
-   .getSource('anchors')
-   ?.setData(
-    collections.anchors ||
-    EMPTY
-   );
-
-
-  const banner=
-   document.getElementById(
-    'reconcileBanner'
-   );
-
-
-  if(banner){
-
-   banner.classList.toggle(
-    'warn',
-    orphanCount>0
-   );
-
-
-   banner.innerHTML=
-    '<span class="reconcileDot"></span>'+
-    '<span>'+
-    (
-     orphanCount>0
-      ?
-      orphanCount+
-      ' AS-BUILT DA RICONCILIARE'
-      :
-      'TUTTI GLI AS-BUILT COLLEGATI'
-    )+
-    '</span>';
-  }
-
-
-  set(
-   'kAsbuilt',
-   orphanCount>0
-    ?
-    asbuiltTotal+
-    ' · '+
-    orphanCount+
-    ' ⚠'
-    :
-    asbuiltTotal
-  );
-
-
-  fitNetwork();
- };
-
-
- /* ---------------------------------------------------
-    search override:
-    modern interventions + orphan GIS assets
-    --------------------------------------------------- */
-
- window.runSearch=
- async function(){
-
-  const q=
-   document
-    .getElementById(
-     'search'
-    )
-    .value
-    .trim();
-
-
-  const site=
-   document
-    .getElementById(
-     'site'
-    )
-    .value;
-
-
-  const params=
-   new URLSearchParams();
-
-
-  if(q){
-
-   params.set(
-    'q',
-    q
-   );
-  }
-
-
-  if(site){
-
-   params.set(
-    'cantiere',
-    site
-   );
-  }
-
-
-  try{
-
-   const data=
-    await api(
-     '/api/infrastructure-search?'+
-     params.toString()
-    );
-
-
-   currentSearch=
-    data.risultati || [];
-
-
-   const normalizedQ=
-    q.toLowerCase();
-
-
-   const legacy=
-    (
-     spatial
-      ?.feature_collections
-      ?.asbuilt
-      ?.features ||
-     []
-    )
-    .filter(
-     feature=>
-      feature
-       ?.properties
-       ?.intervento_collegato !==
-      true
-    )
-    .map(
-     feature=>{
-
-      const props=
-       feature.properties || {};
-
-
-      return {
-
-       id_intervento:
-        String(
-         props.id_intervento ||
-         props.id_tratto ||
-         ''
-        ),
-
-       id_cantiere:
-        String(
-         props.id_cantiere ||
-         ''
-        ),
-
-       materiale:
-        'AS-BUILT LEGACY',
-
-       anomalia:false,
-
-       legacy:true
-      };
-     }
-    )
-    .filter(
-     item=>{
-
-      if(
-       site &&
-       item.id_cantiere !==
-       site
-      ){
-
-       return false;
-      }
-
-
-      if(!normalizedQ){
-
-       return true;
-      }
-
-
-      return (
-       item.id_intervento+
-       ' '+
-       item.id_cantiere+
-       ' '+
-       item.materiale
-      )
-      .toLowerCase()
-      .includes(
-       normalizedQ
-      );
-     }
-    );
-
-
-   const modernIds=
-    new Set(
-     currentSearch.map(
-      item=>
-       String(
-        item.id_intervento
-       )
-     )
-    );
-
-
-   for(const item of legacy){
-
-    if(
-     !modernIds.has(
-      String(
-       item.id_intervento
-      )
-     )
-    ){
-
-     currentSearch.push(
-      item
-     );
-    }
-   }
-
-
-   renderResults();
-
-
-  }catch(error){
-
-   console.error(error);
-  }
- };
-
-
- /* ---------------------------------------------------
-    results override
-    --------------------------------------------------- */
-
- window.renderResults=
- function(){
-
-  const box=
-   document.getElementById(
-    'results'
-   );
-
-
-  box.innerHTML='';
-
-
-  set(
-   'resultCount',
-   currentSearch.length
-  );
-
-
-  if(!currentSearch.length){
-
-   box.innerHTML=
-    '<div class="resultMeta">'+
-    'Nessun asset nel filtro corrente.'+
-    '</div>';
-
-   return;
-  }
-
-
-  for(
-   const item
-   of currentSearch.slice(
-    0,
-    30
-   )
-  ){
-
-   const row=
-    document.createElement(
-     'div'
-    );
-
-
-   row.className=
-    'result';
-
-
-   row.innerHTML=
-
-    '<strong>'+
-    esc(
-     item.id_intervento
-    )+
-    '</strong>'+
-
-    '<div class="resultMeta">'+
-
-    esc(
-     item.id_cantiere ||
-     '—'
-    )+
-
-    ' · '+
-
-    esc(
-     item.materiale ||
-     '—'
-    )+
-
-    (
-     item.anomalia
-      ?
-      ' · ⚠ ANOMALIA'
-      :
-      ''
-    )+
-
-    (
-     item.legacy
-      ?
-      ' · ⚠ DA RICONCILIARE'
-      :
-      ''
-    )+
-
-    '</div>';
-
-
-   row.onclick=
-    ()=>loadAsset(
-     item.id_intervento
-    );
-
-
-   box.appendChild(
-    row
-   );
-  }
- };
-
-
- /* ---------------------------------------------------
-    preserve modern inspector
-    --------------------------------------------------- */
-
- const modernLoadAsset=
-  window.loadAsset;
-
-
- /* ---------------------------------------------------
-    legacy inspector
-    --------------------------------------------------- */
-
- async function loadLegacyAsset(
-  id
- ){
-
-  const body=
-   document.getElementById(
-    'assetBody'
-   );
-
-
-  const data=
-   await api(
-    '/api/asbuilt-reconciliation/'+
-    encodeURIComponent(id)
-   );
-
-
-  const a=
-   data.asset || {};
-
-
-  set(
-   'assetName',
-   a.id_tratto ||
-   id
-  );
-
-
-  set(
-   'assetSub',
-   (
-    a.id_cantiere ||
-    '—'
-   )+
-   ' · '+
-   (
-    data.stato_riconciliazione ||
-    'DA RICONCILIARE'
-   )
-  );
-
-
-  let html=
-
-   '<div class="legacyWarning">'+
-
-   '<b>'+
-   'AS-BUILT PRESENTE · INTERVENTO NON COLLEGATO'+
-   '</b><br>'+
-
-   esc(
-    data.nota ||
-    'Il tratto viene preservato nel GIS.'
-   )+
-
-   '</div>'+
-
-
-   '<div class="assetGrid">'+
-
-   field(
-    'ID TRATTO',
-    a.id_tratto ||
-    '—'
-   )+
-
-   field(
-    'CANTIERE',
-    a.id_cantiere ||
-    '—'
-   )+
-
-   field(
-    'RIFERIMENTO',
-    a.riferimento_intervento ||
-    '—'
-   )+
-
-   field(
-    'OPERATORE LEGACY',
-    a.operatore ||
-    '—'
-   )+
-
-   field(
-    'GPS SOURCE',
-    a.sorgente_gps ||
-    '—'
-   )+
-
-   field(
-    'GPS QUALITY',
-    a.qualita_gps ||
-    '—'
-   )+
-
-   field(
-    'METRI MISURATI',
-    Number(
-     a.lunghezza_misurata_m ||
-     0
-    )
-    .toLocaleString(
-     'it-IT',
-     {
-      maximumFractionDigits:2
-     }
-    )+
-    ' m'
-   )+
-
-   field(
-    'LUNGHEZZA GPS',
-    Number(
-     a.lunghezza_gps_m ||
-     0
-    )
-    .toLocaleString(
-     'it-IT',
-     {
-      maximumFractionDigits:2
-     }
-    )+
-    ' m'
-   )+
-
-   '</div>';
-
-
-  if(a.descrizione){
-
-   html+=
-    '<div class="eventText" '+
-    'style="margin-bottom:10px">'+
-
-    esc(
-     a.descrizione
-    )+
-
-    '</div>';
-  }
-
-
-  html+=
-
-   '<div class="legacyLinks">'+
-
-   '<a href="/spatial-twin">'+
-   'SPATIAL TWIN'+
-   '</a>'+
-
-   '<a href="/network-memory">'+
-   'NETWORK MEMORY'+
-   '</a>'+
-
-   '</div>'+
-
-
-   '<div class="timelineTitle">'+
-   'INFRASTRUCTURE TIMELINE'+
-   '</div>'+
-
-
-   '<div class="timeline">'+
-
-   '<div '+
-   'class="event" '+
-   'data-type="asbuilt">'+
-
-   '<div class="eventTime">'+
-   esc(
-    formatDate(
-     a.ultimo_aggiornamento
-    )
-   )+
-   '</div>'+
-
-   '<div class="eventTitle">'+
-   'As-Built presente nel GIS'+
-   '</div>'+
-
-   '<div class="eventText">'+
-   'Stato: DA RICONCILIARE. '+
-   'Il tratto viene preservato senza creare '+
-   'artificialmente un intervento.'+
-   '</div>'+
-
-   '</div>'+
-
-   '</div>';
-
-
-  body.innerHTML=
-   html;
- }
-
-
- /* ---------------------------------------------------
-    smart inspector:
-    legacy -> reconciliation
-    modern -> existing timeline
-    --------------------------------------------------- */
-
- window.loadAsset=
- async function(id){
-
-  const normalized=
-   String(
-    id || ''
-   )
-   .replace(
-    /^ASB-/,
-    ''
-   );
-
-
-  const feature=
-   (
-    spatial
-     ?.feature_collections
-     ?.asbuilt
-     ?.features ||
-    []
-   )
-   .find(
-    candidate=>{
-
-     const props=
-      candidate.properties ||
-      {};
-
-
-     const candidateId=
-      String(
-       props.id_intervento ||
-       props.id_tratto ||
-       ''
-      )
-      .replace(
-       /^ASB-/,
-       ''
-      );
-
-
-     return (
-      candidateId===
-      normalized
-     );
-    }
-   );
-
-
-  if(
-   feature &&
-   feature
-    ?.properties
-    ?.intervento_collegato !==
-   true
-  ){
-
-   try{
-
-    await loadLegacyAsset(
-     normalized
-    );
-
-    return;
-
-   }catch(error){
-
-    console.error(
-     error
-    );
-   }
-  }
-
-
-  return modernLoadAsset(
-   normalized
-  );
- };
-
-})();
-
-</script>
-
-<!-- FINAL EXPERIENCE POLISH v1 -->
+<!-- NMA BUILD OS MASTER RC2 VISUAL -->
 
 </body>
 </html>
