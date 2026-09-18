@@ -228,6 +228,75 @@ button{
   .grid{grid-template-columns:1fr}
   .full{grid-column:auto}
 }
+
+
+/* ==========================================================
+   NMA_MOBILE_UX_FINAL_V1
+   iPhone / safe-area / nessuna sovrapposizione
+   ========================================================== */
+
+body{
+  min-height:100dvh;
+}
+
+@media(max-width:650px){
+
+  header{
+    padding-left:
+      max(16px,env(safe-area-inset-left));
+    padding-right:
+      max(16px,env(safe-area-inset-right));
+  }
+
+  main{
+    padding:
+      14px
+      max(14px,env(safe-area-inset-right))
+      24px
+      max(14px,env(safe-area-inset-left));
+  }
+
+  #nmaCorrezioniMobile{
+    position:static !important;
+    display:block !important;
+
+    width:
+      calc(
+        100% -
+        max(28px,
+          env(safe-area-inset-left) +
+          env(safe-area-inset-right) +
+          28px
+        )
+      ) !important;
+
+    margin:
+      4px
+      auto
+      calc(
+        20px +
+        env(safe-area-inset-bottom)
+      ) !important;
+
+    padding:14px 16px !important;
+    border-radius:14px !important;
+
+    text-align:center;
+    font-size:15px;
+
+    box-shadow:
+      0 6px 18px rgba(0,0,0,.25) !important;
+  }
+
+  input,
+  select,
+  textarea,
+  button{
+    font-size:16px;
+  }
+
+}
+
 </style>
 </head>
 
@@ -2828,6 +2897,7 @@ document.addEventListener(
 <!-- NMA_CORREZIONI_LINK_V1 -->
 
 <button
+ id="nmaCorrezioniMobile"
  type="button"
  onclick="location.href='/correzioni'"
  style="

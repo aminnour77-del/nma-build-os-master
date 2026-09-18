@@ -6289,6 +6289,8 @@ app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res)
     <!DOCTYPE html>
     <html>
     <head>
+        <meta name="viewport"
+              content="width=device-width,initial-scale=1,viewport-fit=cover">
         <title>NMA BUILD OS - Control Room Satellitare 3D (Google Earth)</title>
         <script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
         <link href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css" rel="stylesheet" />
@@ -6304,16 +6306,124 @@ app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res)
             select { width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; margin-top: 6px; font-size: 14px; outline: none; cursor: pointer; }
             .live-badge { font-size: 10px; background: #00E676; color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; float: right; margin-top: 5px; animation: pulseBadge 1.5s infinite; }
             @keyframes pulseBadge { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-        </style>
+
+
+            /* ==============================================
+               NMA_UFFICIO_MOBILE_UX_FINAL_V1
+               ============================================== */
+
+            @media(max-width:700px){
+
+                #map{
+                    position:fixed;
+                    inset:0;
+                    width:100%;
+                    height:100dvh;
+                }
+
+                #panel{
+                    top:
+                      calc(
+                        10px +
+                        env(safe-area-inset-top)
+                      ) !important;
+
+                    left:
+                      max(
+                        10px,
+                        env(safe-area-inset-left)
+                      ) !important;
+
+                    right:
+                      max(
+                        10px,
+                        env(safe-area-inset-right)
+                      ) !important;
+
+                    width:auto !important;
+
+                    padding:14px !important;
+                    border-radius:14px !important;
+
+                    max-height:52dvh;
+                    overflow:auto;
+
+                    -webkit-overflow-scrolling:touch;
+                }
+
+                #panel h2{
+                    margin:0 0 10px;
+                    font-size:17px;
+                    line-height:1.3;
+                }
+
+                #panel p{
+                    font-size:13px;
+                    line-height:1.35;
+                }
+
+                #panel .metric{
+                    padding:11px;
+                    margin-top:9px;
+                }
+
+                #panel .metric p{
+                    font-size:14px;
+                }
+
+                #panel select{
+                    min-height:44px;
+                    font-size:16px;
+                }
+
+                #nma-sal-mobile-wrap{
+                    left:
+                      max(
+                        12px,
+                        env(safe-area-inset-left)
+                      ) !important;
+
+                    right:
+                      max(
+                        12px,
+                        env(safe-area-inset-right)
+                      ) !important;
+
+                    bottom:
+                      calc(
+                        12px +
+                        env(safe-area-inset-bottom)
+                      ) !important;
+
+                    transform:none !important;
+                    width:auto !important;
+                }
+
+                #nma-sal-mobile-wrap a{
+                    display:block !important;
+                    width:100% !important;
+
+                    padding:
+                      13px 16px !important;
+
+                    font-size:16px !important;
+                    line-height:1.2;
+
+                    text-align:center;
+                    border-radius:12px !important;
+                }
+            }
+
+</style>
     </head>
     <body>
         <div id="map"></div>
-        
+
         <div id="panel">
             <h2>NMA BUILD OS <span class="live-badge">SATELLITE 3D LIVE</span></h2>
             <hr style="border-color:#333; margin: 14px 0;">
             <p>Controllo Linea: <span class="glow">FLUSSO PRESSIONE ATTIVO</span></p>
-            
+
             <div class="metric">
                 <h4>Seleziona Cantiere Operativo</h4>
                 <select id="selettore-cantiere" onchange="aggiornaDatiAppalto()">
@@ -6399,7 +6509,7 @@ app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res)
 
             map.on('load', function () {
                 map.addSource('tubi-gas', { type: 'geojson', data: '/api/tubi' });
-                
+
                 // Tubo esterno strutturale 3D sulla mappa satellitare
                 map.addLayer({
                     'id': 'tubi-struttura',
@@ -6439,10 +6549,10 @@ app.get('/ufficio', requireAuth, requireRole('supervisore', 'admin'), (req, res)
                 socket.on('nuovo_collaudo', () => { caricaMappaEKPI(); caricaCantieri(); });
             });
         </script>
-    
+
 
 <!-- TASTO SAL IN SOVRIMPRESSIONE -->
-<div style="position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 999999;"><a href="/sal" style="background:#FF9800; color:white; padding:15px 30px; display:inline-block; text-decoration:none; font-size:22px; border-radius:12px; font-weight: bold; box-shadow: 0px 10px 20px rgba(0,0,0,0.6); border: 2px solid white;">📄 Genera Documento SAL</a></div>
+<div id="nma-sal-mobile-wrap" style="position:fixed; bottom:40px; left:50%; transform:translateX(-50%); z-index:999999;"><a href="/sal" style="background:#FF9800; color:white; padding:15px 30px; display:inline-block; text-decoration:none; font-size:22px; border-radius:12px; font-weight: bold; box-shadow: 0px 10px 20px rgba(0,0,0,0.6); border: 2px solid white;">📄 Genera Documento SAL</a></div>
 
 </body>
     </html>
@@ -6466,11 +6576,11 @@ app.get(
 app.post('/api/sync-offline', express.json(), requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
     const collaudi = req.body.collaudi || [];
     console.log(`[SYNC] 🔄 Ripristinati ${collaudi.length} collaudi dalla coda offline del cantiere.`);
-    
+
     // Invia i dati recuperati alla mappa 3D se il WebSocket è attivo
     collaudi.forEach(dati => {
         if (typeof io !== 'undefined') {
-            io.emit('telemetria', dati); 
+            io.emit('telemetria', dati);
         }
     });
     res.status(200).json({ success: true });
@@ -6483,12 +6593,12 @@ const registroSquadre = new Map();
 
 app.post('/api/registra-squadra', express.json(), requireAuth, requireRole('operatore', 'supervisore', 'admin'), (req, res) => {
     const { operatore, cantiere, hardwareId } = req.body;
-    registroSquadre.set(operatore, { 
-        cantiere, 
-        hardwareId: hardwareId || 'BLE-Non-Rilevato', 
-        ultimo_contatto: new Date().toISOString() 
+    registroSquadre.set(operatore, {
+        cantiere,
+        hardwareId: hardwareId || 'BLE-Non-Rilevato',
+        ultimo_contatto: new Date().toISOString()
     });
-    
+
     // Emette l'aggiornamento in tempo reale alla Control Room
     if (typeof io !== 'undefined') {
         io.emit('aggiornamento_flotta', Array.from(registroSquadre.entries()));
@@ -6506,7 +6616,7 @@ app.get('/api/squadre-attive', requireAuth, requireRole('supervisore', 'admin'),
 app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => {
     const dataOggi = new Date().toLocaleDateString('it-IT');
     const hashValidazione = require('crypto').createHash('sha256').update(dataOggi + Math.random()).digest('hex');
-    
+
     const htmlSAL = `
     <!DOCTYPE html>
     <html lang="it">
@@ -6534,7 +6644,7 @@ app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => 
     </head>
     <body>
         <button class="btn-stampa" onclick="window.print()">🖨️ Esporta PDF / Stampa</button>
-        
+
         <div class="header">
             <div>
                 <h1>STATO AVANZAMENTO LAVORI (SAL)</h1>
@@ -6546,7 +6656,7 @@ app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => 
                 <p><strong>Commessa:</strong> Reti Gas e Sostituzione Misuratori</p>
             </div>
         </div>
-        
+
         <table>
             <tr>
                 <th>ID Cantiere</th>
@@ -6563,11 +6673,11 @@ app.get('/sal', requireAuth, requireRole('supervisore', 'admin'), (req, res) => 
                 <td>€ 92.790,00</td>
             </tr>
         </table>
-        
+
         <div class="totali">
             TOTALE LAVORI DA FATTURARE: € 92.790,00
         </div>
-        
+
         <div class="hash-sicurezza">
             DOCUMENTO DIGITALE BLINDATO - Immutabilità ISO 27001<br>
             Firma Hash SHA-256: ${hashValidazione}
