@@ -2441,6 +2441,303 @@ body.asset-selected .rightPanel{
 
 </style>
 
+
+<style id="nma-sanbenigno-demo-css">
+
+.demoSwitch{
+ position:fixed;
+ z-index:1400;
+
+ left:50%;
+ top:178px;
+
+ transform:translateX(-50%);
+
+ display:flex;
+ align-items:center;
+ gap:5px;
+
+ padding:5px;
+
+ border:1px solid rgba(39,207,246,.45);
+ border-radius:10px;
+
+ background:rgba(2,15,21,.94);
+
+ backdrop-filter:blur(16px);
+}
+
+.demoSwitch button{
+ min-height:34px;
+
+ padding:0 13px;
+
+ border:0;
+ border-radius:7px;
+
+ background:#08232d;
+ color:#8cadb7;
+
+ font-size:9px;
+ font-weight:900;
+
+ cursor:pointer;
+}
+
+.demoSwitch button.active{
+ background:#0b9bc4;
+ color:#001116;
+
+ box-shadow:
+ 0 0 16px rgba(36,212,255,.28);
+}
+
+.demoWatermark{
+ position:fixed;
+ z-index:1390;
+
+ left:50%;
+ bottom:106px;
+
+ transform:translateX(-50%);
+
+ padding:8px 13px;
+
+ border:1px solid rgba(255,172,36,.60);
+ border-radius:999px;
+
+ background:rgba(34,20,2,.88);
+
+ color:#ffc24f;
+
+ font-size:9px;
+ font-weight:950;
+
+ letter-spacing:.08em;
+
+ pointer-events:none;
+
+ backdrop-filter:blur(15px);
+}
+
+.demoComponentLabel{
+ position:absolute;
+
+ padding:7px 9px;
+
+ border:1px solid rgba(36,212,255,.55);
+ border-radius:7px;
+
+ background:rgba(2,18,25,.94);
+ color:#f3fbff;
+
+ font-size:9px;
+ font-weight:900;
+
+ box-shadow:
+ 0 8px 20px rgba(0,0,0,.35);
+
+ pointer-events:none;
+
+ white-space:nowrap;
+}
+
+.demoComponentLabel.orange{
+ border-color:rgba(255,172,36,.65);
+ color:#ffc451;
+}
+
+.demoComponentLabel.red{
+ border-color:rgba(255,82,99,.72);
+ color:#ff7b88;
+}
+
+.demoInspector{
+ display:grid;
+ gap:8px;
+}
+
+.demoNotice{
+ padding:11px;
+
+ border:1px solid rgba(255,172,36,.55);
+ border-radius:9px;
+
+ background:rgba(62,37,3,.78);
+ color:#ffd38e;
+
+ font-size:10px;
+ line-height:1.5;
+}
+
+.demoNotice b{
+ color:#ffac24;
+}
+
+.demoTechGrid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:6px;
+}
+
+.demoTech{
+ padding:9px;
+
+ border:1px solid #1d4c5d;
+ border-radius:8px;
+
+ background:#04161d;
+}
+
+.demoTech small{
+ display:block;
+
+ color:#6f9ba8;
+
+ font-size:8px;
+ letter-spacing:.07em;
+}
+
+.demoTech strong{
+ display:block;
+
+ margin-top:3px;
+
+ color:#f0fbff;
+
+ font-size:11px;
+}
+
+.demoPipeDiagram{
+ position:relative;
+
+ height:112px;
+
+ margin-top:5px;
+
+ border:1px solid #225466;
+ border-radius:10px;
+
+ overflow:hidden;
+
+ background:
+ radial-gradient(
+  circle at 50% 40%,
+  rgba(35,99,118,.26),
+  #031118 72%
+ );
+}
+
+.demoPipeBar{
+ position:absolute;
+
+ left:7%;
+ right:7%;
+ top:42px;
+
+ height:30px;
+
+ border-radius:999px;
+
+ background:
+ linear-gradient(
+  180deg,
+  #ffdb73 0%,
+  #ff9b05 22%,
+  #ab4f00 52%,
+  #ff9700 78%,
+  #ffe09a 100%
+ );
+
+ box-shadow:
+ 0 0 20px rgba(255,138,0,.45);
+}
+
+.demoPipeBar:before,
+.demoPipeBar:after{
+ content:"";
+
+ position:absolute;
+
+ top:-7px;
+
+ width:15px;
+ height:44px;
+
+ border-radius:5px;
+
+ background:
+ linear-gradient(
+  90deg,
+  #4c5960,
+  #d9edf3 40%,
+  #46565d 70%,
+  #c7dde5
+ );
+
+ box-shadow:
+ 0 0 8px rgba(255,255,255,.22);
+}
+
+.demoPipeBar:before{
+ left:27%;
+}
+
+.demoPipeBar:after{
+ right:24%;
+}
+
+.demoLegend{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:5px;
+
+ margin-top:8px;
+}
+
+.demoLegend div{
+ padding:7px;
+
+ border:1px solid #1e4c5d;
+ border-radius:7px;
+
+ color:#91b0ba;
+
+ font-size:8px;
+}
+
+@media(max-width:980px){
+
+ .demoSwitch{
+  position:absolute;
+
+  top:100px;
+
+  max-width:92vw;
+ }
+
+ .demoWatermark{
+  position:absolute;
+
+  top:
+   calc(
+    88px +
+    62dvh -
+    94px
+   );
+
+  bottom:auto;
+
+  max-width:90vw;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+ }
+}
+
+</style>
+
 </head>
 
 <body>
@@ -7818,6 +8115,1513 @@ setInterval(
 </script>
 
 <!-- NMA TRUE PIPE 3D ENGINE v1 -->
+
+
+<script id="nma-sanbenigno-demo-engine">
+
+/* =========================================================
+   NMA SAN BENIGNO DEMO TRUE3D v1
+
+   TUTTO IL CONTENUTO DI QUESTO MODULO È DIMOSTRATIVO.
+
+   - nessuna scrittura MongoDB
+   - nessuna API POST
+   - nessuna infrastruttura reale dichiarata
+   - coordinate sintetiche attorno a San Benigno Canavese
+   - componenti esclusivamente dimostrativi
+   ========================================================= */
+
+(function(){
+
+ const DEMO={
+
+  enabled:true,
+
+  layerId:
+   'nma-sanbenigno-demo-3d',
+
+  scene:null,
+  camera:null,
+  renderer:null,
+  root:null,
+
+  origin:[
+   7.7861,
+   45.2280
+  ],
+
+  originMercator:null,
+  scale:null,
+
+  labels:[],
+
+  selectedId:
+   'DEMO-SANBENIGNO-001',
+
+  mapReady:false
+ };
+
+
+ /*
+  ==========================================================
+  TRACCIATO SINTETICO
+
+  Non rappresenta una condotta reale.
+  È progettato solo per mostrare il motore grafico.
+  ==========================================================
+ */
+
+ const MAIN_COORDS=[
+
+  [7.78390,45.22748],
+  [7.78442,45.22763],
+  [7.78505,45.22783],
+  [7.78567,45.22805],
+  [7.78628,45.22818],
+  [7.78696,45.22822],
+  [7.78755,45.22810],
+  [7.78805,45.22787]
+ ];
+
+
+ const BRANCH_COORDS=[
+
+  [7.78628,45.22818],
+  [7.78640,45.22855],
+  [7.78655,45.22891]
+ ];
+
+
+ function toLocal(coord){
+
+  const lat=
+   DEMO.origin[1] *
+   Math.PI /
+   180;
+
+
+  const east=
+   (
+    coord[0]-
+    DEMO.origin[0]
+   ) *
+   111320 *
+   Math.cos(lat);
+
+
+  const south=
+   -(
+    coord[1]-
+    DEMO.origin[1]
+   ) *
+   110540;
+
+
+  return new THREE.Vector3(
+   east,
+   south,
+   1.30
+  );
+ }
+
+
+ function orangeMaterial(
+  emissive=.48,
+  metalness=.78
+ ){
+
+  return new THREE.MeshStandardMaterial({
+
+   color:0xff8700,
+
+   roughness:.18,
+
+   metalness,
+
+   emissive:
+    new THREE.Color(
+     0xff6700
+    ),
+
+   emissiveIntensity:
+    emissive
+  });
+ }
+
+
+ function silverMaterial(){
+
+  return new THREE.MeshStandardMaterial({
+
+   color:0xb9cad1,
+
+   roughness:.20,
+
+   metalness:.92,
+
+   emissive:
+    new THREE.Color(
+     0x172d34
+    ),
+
+   emissiveIntensity:.16
+  });
+ }
+
+
+ function darkMetal(){
+
+  return new THREE.MeshStandardMaterial({
+
+   color:0x26353b,
+
+   roughness:.26,
+   metalness:.88
+  });
+ }
+
+
+ function redMaterial(){
+
+  return new THREE.MeshStandardMaterial({
+
+   color:0xff334c,
+
+   roughness:.18,
+   metalness:.63,
+
+   emissive:
+    new THREE.Color(
+     0xff001c
+    ),
+
+   emissiveIntensity:.75
+  });
+ }
+
+
+ function glowMaterial(){
+
+  return new THREE.MeshBasicMaterial({
+
+   color:0xff8a00,
+
+   transparent:true,
+   opacity:.16,
+
+   depthWrite:false,
+
+   blending:
+    THREE.AdditiveBlending
+  });
+ }
+
+
+ function makeCurve(coords){
+
+  return new THREE.CatmullRomCurve3(
+
+   coords.map(
+    toLocal
+   ),
+
+   false,
+
+   'centripetal',
+
+   .18
+  );
+ }
+
+
+ function addTube(
+  group,
+  coords,
+  radius=.64
+ ){
+
+  const curve=
+   makeCurve(coords);
+
+
+  const tube=
+   new THREE.Mesh(
+
+    new THREE.TubeGeometry(
+     curve,
+     170,
+     radius,
+     24,
+     false
+    ),
+
+    orangeMaterial()
+   );
+
+
+  group.add(tube);
+
+
+  const innerHighlight=
+   new THREE.Mesh(
+
+    new THREE.TubeGeometry(
+     curve,
+     170,
+     radius*.76,
+     20,
+     false
+    ),
+
+    new THREE.MeshStandardMaterial({
+
+     color:0xffc048,
+
+     roughness:.12,
+     metalness:.70,
+
+     transparent:true,
+     opacity:.52,
+
+     emissive:
+      new THREE.Color(
+       0xff8700
+      ),
+
+     emissiveIntensity:.55
+    })
+   );
+
+
+  group.add(
+   innerHighlight
+  );
+
+
+  const glow=
+   new THREE.Mesh(
+
+    new THREE.TubeGeometry(
+     curve,
+     150,
+     radius*1.22,
+     16,
+     false
+    ),
+
+    glowMaterial()
+   );
+
+
+  group.add(glow);
+
+
+  return {
+   curve,
+   radius
+  };
+ }
+
+
+ function orientToCurve(
+  object,
+  curve,
+  t
+ ){
+
+  const position=
+   curve.getPointAt(t);
+
+
+  const tangent=
+   curve
+    .getTangentAt(t)
+    .normalize();
+
+
+  object.position.copy(
+   position
+  );
+
+
+  object.quaternion
+   .setFromUnitVectors(
+
+    new THREE.Vector3(
+     0,
+     0,
+     1
+    ),
+
+    tangent
+   );
+ }
+
+
+ function addCollar(
+  group,
+  curve,
+  t,
+  radius,
+  wide=false
+ ){
+
+  const ring=
+   new THREE.Mesh(
+
+    new THREE.TorusGeometry(
+
+     radius*
+     (
+      wide
+       ? 1.26
+       : 1.16
+     ),
+
+     radius*
+     (
+      wide
+       ? .24
+       : .15
+     ),
+
+     12,
+
+     32
+    ),
+
+    wide
+     ? silverMaterial()
+     : orangeMaterial(.62,.86)
+   );
+
+
+  orientToCurve(
+   ring,
+   curve,
+   t
+  );
+
+
+  group.add(ring);
+
+
+  if(wide){
+
+   for(
+    const delta
+    of [-.012,.012]
+   ){
+
+    const secondary=
+     new THREE.Mesh(
+
+      new THREE.TorusGeometry(
+       radius*1.20,
+       radius*.10,
+       10,
+       28
+      ),
+
+      darkMetal()
+     );
+
+
+    orientToCurve(
+     secondary,
+     curve,
+     Math.max(
+      .01,
+      Math.min(
+       .99,
+       t+delta
+      )
+     )
+    );
+
+
+    group.add(
+     secondary
+    );
+   }
+  }
+ }
+
+
+ function addValve(
+  group,
+  curve,
+  t,
+  radius
+ ){
+
+  const valve=
+   new THREE.Group();
+
+
+  const body=
+   new THREE.Mesh(
+
+    new THREE.SphereGeometry(
+     radius*1.28,
+     22,
+     16
+    ),
+
+    orangeMaterial(.6,.82)
+   );
+
+
+  body.scale.set(
+   1,
+   1,
+   .72
+  );
+
+
+  valve.add(body);
+
+
+  const neck=
+   new THREE.Mesh(
+
+    new THREE.CylinderGeometry(
+     radius*.22,
+     radius*.30,
+     radius*1.8,
+     18
+    ),
+
+    silverMaterial()
+   );
+
+
+  neck.rotation.x=
+   Math.PI/2;
+
+
+  neck.position.z=
+   radius*1.22;
+
+
+  valve.add(neck);
+
+
+  const wheel=
+   new THREE.Mesh(
+
+    new THREE.TorusGeometry(
+     radius*.76,
+     radius*.11,
+     10,
+     28
+    ),
+
+    orangeMaterial(.7,.82)
+   );
+
+
+  wheel.position.z=
+   radius*2.05;
+
+
+  valve.add(wheel);
+
+
+  const stem=
+   new THREE.Mesh(
+
+    new THREE.CylinderGeometry(
+     radius*.07,
+     radius*.07,
+     radius*.65,
+     12
+    ),
+
+    silverMaterial()
+   );
+
+
+  stem.rotation.x=
+   Math.PI/2;
+
+
+  stem.position.z=
+   radius*1.73;
+
+
+  valve.add(stem);
+
+
+  orientToCurve(
+   valve,
+   curve,
+   t
+  );
+
+
+  /*
+   Manteniamo il gruppo ancorato alla centerline.
+   Il dettaglio verticale è puramente visuale.
+  */
+
+  group.add(valve);
+ }
+
+
+ function addAnomaly(
+  group,
+  curve,
+  t,
+  radius
+ ){
+
+  const ring=
+   new THREE.Mesh(
+
+    new THREE.TorusGeometry(
+     radius*1.30,
+     radius*.22,
+     12,
+     34
+    ),
+
+    redMaterial()
+   );
+
+
+  orientToCurve(
+   ring,
+   curve,
+   t
+  );
+
+
+  group.add(ring);
+ }
+
+
+ function addTee(
+  group,
+  mainCurve,
+  t,
+  radius
+ ){
+
+  const junction=
+   new THREE.Mesh(
+
+    new THREE.SphereGeometry(
+     radius*1.27,
+     20,
+     16
+    ),
+
+    orangeMaterial(.65,.82)
+   );
+
+
+  junction.position.copy(
+   mainCurve.getPointAt(t)
+  );
+
+
+  group.add(junction);
+
+
+  addCollar(
+   group,
+   mainCurve,
+   t-.018,
+   radius,
+   true
+  );
+
+
+  addCollar(
+   group,
+   mainCurve,
+   t+.018,
+   radius,
+   true
+  );
+ }
+
+
+ function makeNetwork(){
+
+  const root=
+   new THREE.Group();
+
+
+  const main=
+   addTube(
+    root,
+    MAIN_COORDS,
+    .67
+   );
+
+
+  const branch=
+   addTube(
+    root,
+    BRANCH_COORDS,
+    .50
+   );
+
+
+  /*
+   Collari lungo il tubo principale.
+  */
+
+  const collarPositions=[
+   .08,
+   .15,
+   .23,
+   .36,
+   .44,
+   .55,
+   .68,
+   .78,
+   .88,
+   .95
+  ];
+
+
+  collarPositions.forEach(
+   (t,index)=>
+    addCollar(
+     root,
+     main.curve,
+     t,
+     main.radius,
+     index===3 ||
+     index===7
+    )
+  );
+
+
+  addCollar(
+   root,
+   branch.curve,
+   .28,
+   branch.radius,
+   true
+  );
+
+
+  addCollar(
+   root,
+   branch.curve,
+   .67,
+   branch.radius,
+   false
+  );
+
+
+  /*
+   Due valvole tecniche.
+  */
+
+  addValve(
+   root,
+   main.curve,
+   .30,
+   main.radius
+  );
+
+
+  addValve(
+   root,
+   main.curve,
+   .76,
+   main.radius
+  );
+
+
+  /*
+   Raccordo a T.
+  */
+
+  addTee(
+   root,
+   main.curve,
+   .56,
+   main.radius
+  );
+
+
+  /*
+   Anomalia DEMO.
+  */
+
+  addAnomaly(
+   root,
+   main.curve,
+   .66,
+   main.radius
+  );
+
+
+  /*
+   Terminali metallici.
+  */
+
+  addCollar(
+   root,
+   main.curve,
+   .015,
+   main.radius,
+   true
+  );
+
+
+  addCollar(
+   root,
+   main.curve,
+   .985,
+   main.radius,
+   true
+  );
+
+
+  return {
+   root,
+   mainCurve:main.curve
+  };
+ }
+
+
+ function addLights(){
+
+  DEMO.scene.add(
+
+   new THREE.HemisphereLight(
+    0xc8efff,
+    0x031016,
+    2.6
+   )
+  );
+
+
+  const key=
+   new THREE.DirectionalLight(
+    0xffffff,
+    4.3
+   );
+
+
+  key.position.set(
+   -120,
+   -130,
+   260
+  );
+
+
+  DEMO.scene.add(key);
+
+
+  const orange=
+   new THREE.PointLight(
+    0xff8300,
+    3.4,
+    180
+   );
+
+
+  orange.position.set(
+   0,
+   0,
+   55
+  );
+
+
+  DEMO.scene.add(
+   orange
+  );
+
+
+  const rim=
+   new THREE.DirectionalLight(
+    0x37d7ff,
+    1.7
+   );
+
+
+  rim.position.set(
+   130,
+   80,
+   120
+  );
+
+
+  DEMO.scene.add(rim);
+ }
+
+
+ const customLayer={
+
+  id:
+   DEMO.layerId,
+
+  type:'custom',
+
+  renderingMode:'3d',
+
+
+  onAdd(mapInstance,gl){
+
+   DEMO.camera=
+    new THREE.Camera();
+
+
+   DEMO.scene=
+    new THREE.Scene();
+
+
+   addLights();
+
+
+   const network=
+    makeNetwork();
+
+
+   DEMO.root=
+    network.root;
+
+
+   DEMO.scene.add(
+    DEMO.root
+   );
+
+
+   DEMO.originMercator=
+    maplibregl
+     .MercatorCoordinate
+     .fromLngLat(
+      {
+       lng:DEMO.origin[0],
+       lat:DEMO.origin[1]
+      },
+      0
+     );
+
+
+   DEMO.scale=
+    DEMO
+     .originMercator
+     .meterInMercatorCoordinateUnits();
+
+
+   DEMO.renderer=
+    new THREE.WebGLRenderer({
+
+     canvas:
+      mapInstance.getCanvas(),
+
+     context:gl,
+
+     antialias:true
+    });
+
+
+   DEMO.renderer.autoClear=false;
+
+
+   if(
+    'outputColorSpace'
+    in DEMO.renderer
+   ){
+
+    DEMO.renderer.outputColorSpace=
+     THREE.SRGBColorSpace;
+   }
+
+
+   DEMO.mapReady=true;
+  },
+
+
+  render(gl,matrix){
+
+   if(
+    !DEMO.enabled ||
+    !DEMO.mapReady
+   ){
+    return;
+   }
+
+
+   const translate=
+    new THREE.Matrix4()
+     .makeTranslation(
+
+      DEMO.originMercator.x,
+
+      DEMO.originMercator.y,
+
+      DEMO.originMercator.z
+     );
+
+
+   translate.scale(
+
+    new THREE.Vector3(
+     DEMO.scale,
+     DEMO.scale,
+     DEMO.scale
+    )
+   );
+
+
+   DEMO.camera
+    .projectionMatrix=
+
+     new THREE.Matrix4()
+      .fromArray(matrix)
+      .multiply(
+       translate
+      );
+
+
+   DEMO.renderer.resetState();
+
+
+   DEMO.renderer.render(
+    DEMO.scene,
+    DEMO.camera
+   );
+
+
+   map.triggerRepaint();
+  }
+ };
+
+
+ function hideRealNetwork(){
+
+  const layers=[
+
+   'nma-true-pipe-3d',
+
+   'asbuilt-shadow',
+   'asbuilt-glow',
+   'asbuilt-shell',
+   'asbuilt-core',
+   'asbuilt-highlight',
+   'asbuilt-line',
+
+   'selected-glow',
+   'selected-core',
+
+   'visual-joint-glow',
+   'visual-joint-shell',
+   'visual-joint-core',
+
+   'project-glow',
+   'project-line',
+
+   'asset-points',
+   'anomaly-points'
+  ];
+
+
+  layers.forEach(
+   id=>{
+
+    if(map.getLayer(id)){
+
+     map.setLayoutProperty(
+      id,
+      'visibility',
+      'none'
+     );
+    }
+   }
+  );
+ }
+
+
+ function showRealNetwork(){
+
+  const layers=[
+
+   'nma-true-pipe-3d',
+
+   'asbuilt-shadow',
+   'asbuilt-glow',
+   'asbuilt-shell',
+   'asbuilt-core',
+   'asbuilt-highlight',
+
+   'project-glow',
+   'project-line',
+
+   'asset-points',
+   'anomaly-points'
+  ];
+
+
+  layers.forEach(
+   id=>{
+
+    if(map.getLayer(id)){
+
+     map.setLayoutProperty(
+      id,
+      'visibility',
+      'visible'
+     );
+    }
+   }
+  );
+ }
+
+
+ function zoomDemo(){
+
+  map.easeTo({
+
+   center:[
+    7.78615,
+    45.22803
+   ],
+
+   zoom:17.25,
+
+   pitch:64,
+
+   bearing:-31,
+
+   duration:1100
+  });
+ }
+
+
+ function createUI(){
+
+  if(
+   document.getElementById(
+    'nmaDemoSwitch'
+   )
+  ){
+   return;
+  }
+
+
+  const switcher=
+   document.createElement(
+    'div'
+   );
+
+
+  switcher.id=
+   'nmaDemoSwitch';
+
+  switcher.className=
+   'demoSwitch';
+
+
+  switcher.innerHTML=
+   '<button id="demoBtn" type="button" class="active">'+
+   'DEMO SAN BENIGNO'+
+   '</button>'+
+   '<button id="realBtn" type="button">'+
+   'DATI REALI'+
+   '</button>';
+
+
+  document.body.appendChild(
+   switcher
+  );
+
+
+  const watermark=
+   document.createElement(
+    'div'
+   );
+
+
+  watermark.id=
+   'demoWatermark';
+
+  watermark.className=
+   'demoWatermark';
+
+  watermark.textContent=
+   'SIMULAZIONE VISIVA · NON È UNA RETE REALE';
+
+
+  document.body.appendChild(
+   watermark
+  );
+
+
+  document
+   .getElementById(
+    'demoBtn'
+   )
+   .addEventListener(
+    'click',
+    enableDemo
+   );
+
+
+  document
+   .getElementById(
+    'realBtn'
+   )
+   .addEventListener(
+    'click',
+    disableDemo
+   );
+ }
+
+
+ function renderDemoInspector(){
+
+  const name=
+   document.getElementById(
+    'assetName'
+   );
+
+
+  const sub=
+   document.getElementById(
+    'assetSub'
+   );
+
+
+  const status=
+   document.getElementById(
+    'assetStatus'
+   );
+
+
+  const body=
+   document.getElementById(
+    'assetBody'
+   );
+
+
+  if(name){
+
+   name.textContent=
+    'DEMO-SANBENIGNO-001';
+  }
+
+
+  if(sub){
+
+   sub.textContent=
+    'SAN BENIGNO CANAVESE · SIMULAZIONE';
+  }
+
+
+  if(status){
+
+   status.style.display=
+    'inline-flex';
+
+   status.textContent=
+    '◈ DEMO TRUE 3D';
+  }
+
+
+  if(!body){
+   return;
+  }
+
+
+  body.innerHTML=
+   '<div class="demoInspector">'+
+
+   '<div class="demoNotice">'+
+   '<b>SIMULAZIONE DIMOSTRATIVA</b><br>'+
+   'Tracciato sintetico creato per mostrare la resa finale '+
+   'del Digital Twin. Non rappresenta una condotta realmente '+
+   'presente a San Benigno Canavese.'+
+   '</div>'+
+
+   '<div class="demoTechGrid">'+
+
+   tech(
+    'ASSET',
+    'DEMO-SANBENIGNO-001'
+   )+
+
+   tech(
+    'LOCALITÀ',
+    'San Benigno Canavese'
+   )+
+
+   tech(
+    'RETE',
+    'Gas · Demo'
+   )+
+
+   tech(
+    'STATO VISIVO',
+    'Da riconciliare'
+   )+
+
+   tech(
+    'CORPO TUBO',
+    'Mesh cilindrica 3D'
+   )+
+
+   tech(
+    'COMPONENTI',
+    'Valvole · T · collari'
+   )+
+
+   tech(
+    'ANOMALIA',
+    'Demo AN-001'
+   )+
+
+   tech(
+    'DATABASE',
+    'Nessuna scrittura'
+   )+
+
+   '</div>'+
+
+   '<div class="pipeSection">'+
+
+   '<div class="pipeTitle">'+
+   'SEZIONE TUBO · DEMO TRUE 3D'+
+   '</div>'+
+
+   '<div class="demoPipeDiagram">'+
+    '<div class="demoPipeBar"></div>'+
+   '</div>'+
+
+   '<div class="demoLegend">'+
+
+    '<div>● Corpo cilindrico 3D</div>'+
+    '<div>◎ Collari metallici</div>'+
+    '<div>◉ 2 valvole demo</div>'+
+    '<div>⊥ Raccordo a T</div>'+
+    '<div>● Anomalia demo</div>'+
+    '<div>⌁ Diramazione 3D</div>'+
+
+   '</div>'+
+
+   '</div>'+
+
+   '<div class="timelineTitle">'+
+   'DEMO INFRASTRUCTURE TIMELINE'+
+   '</div>'+
+
+   '<div class="timeline">'+
+
+    '<div class="event" data-type="asbuilt">'+
+     '<div class="eventTitle">'+
+     'Rete dimostrativa caricata'+
+     '</div>'+
+     '<div class="eventText">'+
+     'Visualizzazione client-side. Nessun record salvato nel database.'+
+     '</div>'+
+    '</div>'+
+
+   '</div>'+
+
+   '</div>';
+ }
+
+
+ function tech(label,value){
+
+  return (
+   '<div class="demoTech">'+
+    '<small>'+
+     label+
+    '</small>'+
+    '<strong>'+
+     value+
+    '</strong>'+
+   '</div>'
+  );
+ }
+
+
+ function enableDemo(){
+
+  DEMO.enabled=true;
+
+
+  hideRealNetwork();
+
+
+  if(
+   map.getLayer(
+    DEMO.layerId
+   )
+  ){
+
+   map.setLayoutProperty(
+    DEMO.layerId,
+    'visibility',
+    'visible'
+   );
+  }
+
+
+  document
+   .getElementById(
+    'demoBtn'
+   )
+   ?.classList.add(
+    'active'
+   );
+
+
+  document
+   .getElementById(
+    'realBtn'
+   )
+   ?.classList.remove(
+    'active'
+   );
+
+
+  const wm=
+   document.getElementById(
+    'demoWatermark'
+   );
+
+
+  if(wm){
+   wm.style.display='block';
+  }
+
+
+  renderDemoInspector();
+
+  zoomDemo();
+
+  map.triggerRepaint();
+ }
+
+
+ function disableDemo(){
+
+  DEMO.enabled=false;
+
+
+  if(
+   map.getLayer(
+    DEMO.layerId
+   )
+  ){
+
+   map.setLayoutProperty(
+    DEMO.layerId,
+    'visibility',
+    'none'
+   );
+  }
+
+
+  showRealNetwork();
+
+
+  document
+   .getElementById(
+    'demoBtn'
+   )
+   ?.classList.remove(
+    'active'
+   );
+
+
+  document
+   .getElementById(
+    'realBtn'
+   )
+   ?.classList.add(
+    'active'
+   );
+
+
+  const wm=
+   document.getElementById(
+    'demoWatermark'
+   );
+
+
+  if(wm){
+   wm.style.display='none';
+  }
+
+
+  if(
+   typeof refreshAll ===
+   'function'
+  ){
+
+   refreshAll();
+  }
+
+
+  setTimeout(
+   ()=>{
+
+    if(
+     typeof fitNetwork ===
+     'function'
+    ){
+
+     fitNetwork();
+    }
+   },
+   300
+  );
+ }
+
+
+ function install(){
+
+  createUI();
+
+
+  if(
+   !map.getLayer(
+    DEMO.layerId
+   )
+  ){
+
+   map.addLayer(
+    customLayer
+   );
+  }
+
+
+  setTimeout(
+   enableDemo,
+   350
+  );
+ }
+
+
+ if(map.loaded()){
+
+  install();
+
+ }else{
+
+  map.on(
+   'load',
+   install
+  );
+ }
+
+})();
+
+</script>
+
+<!-- NMA SAN BENIGNO DEMO TRUE3D v1 -->
 
 </body>
 </html>
