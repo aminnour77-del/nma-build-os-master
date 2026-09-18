@@ -1881,6 +1881,469 @@ select{
 
 </style>
 
+
+<style id="nma-rc3-visual-match">
+
+/* =========================================================
+   NMA RC3 VISUAL MATCH
+   ========================================================= */
+
+:root{
+ --left:350px;
+ --right:470px;
+ --top:166px;
+ --bottom:88px;
+}
+
+/* TOP */
+
+.topbar{
+ height:76px;
+}
+
+.logo{
+ width:350px;
+ font-size:21px;
+}
+
+.logo span{
+ font-size:9px;
+}
+
+.mainnav a{
+ min-width:84px;
+ font-size:9px;
+}
+
+.mainnav a .navIcon{
+ font-size:20px;
+}
+
+.globalSearch{
+ width:320px;
+}
+
+.globalSearch input{
+ height:42px;
+ font-size:12px;
+}
+
+.topStatus{
+ font-size:10px;
+ padding:9px 13px;
+}
+
+/* KPI */
+
+.kpiStrip{
+ top:76px;
+ height:90px;
+ padding:9px 12px;
+ gap:8px;
+}
+
+.kpi{
+ padding:11px 13px;
+ border-radius:11px;
+}
+
+.kpi small{
+ font-size:9px;
+}
+
+.kpi strong{
+ font-size:22px;
+ margin-top:5px;
+}
+
+.systemPulse{
+ width:34px;
+ height:34px;
+}
+
+/* LEFT */
+
+.leftPanel{
+ top:166px;
+ bottom:88px;
+ width:350px;
+}
+
+.leftInner{
+ padding:12px;
+}
+
+.tabs button{
+ min-height:42px;
+ font-size:10px;
+}
+
+.section{
+ border-radius:12px;
+ margin-bottom:13px;
+}
+
+.sectionHead{
+ padding:12px 13px;
+ font-size:11px;
+}
+
+.sectionBody{
+ padding:12px;
+}
+
+.searchRow{
+ grid-template-columns:1fr 48px;
+ gap:7px;
+}
+
+.searchRow input{
+ height:45px;
+ font-size:14px;
+}
+
+.searchBtn{
+ font-size:19px;
+}
+
+.siteSelect{
+ height:41px;
+ font-size:12px;
+}
+
+.result{
+ padding:11px 12px;
+ border-radius:10px;
+}
+
+.result strong{
+ font-size:13px;
+}
+
+.resultMeta{
+ font-size:10px;
+ line-height:1.5;
+}
+
+.layer{
+ min-height:42px;
+ font-size:11px;
+}
+
+.layerIndicator{
+ width:18px;
+ height:18px;
+}
+
+.reconcile{
+ padding:11px;
+ font-size:11px;
+}
+
+/* RIGHT */
+
+.rightPanel{
+ top:166px;
+ bottom:88px;
+ width:470px;
+}
+
+.inspectorHead{
+ padding:15px 17px 13px;
+}
+
+.inspectorTop{
+ font-size:11px;
+}
+
+.assetName{
+ font-size:24px;
+ margin-top:9px;
+}
+
+.assetSub{
+ font-size:11px;
+}
+
+.assetStatus{
+ font-size:11px;
+ padding:7px 11px;
+}
+
+.inspectorTabs button{
+ height:45px;
+ font-size:10px;
+}
+
+.assetBody{
+ padding:15px 16px 24px;
+}
+
+.assetField{
+ padding:10px;
+}
+
+.assetField small{
+ font-size:9px;
+}
+
+.assetField b{
+ font-size:12px;
+}
+
+.warning{
+ padding:13px;
+ font-size:11px;
+ line-height:1.55;
+}
+
+.actionRow a,
+.actionRow button{
+ min-height:43px;
+ font-size:10px;
+}
+
+.pipeSection{
+ padding:13px;
+}
+
+.pipeTitle{
+ font-size:10px;
+}
+
+.pipeVisual{
+ height:92px;
+}
+
+.pipeCylinder{
+ top:31px;
+ height:30px;
+}
+
+.pipeCylinder:before{
+ width:42px;
+ height:42px;
+ top:-8px;
+}
+
+.pipeLabels{
+ font-size:10px;
+}
+
+.timelineTitle,
+.mediaTitle{
+ font-size:10px;
+}
+
+.event{
+ padding:10px;
+}
+
+.eventTime{
+ font-size:9px;
+}
+
+.eventTitle{
+ font-size:11px;
+}
+
+.eventText{
+ font-size:10px;
+}
+
+/* MAP */
+
+#map{
+ top:166px;
+ left:350px;
+ right:470px;
+ bottom:88px;
+}
+
+.mapHudTop{
+ top:178px;
+ left:362px;
+}
+
+.hudPill{
+ font-size:10px;
+ padding:9px 11px;
+}
+
+.mapLegend{
+ top:178px;
+ right:482px;
+ width:138px;
+ font-size:9px;
+}
+
+.viewMode{
+ right:482px;
+ bottom:100px;
+}
+
+.viewMode button{
+ min-width:53px;
+ height:35px;
+ font-size:9px;
+}
+
+/* BOTTOM */
+
+.bottomBar{
+ height:88px;
+
+ grid-template-columns:
+ 250px
+ repeat(5,minmax(0,1fr))
+ 270px;
+
+ gap:8px;
+ padding:9px 12px;
+}
+
+.bottomBrand{
+ font-size:19px;
+}
+
+.bottomBrand span{
+ font-size:8px;
+}
+
+.telemetry{
+ padding:10px 12px;
+}
+
+.telemetry small{
+ font-size:8px;
+}
+
+.telemetry strong{
+ font-size:11px;
+}
+
+.systemMessages{
+ font-size:9px;
+}
+
+/* Selected infrastructure emphasis */
+
+body.asset-selected #map{
+ filter:none;
+}
+
+body.asset-selected .rightPanel{
+ box-shadow:
+ -12px 0 34px rgba(0,0,0,.42),
+ -1px 0 0 rgba(36,212,255,.18);
+}
+
+/* Tube badge */
+
+.tubeVisualBadge{
+ margin-top:8px;
+
+ display:inline-flex;
+ align-items:center;
+ gap:7px;
+
+ padding:6px 9px;
+
+ border:
+ 1px solid rgba(36,212,255,.42);
+
+ border-radius:999px;
+
+ background:
+ rgba(4,36,47,.78);
+
+ color:var(--cyan);
+
+ font-size:9px;
+ font-weight:900;
+}
+
+.tubeVisualBadge:before{
+ content:"";
+
+ width:7px;
+ height:7px;
+
+ border-radius:50%;
+
+ background:currentColor;
+
+ box-shadow:
+ 0 0 9px currentColor;
+}
+
+/* MOBILE remains dedicated, not squeezed desktop */
+
+@media(max-width:980px){
+
+ :root{
+  --top:88px;
+  --bottom:0;
+ }
+
+ .topbar{
+  height:88px;
+ }
+
+ .logo{
+  width:auto;
+  font-size:19px;
+ }
+
+ #map{
+  top:auto;
+  left:auto;
+  right:auto;
+  bottom:auto;
+
+  height:62dvh;
+  margin-top:88px;
+ }
+
+ .leftPanel,
+ .rightPanel{
+  top:auto;
+  bottom:auto;
+
+  width:auto;
+ }
+
+ .rightPanel{
+  min-height:520px;
+ }
+
+ .assetName{
+  font-size:22px;
+ }
+
+ .bottomBar{
+  height:auto;
+
+  grid-template-columns:
+  repeat(2,1fr);
+ }
+
+ .viewMode{
+  right:12px;
+
+  top:
+  calc(
+   88px +
+   62dvh -
+   49px
+  );
+
+  bottom:auto;
+ }
+}
+
+</style>
+
 </head>
 
 <body>
@@ -5126,6 +5589,615 @@ setInterval(
 </script>
 
 <!-- NMA BUILD OS MASTER RC2 VISUAL -->
+
+
+<script id="nma-rc3-visual-match-script">
+
+/* =========================================================
+   NMA RC3 VISUAL MATCH
+   ========================================================= */
+
+(function(){
+
+ let autoSelected=false;
+
+
+ /* ---------------------------------------------------------
+    DECORATIVE PIPE JOINTS
+    Visual only.
+    Same real GeoJSON geometry.
+    They are NOT physical assets.
+    --------------------------------------------------------- */
+
+ function ensureTubeJointLayers(){
+
+  if(
+   !map ||
+   !map.isStyleLoaded()
+  ){
+   return false;
+  }
+
+
+  if(
+   !map.getSource(
+    'visual-pipe-joints'
+   )
+  ){
+
+   map.addSource(
+    'visual-pipe-joints',
+    {
+     type:'geojson',
+
+     data:{
+      type:'FeatureCollection',
+      features:[]
+     }
+    }
+   );
+  }
+
+
+  if(
+   !map.getLayer(
+    'visual-joint-glow'
+   )
+  ){
+
+   map.addLayer({
+
+    id:'visual-joint-glow',
+
+    type:'circle',
+
+    source:
+     'visual-pipe-joints',
+
+    paint:{
+
+     'circle-radius':[
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+
+      13,2,
+      16,8,
+      19,16
+     ],
+
+     'circle-color':[
+      'case',
+
+      [
+       '==',
+       ['get','linked'],
+       true
+      ],
+
+      '#20e79e',
+
+      '#ffac24'
+     ],
+
+     'circle-opacity':.28,
+
+     'circle-blur':.65
+    }
+   });
+  }
+
+
+  if(
+   !map.getLayer(
+    'visual-joint-shell'
+   )
+  ){
+
+   map.addLayer({
+
+    id:'visual-joint-shell',
+
+    type:'circle',
+
+    source:
+     'visual-pipe-joints',
+
+    paint:{
+
+     'circle-radius':[
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+
+      13,1.4,
+      16,5,
+      19,10
+     ],
+
+     'circle-color':'#031014',
+
+     'circle-stroke-color':[
+      'case',
+
+      [
+       '==',
+       ['get','linked'],
+       true
+      ],
+
+      '#20e79e',
+
+      '#ffac24'
+     ],
+
+     'circle-stroke-width':[
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+
+      13,.7,
+      16,2,
+      19,4
+     ]
+    }
+   });
+  }
+
+
+  if(
+   !map.getLayer(
+    'visual-joint-core'
+   )
+  ){
+
+   map.addLayer({
+
+    id:'visual-joint-core',
+
+    type:'circle',
+
+    source:
+     'visual-pipe-joints',
+
+    paint:{
+
+     'circle-radius':[
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+
+      13,.45,
+      16,1.5,
+      19,3.5
+     ],
+
+     'circle-color':'#ffffff',
+
+     'circle-opacity':.72
+    }
+   });
+  }
+
+
+  return true;
+ }
+
+
+ function distanceApprox(a,b){
+
+  const lat=
+   (
+    Number(a[1])+
+    Number(b[1])
+   )/2;
+
+
+  const dx=
+   (
+    Number(b[0])-
+    Number(a[0])
+   )*
+   111320*
+   Math.cos(
+    lat*
+    Math.PI/
+    180
+   );
+
+
+  const dy=
+   (
+    Number(b[1])-
+    Number(a[1])
+   )*
+   110540;
+
+
+  return Math.sqrt(
+   dx*dx+
+   dy*dy
+  );
+ }
+
+
+ function buildVisualJoints(){
+
+  if(
+   !ensureTubeJointLayers()
+  ){
+   return;
+  }
+
+
+  const features=[];
+
+
+  const lines=
+   spatial
+    ?.feature_collections
+    ?.asbuilt
+    ?.features ||
+   [];
+
+
+  for(
+   const line
+   of lines
+  ){
+
+   const coords=
+    line.geometry
+     ?.coordinates ||
+    [];
+
+
+   if(
+    line.geometry
+     ?.type !==
+    'LineString'
+    ||
+    coords.length<2
+   ){
+    continue;
+   }
+
+
+   const linked=
+    line.properties
+     ?.intervento_collegato ===
+    true;
+
+
+   for(
+    let i=0;
+    i<coords.length-1;
+    i++
+   ){
+
+    const a=coords[i];
+    const b=coords[i+1];
+
+
+    const meters=
+     distanceApprox(
+      a,
+      b
+     );
+
+
+    const steps=
+     Math.max(
+      1,
+      Math.min(
+       12,
+       Math.floor(
+        meters/18
+       )
+      )
+     );
+
+
+    for(
+     let step=1;
+     step<=steps;
+     step++
+    ){
+
+     const t=
+      step/
+      (
+       steps+1
+      );
+
+
+     features.push({
+
+      type:'Feature',
+
+      properties:{
+       visual_only:true,
+       linked
+      },
+
+      geometry:{
+       type:'Point',
+
+       coordinates:[
+        Number(a[0])+
+        (
+         Number(b[0])-
+         Number(a[0])
+        )*t,
+
+        Number(a[1])+
+        (
+         Number(b[1])-
+         Number(a[1])
+        )*t
+       ]
+      }
+     });
+    }
+   }
+  }
+
+
+  map
+   .getSource(
+    'visual-pipe-joints'
+   )
+   ?.setData({
+
+    type:'FeatureCollection',
+
+    features
+   });
+ }
+
+
+ /* ---------------------------------------------------------
+    WRAP RENDER SPATIAL
+    --------------------------------------------------------- */
+
+ const originalRenderSpatial=
+  window.renderSpatial;
+
+
+ window.renderSpatial=
+ function(){
+
+  originalRenderSpatial();
+
+
+  setTimeout(
+   buildVisualJoints,
+   0
+  );
+ };
+
+
+ /* ---------------------------------------------------------
+    AUTO-SELECT THE ONLY REAL AVAILABLE ASSET
+    Does not create data.
+    --------------------------------------------------------- */
+
+ const originalRunSearch=
+  window.runSearch;
+
+
+ window.runSearch=
+ async function(){
+
+  await originalRunSearch();
+
+
+  if(
+   autoSelected ||
+   selectedId ||
+   currentSearch.length !== 1
+  ){
+   return;
+  }
+
+
+  autoSelected=true;
+
+
+  const only=
+   currentSearch[0];
+
+
+  const id=
+   String(
+    only.id_intervento ||
+    ''
+   );
+
+
+  if(!id){
+   return;
+  }
+
+
+  setTimeout(
+   ()=>{
+
+    loadAsset(id);
+
+    zoomToAsset(id);
+
+    document.body
+     .classList.add(
+      'asset-selected'
+     );
+
+   },
+   250
+  );
+ };
+
+
+ /* ---------------------------------------------------------
+    WRAP LOAD ASSET
+    --------------------------------------------------------- */
+
+ const originalLoadAsset=
+  window.loadAsset;
+
+
+ window.loadAsset=
+ async function(id){
+
+  document.body
+   .classList.add(
+    'asset-selected'
+   );
+
+
+  set(
+   'hudSelection',
+   id ||
+   'Asset selezionato'
+  );
+
+
+  const result=
+   await originalLoadAsset(id);
+
+
+  addVisualBadge();
+
+
+  return result;
+ };
+
+
+ function addVisualBadge(){
+
+  const body=
+   document.getElementById(
+    'assetBody'
+   );
+
+
+  if(
+   !body ||
+   body.querySelector(
+    '.tubeVisualBadge'
+   )
+  ){
+   return;
+  }
+
+
+  const badge=
+   document.createElement(
+    'div'
+   );
+
+
+  badge.className=
+   'tubeVisualBadge';
+
+
+  badge.textContent=
+   'TUBAZIONE · VISUALIZZAZIONE GIS';
+
+
+  body.insertBefore(
+   badge,
+   body.firstChild
+  );
+ }
+
+
+ /* ---------------------------------------------------------
+    MAP VISUAL POLISH
+    --------------------------------------------------------- */
+
+ function polishMap(){
+
+  if(
+   !map ||
+   !map.isStyleLoaded()
+  ){
+   return;
+  }
+
+
+  if(
+   map.getLayer(
+    'satellite'
+   )
+  ){
+
+   map.setPaintProperty(
+    'satellite',
+    'raster-saturation',
+    -.16
+   );
+
+
+   map.setPaintProperty(
+    'satellite',
+    'raster-contrast',
+    .15
+   );
+
+
+   map.setPaintProperty(
+    'satellite',
+    'raster-brightness-min',
+    .035
+   );
+
+
+   map.setPaintProperty(
+    'satellite',
+    'raster-brightness-max',
+    .82
+   );
+  }
+ }
+
+
+ map.on(
+  'load',
+  ()=>{
+
+   polishMap();
+
+   setTimeout(
+    buildVisualJoints,
+    200
+   );
+  }
+ );
+
+
+ /* ---------------------------------------------------------
+    WINDOW RESIZE
+    --------------------------------------------------------- */
+
+ window.addEventListener(
+  'resize',
+  ()=>{
+
+   setTimeout(
+    ()=>{
+     map.resize();
+    },
+    80
+   );
+  }
+ );
+
+})();
+
+</script>
+
+<!-- NMA RC3 VISUAL MATCH -->
 
 </body>
 </html>
