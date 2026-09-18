@@ -1,5 +1,4 @@
 <!doctype html>
-
 <html lang="it">
 
 <head>
@@ -7,2170 +6,2607 @@
 <meta charset="utf-8">
 
 <meta
-  name="viewport"
-  content="width=device-width,initial-scale=1,viewport-fit=cover"
+ name="viewport"
+ content="width=device-width,initial-scale=1,viewport-fit=cover"
 >
 
-<title>
-NMA BUILD OS — Master Control Room
-</title>
+<meta name="theme-color" content="#020b10">
+
+<title>NMA BUILD OS — Infrastructure Control</title>
+
+<script src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js"></script>
+
+<link
+ rel="stylesheet"
+ href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css"
+>
 
 <style>
 
 :root{
-    --bg:#031017;
-    --panel:#071d26;
-    --panel2:#0a2631;
-    --line:#174b5d;
+ --bg:#020b10;
+ --glass:rgba(3,17,23,.91);
+ --glass2:rgba(4,24,31,.94);
+ --line:rgba(66,174,202,.25);
 
-    --cyan:#27c9ef;
-    --green:#20e39a;
-    --orange:#ff9e1b;
-    --red:#ff5b66;
-    --violet:#c178ff;
+ --cyan:#25d5ff;
+ --green:#23e6a1;
+ --orange:#ffab32;
+ --red:#ff5968;
+ --violet:#c47cff;
 
-    --text:#edf9fc;
-    --muted:#89a7b2;
+ --text:#effbff;
+ --muted:#86a8b3;
 }
 
 *{
-    box-sizing:border-box;
+ box-sizing:border-box;
 }
 
 html,
 body{
-    margin:0;
+ margin:0;
+ width:100%;
+ height:100%;
+ overflow:hidden;
 
-    background:var(--bg);
-    color:var(--text);
+ background:var(--bg);
+ color:var(--text);
 
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+ font-family:
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  sans-serif;
 }
 
-body{
-    min-height:100dvh;
-
-    padding-bottom:
-        env(safe-area-inset-bottom);
+button,
+input,
+select{
+ font:inherit;
 }
 
+/* ======================================================
+   MAP
+   ====================================================== */
 
-/* ==========================================================
-   HEADER
-   ========================================================== */
+#map{
+ position:fixed;
+ inset:0;
 
-header{
-    position:sticky;
-    top:0;
-
-    z-index:200;
-
-    background:
-        rgba(2,14,20,.96);
-
-    backdrop-filter:
-        blur(17px);
-
-    border-bottom:
-        1px solid var(--line);
-
-    padding:
-        calc(
-            12px +
-            env(safe-area-inset-top)
-        )
-        max(
-            14px,
-            env(safe-area-inset-right)
-        )
-        12px
-        max(
-            14px,
-            env(safe-area-inset-left)
-        );
+ background:#07151a;
 }
 
-.top{
-    max-width:1550px;
-    margin:auto;
+/* ======================================================
+   TOP COMMAND BAR
+   ====================================================== */
 
-    display:flex;
+.command{
+ position:fixed;
 
-    justify-content:space-between;
-    align-items:center;
+ top:0;
+ left:0;
+ right:0;
 
-    gap:12px;
+ z-index:100;
+
+ min-height:72px;
+
+ padding:
+  calc(11px + env(safe-area-inset-top))
+  max(14px,env(safe-area-inset-right))
+  10px
+  max(14px,env(safe-area-inset-left));
+
+ display:flex;
+ align-items:center;
+ gap:14px;
+
+ background:
+  linear-gradient(
+   180deg,
+   rgba(1,10,14,.98),
+   rgba(1,10,14,.90)
+  );
+
+ border-bottom:1px solid var(--line);
+
+ backdrop-filter:blur(20px);
 }
 
 .brand{
-    font-weight:950;
-    letter-spacing:.08em;
+ min-width:220px;
+
+ font-weight:950;
+ letter-spacing:.11em;
+
+ font-size:17px;
 }
 
-.brand small{
-    display:block;
+.brand span{
+ display:block;
 
-    color:var(--cyan);
+ margin-top:3px;
 
-    margin-top:4px;
+ color:var(--cyan);
 
-    font-size:9px;
-
-    letter-spacing:.15em;
+ font-size:8px;
+ letter-spacing:.18em;
 }
 
-.nav{
-    display:flex;
-    flex-wrap:wrap;
+.commandKpi{
+ flex:1;
 
-    gap:6px;
+ display:grid;
+
+ grid-template-columns:
+  repeat(6,minmax(90px,1fr));
+
+ gap:5px;
 }
 
-.nav a{
-    text-decoration:none;
+.miniKpi{
+ min-width:0;
 
-    color:white;
+ padding:7px 9px;
 
-    background:#0b2c38;
+ border:1px solid var(--line);
 
-    border:
-        1px solid #23596d;
+ border-radius:10px;
 
-    border-radius:10px;
-
-    padding:9px 10px;
-
-    font-weight:900;
-
-    font-size:10px;
+ background:
+  rgba(5,25,32,.72);
 }
 
+.miniKpi small{
+ display:block;
 
-/* ==========================================================
-   MAIN
-   ========================================================== */
+ overflow:hidden;
+ white-space:nowrap;
+ text-overflow:ellipsis;
 
-main{
-    max-width:1550px;
-    margin:auto;
+ color:var(--muted);
 
-    padding:
-        15px
-        max(
-            15px,
-            env(safe-area-inset-right)
-        )
-        30px
-        max(
-            15px,
-            env(safe-area-inset-left)
-        );
+ font-size:7px;
+ letter-spacing:.10em;
 }
 
-.hero{
-    display:flex;
+.miniKpi b{
+ display:block;
 
-    justify-content:space-between;
-    align-items:flex-end;
+ margin-top:2px;
 
-    gap:14px;
-
-    margin-bottom:13px;
-}
-
-.eyebrow{
-    color:var(--cyan);
-
-    font-size:10px;
-
-    font-weight:950;
-
-    letter-spacing:.15em;
-}
-
-h1{
-    margin:5px 0;
-
-    font-size:
-        clamp(
-            28px,
-            5vw,
-            50px
-        );
-
-    line-height:1.03;
-}
-
-.hero p{
-    margin:0;
-
-    color:var(--muted);
-
-    line-height:1.5;
-
-    max-width:850px;
+ font-size:14px;
 }
 
 .status{
-    border:
-        1px solid var(--line);
+ flex:none;
 
-    border-radius:999px;
+ display:flex;
+ align-items:center;
+ gap:6px;
 
-    padding:9px 12px;
+ padding:8px 10px;
 
-    font-weight:900;
+ border:1px solid rgba(35,230,161,.4);
 
-    font-size:10px;
+ border-radius:999px;
+
+ background:
+  rgba(4,37,29,.75);
+
+ color:var(--green);
+
+ font-size:9px;
+ font-weight:900;
 }
 
+.statusDot{
+ width:7px;
+ height:7px;
 
-/* ==========================================================
-   KPI
-   ========================================================== */
+ border-radius:50%;
 
-.kpis{
-    display:grid;
+ background:currentColor;
 
-    grid-template-columns:
-        repeat(
-            8,
-            minmax(
-                120px,
-                1fr
-            )
-        );
-
-    gap:8px;
-
-    overflow:auto;
-
-    margin-bottom:13px;
+ box-shadow:
+  0 0 10px currentColor;
 }
 
-.kpi{
-    min-width:120px;
+/* ======================================================
+   LEFT RAIL
+   ====================================================== */
 
-    background:#061820;
+.leftRail{
+ position:fixed;
 
-    border:
-        1px solid #174859;
+ z-index:90;
 
-    border-radius:14px;
+ top:84px;
+ left:14px;
 
-    padding:12px;
+ width:290px;
+
+ max-height:
+  calc(
+   100dvh -
+   180px -
+   env(safe-area-inset-top)
+  );
+
+ display:flex;
+ flex-direction:column;
+ gap:8px;
 }
 
-.kpi small{
-    display:block;
+.glass{
+ border:1px solid var(--line);
 
-    color:var(--muted);
+ border-radius:15px;
 
-    font-size:9px;
+ background:var(--glass);
 
-    letter-spacing:.08em;
+ box-shadow:
+  0 18px 45px rgba(0,0,0,.28);
+
+ backdrop-filter:blur(18px);
 }
 
-.kpi b{
-    display:block;
-
-    margin-top:5px;
-
-    font-size:22px;
+.searchBox{
+ padding:11px;
 }
 
-.green{
-    color:var(--green);
+.panelTitle{
+ display:flex;
+
+ justify-content:space-between;
+ align-items:center;
+
+ gap:8px;
+
+ margin-bottom:8px;
+
+ color:var(--cyan);
+
+ font-size:9px;
+ font-weight:950;
+ letter-spacing:.12em;
 }
 
-.orange{
-    color:var(--orange);
+.searchRow{
+ display:grid;
+
+ grid-template-columns:1fr 42px;
+
+ gap:5px;
 }
 
-.red{
-    color:var(--red);
-}
+.searchRow input{
+ min-width:0;
+ height:40px;
 
-.cyan{
-    color:var(--cyan);
-}
+ border:1px solid #245466;
 
-.violet{
-    color:var(--violet);
-}
+ border-radius:9px;
 
+ outline:none;
 
-/* ==========================================================
-   CARDS
-   ========================================================== */
+ background:#04151c;
+ color:white;
 
-.card{
-    background:
-        linear-gradient(
-            145deg,
-            #09222c,
-            #06171e
-        );
+ padding:0 10px;
 
-    border:
-        1px solid var(--line);
-
-    border-radius:18px;
-
-    padding:15px;
-}
-
-.card h2{
-    margin:0 0 12px;
-
-    color:var(--cyan);
-
-    font-size:14px;
-
-    letter-spacing:.08em;
-}
-
-
-/* ==========================================================
-   READINESS
-   ========================================================== */
-
-.readiness{
-    display:grid;
-
-    grid-template-columns:
-        repeat(
-            3,
-            minmax(
-                180px,
-                1fr
-            )
-        );
-
-    gap:8px;
-}
-
-.readyItem{
-    border:
-        1px solid #194759;
-
-    border-radius:12px;
-
-    background:#061820;
-
-    padding:11px;
-}
-
-.readyItem small{
-    display:block;
-
-    color:var(--muted);
-
-    font-size:10px;
-}
-
-.readyItem strong{
-    display:block;
-
-    margin:5px 0;
-
-    font-size:12px;
-}
-
-.readyItem p{
-    margin:0;
-
-    color:#9fb8c1;
-
-    font-size:10px;
-
-    line-height:1.4;
-}
-
-.ready{
-    border-color:#116c4b;
-}
-
-.field{
-    border-color:#76520d;
-}
-
-.external{
-    border-color:#62447c;
-}
-
-.attention{
-    border-color:#81323b;
-}
-
-
-/* ==========================================================
-   SEARCH / TIMELINE
-   ========================================================== */
-
-.workspace{
-    display:grid;
-
-    grid-template-columns:
-        minmax(320px,.72fr)
-        minmax(0,1.28fr);
-
-    gap:12px;
-
-    margin-top:13px;
-}
-
-.searchbar{
-    display:grid;
-
-    grid-template-columns:
-        1fr auto;
-
-    gap:7px;
-
-    margin-bottom:9px;
-}
-
-input,
-select{
-    width:100%;
-
-    min-height:45px;
-
-    background:#061820;
-
-    border:
-        1px solid #275a6d;
-
-    color:white;
-
-    border-radius:11px;
-
-    padding:9px 11px;
-
-    font-size:16px;
-}
-
-button{
-    border:0;
-
-    border-radius:11px;
-
-    padding:10px 14px;
-
-    font-weight:900;
-
-    cursor:pointer;
+ font-size:13px;
 }
 
 .searchButton{
-    background:var(--cyan);
+ border:0;
 
-    color:#04171d;
+ border-radius:9px;
+
+ background:var(--cyan);
+ color:#021116;
+
+ font-size:16px;
+ font-weight:950;
+
+ cursor:pointer;
+}
+
+.siteSelect{
+ width:100%;
+ height:36px;
+
+ margin-top:6px;
+
+ border:1px solid #245466;
+
+ border-radius:9px;
+
+ background:#04151c;
+ color:white;
+
+ padding:0 8px;
+
+ font-size:11px;
 }
 
 .results{
-    display:grid;
+ display:grid;
 
-    gap:7px;
+ gap:5px;
 
-    max-height:720px;
+ margin-top:8px;
 
-    overflow:auto;
+ max-height:250px;
+
+ overflow:auto;
 }
 
 .result{
-    background:#061820;
+ padding:9px;
 
-    border:
-        1px solid #184655;
+ border:1px solid #174252;
 
-    border-radius:12px;
+ border-radius:9px;
 
-    padding:11px;
+ background:#04151c;
 
-    cursor:pointer;
+ cursor:pointer;
 }
 
 .result:hover{
-    border-color:var(--cyan);
-}
-
-.resultHead{
-    display:flex;
-
-    justify-content:space-between;
-
-    gap:10px;
+ border-color:var(--cyan);
 }
 
 .result strong{
-    word-break:break-word;
+ display:block;
+
+ font-size:10px;
+
+ word-break:break-word;
 }
 
-.muted{
-    color:var(--muted);
+.resultMeta{
+ margin-top:3px;
 
-    font-size:10px;
+ color:var(--muted);
 
-    line-height:1.45;
+ font-size:8px;
 
-    margin-top:4px;
+ line-height:1.4;
 }
 
-.tags{
-    display:flex;
-
-    flex-wrap:wrap;
-
-    gap:5px;
-
-    margin-top:8px;
+.layerBox{
+ padding:11px;
 }
 
-.tag{
-    display:inline-block;
+.layers{
+ display:grid;
 
-    padding:4px 7px;
+ grid-template-columns:1fr 1fr;
 
-    border-radius:999px;
-
-    background:#113441;
-
-    font-size:9px;
-
-    font-weight:850;
+ gap:5px;
 }
 
-.tag.good{
-    background:#073a28;
-    color:var(--green);
+.layer{
+ min-height:36px;
+
+ border:1px solid #285568;
+
+ border-radius:9px;
+
+ background:#061b23;
+ color:#9cbac4;
+
+ font-size:8px;
+ font-weight:900;
+
+ cursor:pointer;
 }
 
-.tag.warn{
-    background:#49300b;
-    color:#ffc15e;
+.layer.on{
+ border-color:var(--green);
+ color:var(--green);
+
+ background:
+  rgba(5,43,33,.86);
 }
 
-.tag.bad{
-    background:#431920;
-    color:#ff8a91;
+.layer.project.on{
+ color:var(--cyan);
+ border-color:var(--cyan);
 }
 
-
-/* ==========================================================
-   ASSET DETAIL
-   ========================================================== */
-
-.assetHeader{
-    display:grid;
-
-    grid-template-columns:
-        1fr auto;
-
-    gap:12px;
-
-    align-items:start;
-
-    margin-bottom:12px;
+.layer.spatial.on{
+ color:var(--orange);
+ border-color:var(--orange);
 }
 
-.assetTitle{
-    font-size:20px;
+/* ======================================================
+   RIGHT ASSET INSPECTOR
+   ====================================================== */
 
-    font-weight:950;
+.assetPanel{
+ position:fixed;
 
-    word-break:break-word;
+ z-index:90;
+
+ top:84px;
+ right:14px;
+
+ width:350px;
+
+ max-height:
+  calc(
+   100dvh -
+   180px -
+   env(safe-area-inset-top)
+  );
+
+ overflow:hidden;
+
+ display:flex;
+ flex-direction:column;
 }
 
-.assetMeta{
-    color:var(--muted);
+.assetHead{
+ padding:13px;
 
-    font-size:11px;
-
-    margin-top:4px;
+ border-bottom:1px solid var(--line);
 }
 
-.assetLinks{
-    display:flex;
+.assetHead small{
+ color:var(--cyan);
 
-    flex-wrap:wrap;
+ font-size:8px;
+ font-weight:950;
 
-    gap:5px;
-
-    justify-content:flex-end;
+ letter-spacing:.14em;
 }
 
-.assetLinks a{
-    text-decoration:none;
+.assetName{
+ margin-top:4px;
 
-    color:white;
+ font-size:17px;
+ font-weight:950;
 
-    background:#0c3441;
+ word-break:break-word;
+}
 
-    border:
-        1px solid #23596d;
+.assetSub{
+ margin-top:3px;
 
-    padding:7px 9px;
+ color:var(--muted);
 
-    border-radius:9px;
+ font-size:9px;
+}
 
-    font-size:9px;
+.assetBody{
+ padding:11px;
 
-    font-weight:900;
+ overflow:auto;
+}
+
+.assetEmpty{
+ min-height:210px;
+
+ display:flex;
+ flex-direction:column;
+
+ justify-content:center;
+ align-items:center;
+
+ text-align:center;
+
+ color:var(--muted);
+
+ font-size:10px;
+
+ line-height:1.55;
+}
+
+.assetEmptyIcon{
+ width:50px;
+ height:50px;
+
+ margin-bottom:12px;
+
+ display:grid;
+ place-items:center;
+
+ border:1px solid var(--line);
+
+ border-radius:50%;
+
+ color:var(--cyan);
+
+ font-size:22px;
 }
 
 .assetGrid{
-    display:grid;
+ display:grid;
 
-    grid-template-columns:
-        repeat(
-            4,
-            1fr
-        );
+ grid-template-columns:1fr 1fr;
 
-    gap:7px;
+ gap:5px;
 
-    margin-bottom:13px;
+ margin-bottom:10px;
 }
 
 .assetField{
-    background:#061820;
+ padding:8px;
 
-    border:
-        1px solid #184657;
+ border:1px solid #174252;
 
-    border-radius:11px;
+ border-radius:9px;
 
-    padding:9px;
+ background:#04151c;
 }
 
 .assetField small{
-    display:block;
+ display:block;
 
-    color:var(--muted);
+ color:var(--muted);
 
-    font-size:8px;
-
-    letter-spacing:.07em;
+ font-size:7px;
+ letter-spacing:.08em;
 }
 
 .assetField b{
-    display:block;
+ display:block;
 
-    margin-top:5px;
+ margin-top:3px;
 
-    font-size:12px;
-
-    word-break:break-word;
+ font-size:10px;
 }
 
+.warning{
+ margin-bottom:9px;
 
-/* ==========================================================
-   TIMELINE
-   ========================================================== */
+ padding:9px;
 
-.timeline{
-    position:relative;
+ border:1px solid rgba(255,89,104,.45);
 
-    display:grid;
+ border-radius:9px;
 
-    gap:8px;
+ background:
+  rgba(66,15,22,.68);
 
-    max-height:600px;
+ color:#ff9aa2;
 
-    overflow:auto;
+ font-size:9px;
 
-    padding-left:17px;
+ line-height:1.4;
 }
 
-.timeline:before{
-    content:"";
+.assetLinks{
+ display:grid;
 
-    position:absolute;
+ grid-template-columns:
+  repeat(3,1fr);
 
-    left:5px;
-    top:8px;
-    bottom:8px;
+ gap:4px;
 
-    width:2px;
-
-    background:#17495a;
+ margin-bottom:10px;
 }
 
-.timelineItem{
-    position:relative;
+.assetLinks a{
+ padding:7px 4px;
 
-    background:#061820;
+ text-align:center;
+ text-decoration:none;
 
-    border:
-        1px solid #174654;
+ border:1px solid #215467;
 
-    border-radius:12px;
+ border-radius:8px;
 
-    padding:10px 11px;
-}
+ background:#082631;
+ color:white;
 
-.timelineItem:before{
-    content:"";
-
-    position:absolute;
-
-    left:-17px;
-    top:16px;
-
-    width:9px;
-    height:9px;
-
-    border-radius:50%;
-
-    background:var(--cyan);
-
-    box-shadow:
-        0 0 0 3px var(--bg);
-}
-
-.timelineItem[data-type="maintenance"]:before{
-    background:var(--orange);
-}
-
-.timelineItem[data-type="evidenza"]:before{
-    background:var(--violet);
-}
-
-.timelineItem[data-type="asbuilt"]:before{
-    background:var(--green);
-}
-
-.timelineItem[data-type="spatial"]:before{
-    background:#ffd166;
-}
-
-.timelineDate{
-    color:var(--muted);
-
-    font-size:9px;
+ font-size:7px;
+ font-weight:900;
 }
 
 .timelineTitle{
-    font-size:12px;
+ margin:
+  11px 0
+  7px;
 
-    font-weight:900;
+ color:var(--cyan);
 
-    margin-top:3px;
+ font-size:8px;
+ font-weight:950;
+
+ letter-spacing:.12em;
 }
 
-.timelineText{
-    color:#a9c1ca;
+.timeline{
+ position:relative;
 
-    font-size:10px;
+ display:grid;
 
-    line-height:1.4;
+ gap:6px;
 
-    margin-top:4px;
+ padding-left:14px;
 }
 
+.timeline:before{
+ content:"";
 
-/* ==========================================================
-   QUICK MODULES
-   ========================================================== */
+ position:absolute;
 
-.modules{
-    display:grid;
+ left:3px;
+ top:4px;
+ bottom:4px;
 
-    grid-template-columns:
-        repeat(
-            5,
-            1fr
-        );
+ width:1px;
 
-    gap:8px;
-
-    margin-top:13px;
+ background:#20566a;
 }
 
-.module{
-    text-decoration:none;
+.event{
+ position:relative;
 
-    color:white;
+ padding:8px;
 
-    background:#071d26;
+ border:1px solid #164251;
 
-    border:
-        1px solid #19495a;
+ border-radius:9px;
 
-    border-radius:13px;
-
-    padding:13px;
-
-    font-size:10px;
-
-    font-weight:900;
-
-    text-align:center;
+ background:#04151c;
 }
 
+.event:before{
+ content:"";
 
-/* ==========================================================
+ position:absolute;
+
+ left:-15px;
+ top:12px;
+
+ width:7px;
+ height:7px;
+
+ border-radius:50%;
+
+ background:var(--cyan);
+
+ box-shadow:
+  0 0 8px var(--cyan);
+}
+
+.event[data-type="maintenance"]:before{
+ background:var(--orange);
+}
+
+.event[data-type="evidenza"]:before{
+ background:var(--violet);
+}
+
+.event[data-type="asbuilt"]:before{
+ background:var(--green);
+}
+
+.eventTime{
+ color:var(--muted);
+
+ font-size:7px;
+}
+
+.eventTitle{
+ margin-top:2px;
+
+ font-size:9px;
+ font-weight:900;
+}
+
+.eventText{
+ margin-top:3px;
+
+ color:#9db6bf;
+
+ font-size:8px;
+
+ line-height:1.4;
+}
+
+/* ======================================================
+   BOTTOM CONTROL DECK
+   ====================================================== */
+
+.bottomDeck{
+ position:fixed;
+
+ z-index:90;
+
+ left:14px;
+ right:14px;
+
+ bottom:
+  calc(
+   12px +
+   env(safe-area-inset-bottom)
+  );
+
+ display:grid;
+
+ grid-template-columns:
+  minmax(520px,1fr)
+  auto;
+
+ gap:8px;
+}
+
+.telemetry{
+ display:grid;
+
+ grid-template-columns:
+  repeat(5,1fr);
+
+ overflow:hidden;
+}
+
+.telemetryBox{
+ min-width:0;
+
+ padding:9px 11px;
+
+ border-right:1px solid var(--line);
+}
+
+.telemetryBox:last-child{
+ border-right:0;
+}
+
+.telemetryBox small{
+ display:block;
+
+ color:var(--muted);
+
+ font-size:7px;
+
+ letter-spacing:.08em;
+}
+
+.telemetryBox strong{
+ display:block;
+
+ margin-top:3px;
+
+ overflow:hidden;
+ white-space:nowrap;
+ text-overflow:ellipsis;
+
+ font-size:9px;
+}
+
+.telemetryBox.disconnected strong{
+ color:var(--orange);
+}
+
+.quickNav{
+ display:flex;
+
+ align-items:center;
+
+ gap:4px;
+
+ padding:6px;
+}
+
+.quickNav a{
+ min-width:62px;
+
+ padding:8px 7px;
+
+ text-align:center;
+ text-decoration:none;
+
+ border:1px solid #205166;
+
+ border-radius:8px;
+
+ background:#07212a;
+ color:white;
+
+ font-size:7px;
+ font-weight:900;
+}
+
+/* ======================================================
+   MAP DETAILS
+   ====================================================== */
+
+.maplibregl-ctrl-bottom-right{
+ bottom:95px;
+ right:380px;
+}
+
+.maplibregl-popup-content{
+ background:#061820 !important;
+ color:white !important;
+
+ border:1px solid var(--line);
+
+ border-radius:10px !important;
+
+ font-size:10px;
+}
+
+.maplibregl-popup-tip{
+ border-top-color:#061820 !important;
+}
+
+/* ======================================================
    MOBILE
-   ========================================================== */
+   ====================================================== */
 
-@media(max-width:1000px){
+@media(max-width:900px){
 
-    .workspace{
-        grid-template-columns:1fr;
-    }
+ html,
+ body{
+  overflow:auto;
+ }
 
-    .kpis{
-        grid-template-columns:
-            repeat(
-                4,
-                minmax(
-                    120px,
-                    1fr
-                )
-            );
-    }
+ #map{
+  position:relative;
 
-    .readiness{
-        grid-template-columns:
-            repeat(
-                2,
-                1fr
-            );
-    }
+  width:100%;
+  height:58dvh;
 
-    .modules{
-        grid-template-columns:
-            repeat(
-                3,
-                1fr
-            );
-    }
+  margin-top:67px;
+ }
+
+ .command{
+  min-height:64px;
+ }
+
+ .brand{
+  min-width:auto;
+  font-size:14px;
+ }
+
+ .commandKpi{
+  display:none;
+ }
+
+ .leftRail,
+ .assetPanel,
+ .bottomDeck{
+  position:relative;
+
+  top:auto;
+  left:auto;
+  right:auto;
+  bottom:auto;
+
+  width:auto;
+  max-height:none;
+
+  margin:
+   9px
+   max(
+    9px,
+    env(safe-area-inset-right)
+   )
+   0
+   max(
+    9px,
+    env(safe-area-inset-left)
+   );
+ }
+
+ .assetBody{
+  max-height:none;
+ }
+
+ .results{
+  max-height:220px;
+ }
+
+ .bottomDeck{
+  display:block;
+
+  padding-bottom:
+   calc(
+    12px +
+    env(safe-area-inset-bottom)
+   );
+ }
+
+ .telemetry{
+  grid-template-columns:
+   repeat(2,1fr);
+
+  margin-bottom:8px;
+ }
+
+ .quickNav{
+  flex-wrap:wrap;
+ }
+
+ .maplibregl-ctrl-bottom-right{
+  right:6px;
+  bottom:6px;
+ }
 }
 
+@media(max-width:480px){
 
-@media(max-width:600px){
+ .status{
+  padding:7px 8px;
+  font-size:7px;
+ }
 
-    main{
-        padding:
-            9px
-            max(
-                9px,
-                env(safe-area-inset-right)
-            )
-            calc(
-                20px +
-                env(safe-area-inset-bottom)
-            )
-            max(
-                9px,
-                env(safe-area-inset-left)
-            );
-    }
+ .assetGrid{
+  grid-template-columns:
+   repeat(2,1fr);
+ }
 
-    .top{
-        align-items:flex-start;
-    }
-
-    .nav{
-        flex-direction:column;
-    }
-
-    .hero{
-        flex-direction:column;
-        align-items:flex-start;
-    }
-
-    .kpis{
-        grid-template-columns:
-            repeat(
-                2,
-                minmax(
-                    120px,
-                    1fr
-                )
-            );
-    }
-
-    .readiness{
-        grid-template-columns:1fr;
-    }
-
-    .assetGrid{
-        grid-template-columns:
-            repeat(
-                2,
-                1fr
-            );
-    }
-
-    .assetHeader{
-        grid-template-columns:1fr;
-    }
-
-    .assetLinks{
-        justify-content:flex-start;
-    }
-
-    .modules{
-        grid-template-columns:
-            repeat(
-                2,
-                1fr
-            );
-    }
+ .assetLinks{
+  grid-template-columns:1fr;
+ }
 }
 
 </style>
 
 </head>
 
-
 <body>
 
-<header>
+<div id="map"></div>
 
-<div class="top">
 
-    <div class="brand">
+<header class="command">
 
-        NMA BUILD OS
+ <div class="brand">
 
-        <small>
-            MASTER CONTROL ROOM · CANDIDATE
-        </small>
+  NMA BUILD OS
 
-    </div>
+  <span>
+   INFRASTRUCTURE CONTROL SYSTEM
+  </span>
 
-    <nav class="nav">
+ </div>
 
-        <a href="/digital-twin">
-            DIGITAL TWIN
-        </a>
 
-        <a href="/network-memory">
-            NETWORK
-        </a>
+ <div class="commandKpi">
 
-        <a href="/spatial-twin">
-            SPATIAL
-        </a>
+  <div class="miniKpi">
+   <small>INTERVENTI</small>
+   <b id="kInterventi">—</b>
+  </div>
 
-    </nav>
+  <div class="miniKpi">
+   <small>VALIDATI</small>
+   <b id="kValidati">—</b>
+  </div>
 
-</div>
+  <div class="miniKpi">
+   <small>METRI REALI</small>
+   <b id="kMetri">—</b>
+  </div>
+
+  <div class="miniKpi">
+   <small>ANOMALIE</small>
+   <b id="kAnomalie">—</b>
+  </div>
+
+  <div class="miniKpi">
+   <small>MANUTENZIONI</small>
+   <b id="kMaintenance">—</b>
+  </div>
+
+  <div class="miniKpi">
+   <small>AS-BUILT</small>
+   <b id="kAsbuilt">—</b>
+  </div>
+
+ </div>
+
+
+ <div
+  id="systemStatus"
+  class="status">
+
+  <span class="statusDot"></span>
+
+  <span>CHECK</span>
+
+ </div>
 
 </header>
 
 
-<main>
+<aside class="leftRail">
 
-<section class="hero">
+ <section class="glass searchBox">
 
-    <div>
+  <div class="panelTitle">
 
-        <div class="eyebrow">
-            INFRASTRUCTURE INTELLIGENCE
-        </div>
+   <span>INFRASTRUCTURE SEARCH</span>
 
-        <h1>
-            Master Control Room
-        </h1>
+   <span id="resultCount">—</span>
 
-        <p>
-            Un'unica vista collega produzione,
-            workflow, anomalie, manutenzione,
-            As-Built, progetto, evidenze,
-            Audit e memoria dell'infrastruttura.
-        </p>
+  </div>
 
-    </div>
+  <div class="searchRow">
 
-    <div
-      id="status"
-      class="status">
-        ● CHECK
-    </div>
+   <input
+    id="search"
+    type="search"
+    placeholder="Asset, cantiere, materiale..."
+   >
 
-</section>
+   <button
+    class="searchButton"
+    onclick="runSearch()">
+    ⌕
+   </button>
 
+  </div>
 
-<section class="kpis">
+  <select
+   id="site"
+   class="siteSelect"
+   onchange="refreshAll()">
 
-    <div class="kpi">
-        <small>INTERVENTI</small>
-        <b id="kInterventi">—</b>
-    </div>
+   <option value="">
+    Tutta la rete
+   </option>
 
-    <div class="kpi">
-        <small>VALIDATI</small>
-        <b
-          id="kValidati"
-          class="green">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>DA CORREGGERE</small>
-        <b
-          id="kCorrezioni"
-          class="orange">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>METRI MISURATI</small>
-        <b id="kMetri">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>ANOMALIE</small>
-        <b
-          id="kAnomalie"
-          class="red">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>MANUTENZIONI APERTE</small>
-        <b
-          id="kMaintenance"
-          class="orange">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>AS-BUILT</small>
-        <b
-          id="kAsbuilt"
-          class="cyan">—</b>
-    </div>
-
-    <div class="kpi">
-        <small>SPATIAL POINTS</small>
-        <b
-          id="kSpatial"
-          class="violet">—</b>
-    </div>
-
-</section>
+  </select>
 
 
-<section class="card">
+  <div
+   id="results"
+   class="results">
+  </div>
 
-    <h2>
-        SYSTEM / PILOT READINESS
-    </h2>
-
-    <div
-      id="readiness"
-      class="readiness">
-    </div>
-
-</section>
+ </section>
 
 
-<section class="workspace">
+ <section class="glass layerBox">
 
-    <section class="card">
+  <div class="panelTitle">
+   <span>DIGITAL TWIN LAYERS</span>
+  </div>
 
-        <h2>
-            CERCA INFRASTRUTTURA
-        </h2>
+  <div class="layers">
 
-        <div class="searchbar">
+   <button
+    id="layerAsbuilt"
+    class="layer on"
+    onclick="toggleLayer('asbuilt')">
+    AS-BUILT
+   </button>
 
-            <input
-              id="search"
-              type="search"
-              placeholder="ID, cantiere, operatore, squadra, materiale, anomalia..."
-            >
+   <button
+    id="layerProject"
+    class="layer project on"
+    onclick="toggleLayer('project')">
+    PROGETTO
+   </button>
 
-            <button
-              class="searchButton"
-              onclick="runSearch()">
-                CERCA
-            </button>
+   <button
+    id="layerSpatial"
+    class="layer spatial on"
+    onclick="toggleLayer('anchors')">
+    ASSET / EVIDENZE
+   </button>
 
-        </div>
+   <button
+    class="layer"
+    onclick="location.href='/network-memory'">
+    NETWORK MEMORY
+   </button>
 
-        <select
-          id="site"
-          onchange="runSearch()">
+  </div>
 
-            <option value="">
-                Tutti i cantieri
-            </option>
+ </section>
 
-        </select>
-
-        <div
-          id="resultCount"
-          class="muted"
-          style="margin:9px 0">
-            —
-        </div>
-
-        <div
-          id="results"
-          class="results">
-        </div>
-
-    </section>
+</aside>
 
 
-    <section class="card">
+<aside class="assetPanel glass">
 
-        <h2>
-            ASSET TIMELINE
-        </h2>
+ <div class="assetHead">
 
-        <div
-          id="assetDetail">
+  <small>
+   ASSET INTELLIGENCE
+  </small>
 
-            <div class="muted">
-                Seleziona un intervento dalla ricerca.
-            </div>
+  <div
+   id="assetName"
+   class="assetName">
+   INFRASTRUCTURE MEMORY
+  </div>
 
-        </div>
+  <div
+   id="assetSub"
+   class="assetSub">
+   Seleziona un elemento della rete
+  </div>
 
-    </section>
-
-</section>
+ </div>
 
 
-<section class="modules">
+ <div
+  id="assetBody"
+  class="assetBody">
 
-    <a
-      class="module"
-      href="/cantiere">
-        CAMPO
-    </a>
+  <div class="assetEmpty">
 
-    <a
-      class="module"
-      href="/supervisore">
-        SUPERVISORE
-    </a>
+   <div class="assetEmptyIcon">
+    ⌁
+   </div>
 
-    <a
-      class="module"
-      href="/quality">
-        QUALITY GATE
-    </a>
+   Tocca un tratto As-Built,
+   un asset sulla mappa
+   oppure utilizza la ricerca.
 
-    <a
-      class="module"
-      href="/workflow">
-        WORKFLOW
-    </a>
+  </div>
 
-    <a
-      class="module"
-      href="/direzione">
-        CONTROL ROOM v2
-    </a>
+ </div>
 
-    <a
-      class="module"
-      href="/sal-v2">
-        SAL
-    </a>
+</aside>
 
-    <a
-      class="module"
-      href="/audit">
-        AUDIT
-    </a>
 
-    <a
-      class="module"
-      href="/asset-memory">
-        ASSET MEMORY
-    </a>
+<footer class="bottomDeck">
 
-    <a
-      class="module"
-      href="/network-memory">
-        NETWORK MEMORY
-    </a>
+ <section class="glass telemetry">
 
-    <a
-      class="module"
-      href="/spatial-twin">
-        SPATIAL TWIN
-    </a>
+  <div class="telemetryBox">
+   <small>DATABASE</small>
+   <strong id="dbState">
+    CHECK
+   </strong>
+  </div>
 
-</section>
+  <div class="telemetryBox disconnected">
+   <small>PRESSIONE LIVE</small>
+   <strong id="pressure">
+    NON COLLEGATA
+   </strong>
+  </div>
 
-</main>
+  <div class="telemetryBox disconnected">
+   <small>FLUSSO LIVE</small>
+   <strong id="flow">
+    NON COLLEGATO
+   </strong>
+  </div>
+
+  <div class="telemetryBox disconnected">
+   <small>DISPERSIONI</small>
+   <strong id="leaks">
+    NON CALCOLATE
+   </strong>
+  </div>
+
+  <div class="telemetryBox">
+   <small>PILOT</small>
+   <strong id="pilotState">
+    DA ESEGUIRE
+   </strong>
+  </div>
+
+ </section>
+
+
+ <nav class="glass quickNav">
+
+  <a href="/cantiere">
+   CAMPO
+  </a>
+
+  <a href="/supervisore">
+   SUPERVISORE
+  </a>
+
+  <a href="/quality">
+   QUALITY
+  </a>
+
+  <a href="/sal-v2">
+   SAL
+  </a>
+
+  <a href="/audit">
+   AUDIT
+  </a>
+
+  <a href="/asset-memory">
+   MEMORY
+  </a>
+
+  <a href="/spatial-twin">
+   SPATIAL
+  </a>
+
+ </nav>
+
+</footer>
 
 
 <script>
 
-let master=null;
+const EMPTY={
+ type:'FeatureCollection',
+ features:[]
+};
+
+let control=null;
+let spatial=null;
+
+let currentSearch=[];
+
+const visibility={
+ asbuilt:true,
+ project:true,
+ anchors:true
+};
 
 
-/* ==========================================================
+/* =====================================================
+   MAP
+   ===================================================== */
+
+const map=
+ new maplibregl.Map({
+
+  container:'map',
+
+  style:{
+   version:8,
+
+   sources:{
+
+    satellite:{
+     type:'raster',
+
+     tiles:[
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+     ],
+
+     tileSize:256
+    }
+   },
+
+   layers:[
+    {
+     id:'satellite',
+     type:'raster',
+     source:'satellite'
+    }
+   ]
+  },
+
+  center:[
+   7.68625,
+   45.07035
+  ],
+
+  zoom:13,
+
+  pitch:56,
+
+  bearing:-18,
+
+  antialias:true
+ });
+
+
+map.addControl(
+ new maplibregl.NavigationControl(),
+ 'bottom-right'
+);
+
+
+map.on(
+ 'load',
+ ()=>{
+
+  map.addSource(
+   'asbuilt',
+   {
+    type:'geojson',
+    data:EMPTY
+   }
+  );
+
+
+  map.addLayer({
+
+   id:'asbuilt-glow',
+
+   type:'line',
+
+   source:'asbuilt',
+
+   paint:{
+    'line-color':'#052f25',
+    'line-width':13,
+    'line-opacity':.75
+   }
+  });
+
+
+  map.addLayer({
+
+   id:'asbuilt-line',
+
+   type:'line',
+
+   source:'asbuilt',
+
+   paint:{
+    'line-color':'#23e6a1',
+    'line-width':6,
+    'line-opacity':1
+   }
+  });
+
+
+  map.addSource(
+   'project',
+   {
+    type:'geojson',
+    data:EMPTY
+   }
+  );
+
+
+  map.addLayer({
+
+   id:'project-line',
+
+   type:'line',
+
+   source:'project',
+
+   paint:{
+    'line-color':'#25d5ff',
+    'line-width':4,
+    'line-dasharray':[2,2]
+   }
+  });
+
+
+  map.addSource(
+   'anchors',
+   {
+    type:'geojson',
+    data:EMPTY
+   }
+  );
+
+
+  map.addLayer({
+
+   id:'anchors-circle',
+
+   type:'circle',
+
+   source:'anchors',
+
+   paint:{
+
+    'circle-radius':8,
+
+    'circle-color':[
+     'match',
+     ['get','entity_type'],
+
+     'component',
+     '#ffab32',
+
+     'evidence',
+     '#c47cff',
+
+     'anomaly',
+     '#ff5968',
+
+     '#ffffff'
+    ],
+
+    'circle-stroke-color':
+     '#ffffff',
+
+    'circle-stroke-width':
+     2
+   }
+  });
+
+
+  for(
+   const layer of [
+    'asbuilt-line',
+    'project-line',
+    'anchors-circle'
+   ]
+  ){
+
+   map.on(
+    'mouseenter',
+    layer,
+    ()=>{
+     map.getCanvas().style.cursor=
+      'pointer';
+    }
+   );
+
+   map.on(
+    'mouseleave',
+    layer,
+    ()=>{
+     map.getCanvas().style.cursor=
+      '';
+    }
+   );
+  }
+
+
+  map.on(
+   'click',
+   'asbuilt-line',
+   event=>{
+
+    const feature=
+     event.features?.[0];
+
+    if(!feature){
+     return;
+    }
+
+    const id=
+     String(
+      feature.properties
+       ?.id_intervento
+      ||
+      feature.properties
+       ?.id_tratto
+      ||
+      ''
+     )
+     .replace(
+      /^ASB-/,
+      ''
+     );
+
+
+    if(id){
+     loadAsset(id);
+    }
+   }
+  );
+
+
+  map.on(
+   'click',
+   'project-line',
+   event=>{
+
+    const id=
+     String(
+      event.features?.[0]
+       ?.properties
+       ?.id_intervento
+      ||
+      ''
+     );
+
+    if(id){
+     loadAsset(id);
+    }
+   }
+  );
+
+
+  map.on(
+   'click',
+   'anchors-circle',
+   event=>{
+
+    const feature=
+     event.features?.[0];
+
+    if(!feature){
+     return;
+    }
+
+    const id=
+     String(
+      feature.properties
+       ?.id_intervento
+      ||
+      ''
+     );
+
+    if(id){
+     loadAsset(id);
+    }
+
+
+    new maplibregl
+     .Popup()
+     .setLngLat(
+      event.lngLat
+     )
+     .setHTML(
+      '<b>'+
+      esc(
+       feature.properties
+        ?.label
+       ||
+       feature.properties
+        ?.entity_type
+       ||
+       'Asset'
+      )+
+      '</b>'
+     )
+     .addTo(map);
+   }
+  );
+
+
+  refreshAll();
+ }
+);
+
+
+/* =====================================================
    API
-   ========================================================== */
+   ===================================================== */
 
 async function api(
-    url,
-    options={}
+ url,
+ options={}
 ){
 
-    const response=
-        await fetch(
-            url,
-            {
-                credentials:
-                    'same-origin',
+ const response=
+  await fetch(
+   url,
+   {
+    credentials:
+     'same-origin',
 
-                ...options
-            }
-        );
-
-
-    if(response.status===401){
-
-        location.href='/';
-
-        throw new Error(
-            'Sessione scaduta'
-        );
-    }
+    ...options
+   }
+  );
 
 
-    const text=
-        await response.text();
+ if(
+  response.status===
+  401
+ ){
 
-    let data={};
+  location.href='/';
 
-
-    try{
-
-        data=
-            text
-                ? JSON.parse(text)
-                : {};
-
-    }catch{
-
-        data={};
-    }
+  throw new Error(
+   'Sessione scaduta'
+  );
+ }
 
 
-    if(!response.ok){
-
-        throw new Error(
-            data.error ||
-            (
-                'HTTP '+
-                response.status
-            )
-        );
-    }
+ const text=
+  await response.text();
 
 
-    return data;
+ let data={};
+
+
+ try{
+
+  data=
+   text
+    ? JSON.parse(text)
+    : {};
+
+ }catch{
+
+  data={};
+ }
+
+
+ if(!response.ok){
+
+  throw new Error(
+   data.error
+   ||
+   'HTTP '+response.status
+  );
+ }
+
+
+ return data;
 }
 
 
-/* ==========================================================
-   LOAD
-   ========================================================== */
+/* =====================================================
+   REFRESH
+   ===================================================== */
 
-async function loadMaster(){
+async function refreshAll(){
 
-    try{
-
-        master=
-            await api(
-                '/api/master-control'
-            );
-
-
-        renderKpis();
-        renderReadiness();
+ const site=
+  document
+   .getElementById(
+    'site'
+   )
+   .value;
 
 
-        document
-            .getElementById(
-                'status'
-            )
-            .textContent=
-                master.status ===
-                'OPERATIONAL'
-                    ? '● OPERATIONAL'
-                    : '● DEGRADED';
+ const query=
+  site
+   ? '?cantiere='+
+     encodeURIComponent(site)
+   : '';
 
 
-    }catch(error){
+ try{
 
-        console.error(error);
+  [
+   control,
+   spatial,
+   network
+  ]=
+   await Promise.all([
 
-        document
-            .getElementById(
-                'status'
-            )
-            .textContent=
-                '● DEGRADED';
-    }
+    api(
+     '/api/master-control'
+    ),
+
+    api(
+     '/api/spatial-twin'+
+     query
+    ),
+
+    api(
+     '/api/network-control/status'+
+     query
+    )
+   ]);
+
+
+  renderControl();
+  renderSpatial();
+  renderNetwork(
+   network
+  );
+
+  await runSearch();
+
+
+  document
+   .getElementById(
+    'systemStatus'
+   )
+   .innerHTML=
+    '<span class="statusDot"></span>'+
+    '<span>OPERATIONAL</span>';
+
+
+ }catch(error){
+
+  console.error(error);
+
+  document
+   .getElementById(
+    'systemStatus'
+   )
+   .innerHTML=
+    '<span class="statusDot"></span>'+
+    '<span>DEGRADED</span>';
+ }
 }
 
 
-/* ==========================================================
-   KPI
-   ========================================================== */
+/* =====================================================
+   CONTROL ROOM
+   ===================================================== */
 
-function renderKpis(){
+function renderControl(){
 
-    const k=
-        master?.kpi ||
-        {};
-
-
-    setText(
-        'kInterventi',
-        k.interventi
-    );
+ const k=
+  control?.kpi || {};
 
 
-    setText(
-        'kValidati',
-        k.validati
-    );
+ set(
+  'kInterventi',
+  k.interventi
+ );
 
 
-    setText(
-        'kCorrezioni',
-        k.da_correggere
-    );
+ set(
+  'kValidati',
+  k.validati
+ );
 
 
-    setText(
-        'kMetri',
-        Number(
-            k.metri_misurati ||
-            0
-        )
-        .toLocaleString(
-            'it-IT',
-            {
-                maximumFractionDigits:2
-            }
-        )+
-        ' m'
-    );
+ set(
+  'kMetri',
+  Number(
+   k.metri_misurati || 0
+  )
+  .toLocaleString(
+   'it-IT',
+   {
+    maximumFractionDigits:2
+   }
+  )+
+  ' m'
+ );
 
 
-    setText(
-        'kAnomalie',
-        k.anomalie
-    );
+ set(
+  'kAnomalie',
+  k.anomalie
+ );
 
 
-    setText(
-        'kMaintenance',
-        k.manutenzioni_aperte
-    );
+ set(
+  'kMaintenance',
+  k.manutenzioni_aperte
+ );
 
 
-    setText(
-        'kAsbuilt',
-        k.asbuilt
-    );
+ set(
+  'kAsbuilt',
+  k.asbuilt
+ );
 
 
-    setText(
-        'kSpatial',
-        k.spatial_anchors
-    );
+ const readiness=
+  control?.readiness || [];
+
+
+ const database=
+  readiness.find(
+   x=>x.id==='database'
+  );
+
+
+ const pilot=
+  readiness.find(
+   x=>x.id==='pilot'
+  );
+
+
+ set(
+  'dbState',
+  database?.stato ||
+  '—'
+ );
+
+
+ set(
+  'pilotState',
+  pilot?.stato ||
+  'DA ESEGUIRE'
+ );
 }
 
 
-/* ==========================================================
-   READINESS
-   ========================================================== */
+/* =====================================================
+   NETWORK
+   ===================================================== */
 
-function renderReadiness(){
+function renderNetwork(data){
 
-    const box=
-        document
-            .getElementById(
-                'readiness'
-            );
+ const telemetry=
+  data?.telemetria || {};
 
 
-    box.innerHTML='';
+ set(
+  'pressure',
+  telemetry.pressione==null
+   ? 'NON COLLEGATA'
+   : String(
+      telemetry.pressione
+     )
+ );
 
 
-    for(
-        const item
-        of master?.readiness || []
-    ){
-
-        const el=
-            document
-                .createElement(
-                    'div'
-                );
+ set(
+  'flow',
+  telemetry.flusso==null
+   ? 'NON COLLEGATO'
+   : String(
+      telemetry.flusso
+     )
+ );
 
 
-        el.className=
-            'readyItem '+
-            (
-                item.livello ||
-                ''
-            );
-
-
-        el.innerHTML=
-
-            '<small>'+
-            esc(
-                item.area
-            )+
-            '</small>'+
-
-            '<strong>'+
-            esc(
-                item.stato
-            )+
-            '</strong>'+
-
-            '<p>'+
-            esc(
-                item.nota
-            )+
-            '</p>';
-
-
-        box.appendChild(el);
-    }
+ set(
+  'leaks',
+  telemetry
+   ?.dispersioni
+   ?.calcolate===true
+   ? String(
+      telemetry
+       .dispersioni
+       .valore
+     )
+   : 'NON CALCOLATE'
+ );
 }
 
 
-/* ==========================================================
+/* =====================================================
+   SPATIAL / MAP
+   ===================================================== */
+
+function renderSpatial(){
+
+ const collections=
+  spatial
+   ?.feature_collections
+  || {};
+
+
+ map
+  .getSource('asbuilt')
+  ?.setData(
+   collections.asbuilt ||
+   EMPTY
+  );
+
+
+ map
+  .getSource('project')
+  ?.setData(
+   collections.project ||
+   EMPTY
+  );
+
+
+ map
+  .getSource('anchors')
+  ?.setData(
+   collections.anchors ||
+   EMPTY
+  );
+
+
+ fitNetwork();
+}
+
+
+function fitNetwork(){
+
+ const coords=[];
+
+
+ for(
+  const collection
+  of [
+   spatial
+    ?.feature_collections
+    ?.asbuilt,
+
+   spatial
+    ?.feature_collections
+    ?.project,
+
+   spatial
+    ?.feature_collections
+    ?.anchors
+  ]
+ ){
+
+  for(
+   const feature
+   of collection?.features || []
+  ){
+
+   const g=
+    feature.geometry;
+
+
+   if(
+    g?.type==='Point'
+   ){
+
+    coords.push(
+     g.coordinates
+    );
+   }
+
+
+   if(
+    g?.type==='LineString'
+   ){
+
+    coords.push(
+     ...g.coordinates
+    );
+   }
+  }
+ }
+
+
+ const valid=
+  coords.filter(
+   p=>
+    Array.isArray(p)
+    &&
+    Number.isFinite(
+     Number(p[0])
+    )
+    &&
+    Number.isFinite(
+     Number(p[1])
+    )
+  );
+
+
+ if(!valid.length){
+  return;
+ }
+
+
+ const bounds=
+  valid.reduce(
+   (b,p)=>
+    b.extend(p),
+
+   new maplibregl
+    .LngLatBounds(
+     valid[0],
+     valid[0]
+    )
+  );
+
+
+ map.fitBounds(
+  bounds,
+  {
+   padding:{
+    top:110,
+    left:325,
+    right:385,
+    bottom:125
+   },
+
+   maxZoom:18,
+
+   duration:800
+  }
+ );
+}
+
+
+/* =====================================================
+   LAYERS
+   ===================================================== */
+
+function toggleLayer(type){
+
+ visibility[type]=
+  !visibility[type];
+
+
+ const config={
+
+  asbuilt:{
+   layers:[
+    'asbuilt-glow',
+    'asbuilt-line'
+   ],
+   button:'layerAsbuilt'
+  },
+
+  project:{
+   layers:[
+    'project-line'
+   ],
+   button:'layerProject'
+  },
+
+  anchors:{
+   layers:[
+    'anchors-circle'
+   ],
+   button:'layerSpatial'
+  }
+ };
+
+
+ const c=
+  config[type];
+
+
+ for(
+  const layer
+  of c.layers
+ ){
+
+  if(
+   map.getLayer(layer)
+  ){
+
+   map.setLayoutProperty(
+    layer,
+    'visibility',
+    visibility[type]
+     ? 'visible'
+     : 'none'
+   );
+  }
+ }
+
+
+ document
+  .getElementById(
+   c.button
+  )
+  .classList
+  .toggle(
+   'on',
+   visibility[type]
+  );
+}
+
+
+/* =====================================================
    SEARCH
-   ========================================================== */
+   ===================================================== */
 
 async function runSearch(){
 
-    const q=
-        document
-            .getElementById(
-                'search'
-            )
-            .value
-            .trim();
+ const q=
+  document
+   .getElementById(
+    'search'
+   )
+   .value
+   .trim();
 
 
-    const cantiere=
-        document
-            .getElementById(
-                'site'
-            )
-            .value;
+ const site=
+  document
+   .getElementById(
+    'site'
+   )
+   .value;
 
 
-    const params=
-        new URLSearchParams();
+ const params=
+  new URLSearchParams();
 
 
-    if(q){
-        params.set(
-            'q',
-            q
-        );
-    }
+ if(q){
+  params.set(
+   'q',
+   q
+  );
+ }
 
 
-    if(cantiere){
+ if(site){
 
-        params.set(
-            'cantiere',
-            cantiere
-        );
-    }
-
-
-    try{
-
-        const data=
-            await api(
-                '/api/infrastructure-search?'+
-                params.toString()
-            );
+  params.set(
+   'cantiere',
+   site
+  );
+ }
 
 
-        renderResults(data);
+ try{
+
+  const data=
+   await api(
+    '/api/infrastructure-search?'+
+    params.toString()
+   );
 
 
-    }catch(error){
+  currentSearch=
+   data.risultati || [];
 
-        document
-            .getElementById(
-                'results'
-            )
-            .innerHTML=
 
-                '<div class="muted">'+
-                esc(
-                    error.message
-                )+
-                '</div>';
-    }
+  renderResults();
+
+
+ }catch(error){
+
+  console.error(error);
+ }
 }
 
 
-/* ==========================================================
-   RESULTS
-   ========================================================== */
+function renderResults(){
 
-function renderResults(data){
-
-    const list=
-        document
-            .getElementById(
-                'results'
-            );
+ const box=
+  document
+   .getElementById(
+    'results'
+   );
 
 
-    list.innerHTML='';
+ box.innerHTML='';
 
 
-    const items=
-        data?.risultati ||
-        [];
+ set(
+  'resultCount',
+  currentSearch.length
+ );
 
 
-    document
-        .getElementById(
-            'resultCount'
-        )
-        .textContent=
-            items.length+
-            ' risultati';
+ if(!currentSearch.length){
+
+  box.innerHTML=
+   '<div class="resultMeta">'+
+   'Nessun intervento nel filtro corrente.'+
+   '</div>';
+
+  return;
+ }
 
 
-    if(!items.length){
+ for(
+  const item
+  of currentSearch.slice(0,30)
+ ){
 
-        list.innerHTML=
-            '<div class="muted">'+
-            'Nessun intervento trovato.'+
-            '</div>';
-
-        return;
-    }
-
-
-    for(const item of items){
-
-        const row=
-            document
-                .createElement(
-                    'div'
-                );
+  const row=
+   document.createElement(
+    'div'
+   );
 
 
-        row.className=
-            'result';
+  row.className=
+   'result';
 
 
-        const tags=[];
+  row.innerHTML=
+
+   '<strong>'+
+   esc(
+    item.id_intervento
+   )+
+   '</strong>'+
+
+   '<div class="resultMeta">'+
+   esc(
+    item.id_cantiere
+   )+
+
+   ' · '+
+   esc(
+    item.materiale ||
+    '—'
+   )+
+
+   (
+    item.anomalia
+     ? ' · ⚠ ANOMALIA'
+     : ''
+   )+
+
+   '</div>';
 
 
-        tags.push(
-
-            '<span class="tag">'+
-            esc(
-                item.stato ||
-                '—'
-            )+
-            '</span>'
-        );
+  row.onclick=
+   ()=>loadAsset(
+    item.id_intervento
+   );
 
 
-        if(item.asbuilt){
-
-            tags.push(
-                '<span class="tag good">'+
-                'AS-BUILT'+
-                '</span>'
-            );
-        }
-
-
-        if(item.progetto){
-
-            tags.push(
-                '<span class="tag good">'+
-                'PROGETTO'+
-                '</span>'
-            );
-        }
-
-
-        if(item.anomalia){
-
-            tags.push(
-                '<span class="tag bad">'+
-                'ANOMALIA'+
-                '</span>'
-            );
-        }
-
-
-        if(
-            Number(
-                item.manutenzioni_aperte ||
-                0
-            ) > 0
-        ){
-
-            tags.push(
-                '<span class="tag warn">'+
-                'MANUTENZIONE'+
-                '</span>'
-            );
-        }
-
-
-        row.innerHTML=
-
-            '<div class="resultHead">'+
-
-                '<div>'+
-
-                    '<strong>'+
-                    esc(
-                        item.id_intervento
-                    )+
-                    '</strong>'+
-
-                    '<div class="muted">'+
-                    esc(
-                        item.id_cantiere
-                    )+
-                    '</div>'+
-
-                '</div>'+
-
-                '<div class="muted">'+
-
-                    Number(
-                        item.metri ||
-                        0
-                    )
-                    .toLocaleString(
-                        'it-IT',
-                        {
-                            maximumFractionDigits:2
-                        }
-                    )+
-                    ' m'+
-
-                '</div>'+
-
-            '</div>'+
-
-            '<div class="muted">'+
-
-                esc(
-                    item.materiale ||
-                    '—'
-                )+
-
-                (
-                    item.diametro_mm
-                        ? ' · Ø '+
-                            esc(
-                                item.diametro_mm
-                            )+
-                            ' mm'
-                        : ''
-                )+
-
-                ' · Evidenze '+
-                Number(
-                    item.evidenze ||
-                    0
-                )+
-
-                ' · Audit '+
-                Number(
-                    item.audit ||
-                    0
-                )+
-
-                ' · Spatial '+
-                Number(
-                    item.spatial_anchors ||
-                    0
-                )+
-
-            '</div>'+
-
-            '<div class="tags">'+
-            tags.join('')+
-            '</div>';
-
-
-        row.onclick=
-            ()=>
-                loadTimeline(
-                    item.id_intervento
-                );
-
-
-        list.appendChild(row);
-    }
+  box.appendChild(row);
+ }
 }
 
 
-/* ==========================================================
-   TIMELINE
-   ========================================================== */
+/* =====================================================
+   ASSET
+   ===================================================== */
 
-async function loadTimeline(id){
+async function loadAsset(id){
 
-    const box=
-        document
-            .getElementById(
-                'assetDetail'
-            );
-
-
-    box.innerHTML=
-        '<div class="muted">'+
-        'Caricamento memoria asset...'+
-        '</div>';
+ const body=
+  document
+   .getElementById(
+    'assetBody'
+   );
 
 
-    try{
-
-        const data=
-            await api(
-                '/api/asset-timeline/'+
-                encodeURIComponent(id)
-            );
+ set(
+  'assetName',
+  id
+ );
 
 
-        const a=
-            data.asset ||
-            {};
+ set(
+  'assetSub',
+  'Caricamento memoria infrastruttura...'
+ );
 
 
-        const anomaly=
-            a.anomalia
-                ?.presente ===
-            true;
+ body.innerHTML=
+  '<div class="assetEmpty">'+
+  'Caricamento...'+
+  '</div>';
 
 
-        let html=
+ try{
 
-            '<div class="assetHeader">'+
-
-                '<div>'+
-
-                    '<div class="assetTitle">'+
-                    esc(
-                        a.id_intervento
-                    )+
-                    '</div>'+
-
-                    '<div class="assetMeta">'+
-                    esc(
-                        a.id_cantiere
-                    )+
-                    ' · '+
-                    esc(
-                        a.stato
-                    )+
-                    '</div>'+
-
-                '</div>'+
-
-                '<div class="assetLinks">'+
-
-                    '<a href="'+
-                    esc(
-                        data.links
-                            .passaporto
-                    )+
-                    '">'+
-                    'PASSAPORTO'+
-                    '</a>'+
-
-                    '<a href="'+
-                    esc(
-                        data.links
-                            .confronto
-                    )+
-                    '">'+
-                    'PROGETTO ↔ AS-BUILT'+
-                    '</a>'+
-
-                    '<a href="'+
-                    esc(
-                        data.links
-                            .audit
-                    )+
-                    '">'+
-                    'AUDIT'+
-                    '</a>'+
-
-                '</div>'+
-
-            '</div>'+
-
-            '<div class="assetGrid">'+
-
-                field(
-                    'OPERATORE',
-                    a.operatore ||
-                    '—'
-                )+
-
-                field(
-                    'SQUADRA',
-                    a.squadra ||
-                    '—'
-                )+
-
-                field(
-                    'MATERIALE',
-                    a.materiale ||
-                    '—'
-                )+
-
-                field(
-                    'DIAMETRO',
-                    a.diametro_mm
-                        ? a.diametro_mm+
-                            ' mm'
-                        : '—'
-                )+
-
-                field(
-                    'METRI',
-                    Number(
-                        a.metri ||
-                        0
-                    )
-                    .toLocaleString(
-                        'it-IT',
-                        {
-                            maximumFractionDigits:2
-                        }
-                    )+
-                    ' m'
-                )+
-
-                field(
-                    'EVIDENZE',
-                    a.evidenze
-                )+
-
-                field(
-                    'SPATIAL',
-                    a.spatial_anchors
-                )+
-
-                field(
-                    'MANUTENZIONI',
-                    a.manutenzioni
-                )+
-
-            '</div>';
+  const data=
+   await api(
+    '/api/asset-timeline/'+
+    encodeURIComponent(id)
+   );
 
 
-        if(anomaly){
-
-            html+=
-
-                '<div class="result" '+
-                'style="margin-bottom:12px;border-color:#7a3038">'+
-
-                    '<strong class="red">'+
-                    'ANOMALIA REGISTRATA'+
-                    '</strong>'+
-
-                    '<div class="muted">'+
-                    esc(
-                        a.anomalia
-                            .descrizione ||
-                        ''
-                    )+
-                    '</div>'+
-
-                '</div>';
-        }
+  const a=
+   data.asset || {};
 
 
-        html+=
-            '<div class="timeline">';
+  set(
+   'assetName',
+   a.id_intervento ||
+   id
+  );
 
 
-        for(
-            const event
-            of data.eventi || []
-        ){
-
-            html+=
-
-                '<div '+
-                'class="timelineItem" '+
-                'data-type="'+
-                esc(
-                    event.tipo
-                )+
-                '">'+
-
-                    '<div class="timelineDate">'+
-                    esc(
-                        formatDate(
-                            event.data_ora
-                        )
-                    )+
-                    '</div>'+
-
-                    '<div class="timelineTitle">'+
-                    esc(
-                        event.titolo
-                    )+
-                    '</div>'+
-
-                    (
-                        event.dettagli
-                            ?
-                            '<div class="timelineText">'+
-                            esc(
-                                event.dettagli
-                            )+
-                            '</div>'
-                            :
-                            ''
-                    )+
-
-                    (
-                        event.stato
-                            ?
-                            '<div class="tags">'+
-                            '<span class="tag">'+
-                            esc(
-                                event.stato
-                            )+
-                            '</span>'+
-                            '</div>'
-                            :
-                            ''
-                    )+
-
-                '</div>';
-        }
+  set(
+   'assetSub',
+   (
+    a.id_cantiere ||
+    '—'
+   )+
+   ' · '+
+   (
+    a.stato ||
+    '—'
+   )
+  );
 
 
-        html+='</div>';
+  let html=
+   '<div class="assetGrid">'+
+
+   field(
+    'MATERIALE',
+    a.materiale || '—'
+   )+
+
+   field(
+    'DIAMETRO',
+    a.diametro_mm
+     ? a.diametro_mm+' mm'
+     : '—'
+   )+
+
+   field(
+    'METRI',
+    Number(
+     a.metri || 0
+    )
+    .toLocaleString(
+     'it-IT',
+     {
+      maximumFractionDigits:2
+     }
+    )+
+    ' m'
+   )+
+
+   field(
+    'EVIDENZE',
+    a.evidenze || 0
+   )+
+
+   field(
+    'MANUTENZIONI',
+    a.manutenzioni || 0
+   )+
+
+   field(
+    'SPATIAL POINTS',
+    a.spatial_anchors || 0
+   )+
+
+   '</div>';
 
 
-        box.innerHTML=
-            html;
+  if(
+   a.anomalia?.presente===true
+  ){
+
+   html+=
+    '<div class="warning">'+
+    '<b>ANOMALIA REGISTRATA</b><br>'+
+    esc(
+     a.anomalia
+      .descrizione ||
+     ''
+    )+
+    '</div>';
+  }
 
 
-    }catch(error){
+  html+=
+   '<div class="assetLinks">'+
 
-        box.innerHTML=
-            '<div class="muted">'+
-            esc(
-                error.message
-            )+
-            '</div>';
-    }
+   '<a href="'+
+   esc(
+    data.links.passaporto
+   )+
+   '">PASSAPORTO</a>'+
+
+   '<a href="'+
+   esc(
+    data.links.confronto
+   )+
+   '">PROGETTO ↔ AS-BUILT</a>'+
+
+   '<a href="'+
+   esc(
+    data.links.audit
+   )+
+   '">AUDIT</a>'+
+
+   '</div>';
+
+
+  html+=
+   '<div class="timelineTitle">'+
+   'INFRASTRUCTURE TIMELINE'+
+   '</div>';
+
+
+  html+=
+   '<div class="timeline">';
+
+
+  for(
+   const event
+   of data.eventi || []
+  ){
+
+   html+=
+
+    '<div '+
+    'class="event" '+
+    'data-type="'+
+    esc(
+     event.tipo
+    )+
+    '">'+
+
+    '<div class="eventTime">'+
+    esc(
+     formatDate(
+      event.data_ora
+     )
+    )+
+    '</div>'+
+
+    '<div class="eventTitle">'+
+    esc(
+     event.titolo
+    )+
+    '</div>'+
+
+    (
+     event.dettagli
+      ?
+      '<div class="eventText">'+
+      esc(
+       event.dettagli
+      )+
+      '</div>'
+      :
+      ''
+    )+
+
+    '</div>';
+  }
+
+
+  html+='</div>';
+
+
+  body.innerHTML=html;
+
+
+ }catch(error){
+
+  set(
+   'assetSub',
+   'Errore lettura asset'
+  );
+
+
+  body.innerHTML=
+   '<div class="assetEmpty">'+
+   esc(
+    error.message
+   )+
+   '</div>';
+ }
 }
 
 
-/* ==========================================================
+/* =====================================================
    SITES
-   ========================================================== */
+   ===================================================== */
 
 async function loadSites(){
 
-    try{
+ try{
 
-        const sites=
-            await api(
-                '/api/cantieri'
-            );
-
-
-        const select=
-            document
-                .getElementById(
-                    'site'
-                );
+  const sites=
+   await api(
+    '/api/cantieri'
+   );
 
 
-        for(const site of sites){
-
-            const option=
-                document
-                    .createElement(
-                        'option'
-                    );
-
-            option.value=site;
-            option.textContent=site;
-
-            select.appendChild(option);
-        }
+  const select=
+   document
+    .getElementById(
+     'site'
+    );
 
 
-    }catch(error){
+  for(
+   const site of sites
+  ){
 
-        console.error(error);
-    }
+   const option=
+    document.createElement(
+     'option'
+    );
+
+
+   option.value=site;
+   option.textContent=site;
+
+
+   select.appendChild(
+    option
+   );
+  }
+
+
+ }catch(error){
+
+  console.error(error);
+ }
 }
 
 
-/* ==========================================================
+/* =====================================================
    HELPERS
-   ========================================================== */
+   ===================================================== */
+
+function set(
+ id,
+ value
+){
+
+ const node=
+  document.getElementById(id);
+
+
+ if(node){
+
+  node.textContent=
+   value ?? '—';
+ }
+}
+
 
 function field(
-    label,
-    value
+ label,
+ value
 ){
 
-    return (
-
-        '<div class="assetField">'+
-
-            '<small>'+
-            esc(label)+
-            '</small>'+
-
-            '<b>'+
-            esc(
-                String(
-                    value ??
-                    '—'
-                )
-            )+
-            '</b>'+
-
-        '</div>'
-    );
-}
-
-
-function setText(
-    id,
-    value
-){
-
-    document
-        .getElementById(id)
-        .textContent=
-            value ?? '—';
+ return (
+  '<div class="assetField">'+
+  '<small>'+
+  esc(label)+
+  '</small>'+
+  '<b>'+
+  esc(value)+
+  '</b>'+
+  '</div>'
+ );
 }
 
 
 function formatDate(value){
 
-    if(!value){
-        return '—';
-    }
+ if(!value){
+  return '—';
+ }
 
 
-    const d=
-        new Date(value);
+ const date=
+  new Date(value);
 
 
-    if(
-        Number.isNaN(
-            d.getTime()
-        )
-    ){
-        return String(value);
-    }
+ if(
+  Number.isNaN(
+   date.getTime()
+  )
+ ){
+  return value;
+ }
 
 
-    return d.toLocaleString(
-        'it-IT'
-    );
+ return date
+  .toLocaleString(
+   'it-IT'
+  );
 }
 
 
 function esc(value){
 
-    return String(
-        value ?? ''
-    )
-    .replaceAll(
-        '&',
-        '&amp;'
-    )
-    .replaceAll(
-        '<',
-        '&lt;'
-    )
-    .replaceAll(
-        '>',
-        '&gt;'
-    )
-    .replaceAll(
-        '"',
-        '&quot;'
-    )
-    .replaceAll(
-        "'",
-        '&#039;'
-    );
+ return String(
+  value ?? ''
+ )
+ .replaceAll(
+  '&',
+  '&amp;'
+ )
+ .replaceAll(
+  '<',
+  '&lt;'
+ )
+ .replaceAll(
+  '>',
+  '&gt;'
+ )
+ .replaceAll(
+  '"',
+  '&quot;'
+ )
+ .replaceAll(
+  "'",
+  '&#039;'
+ );
 }
 
 
-/* ==========================================================
+/* =====================================================
    START
-   ========================================================== */
+   ===================================================== */
 
 document
-    .getElementById(
-        'search'
-    )
-    .addEventListener(
-        'keydown',
-        event=>{
+ .getElementById(
+  'search'
+ )
+ .addEventListener(
+  'keydown',
+  event=>{
 
-            if(
-                event.key ===
-                'Enter'
-            ){
-                runSearch();
-            }
-        }
-    );
+   if(
+    event.key==='Enter'
+   ){
+
+    runSearch();
+   }
+  }
+ );
 
 
-Promise.all([
-    loadMaster(),
-    loadSites()
-])
-.then(
-    runSearch
-);
+loadSites();
 
 
 setInterval(
-    loadMaster,
-    30000
+ refreshAll,
+ 30000
 );
 
 </script>
 
-</body>
+<!-- MASTER EXPERIENCE v1 -->
 
+</body>
 </html>
