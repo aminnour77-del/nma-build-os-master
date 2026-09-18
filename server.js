@@ -81,7 +81,7 @@ app.use((req,res,next)=>{
 const mongoose = require('mongoose');
 
 // Connessione al cluster cloud (AWS)
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'nma_build_os' })
+mongoose.connect(process.env.MONGODB_URI, { dbName: (process.env.NMA_E2E_DB || 'nma_build_os') })
   .then(() => console.log('✅ [SISTEMA] Connesso al Database Industriale MongoDB Atlas'))
   .catch(err => console.error('❌ [ERRORE] Connessione DB fallita:', err));
 
@@ -229,7 +229,7 @@ app.set('trust proxy', 1);
 app.use(session({
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
-        dbName: 'nma_build_os',
+        dbName: (process.env.NMA_E2E_DB || 'nma_build_os'),
         collectionName: 'sessions',
         ttl: 8 * 60 * 60,
         autoRemove: 'native',
@@ -327,7 +327,8 @@ app.get('/api/health', async (req, res) => {
             master_foundation_v1: true,
             network_memory_v1: true,
             spatial_vision_v1: true,
-            master_control_room_v1: true
+            master_control_room_v1: true,
+            master_candidate_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -9967,13 +9968,25 @@ app.get(
 // ============================================================
 
 app.get(
-    '/master',
+    '/digital-twin',
     requireAuth,
     requireRole('supervisore','admin'),
     (req,res)=>{
         res.sendFile(
             __dirname+
             '/master_v1.html'
+        );
+    }
+);
+
+app.get(
+    '/master',
+    requireAuth,
+    requireRole('supervisore','admin'),
+    (req,res)=>{
+        res.sendFile(
+            __dirname+
+            '/master_control_v1.html'
         );
     }
 );
