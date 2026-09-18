@@ -324,7 +324,8 @@ app.get('/api/health', async (req, res) => {
         capabilities: {
             server_guard_v1: true,
             resilience_v1: true,
-            master_foundation_v1: true
+            master_foundation_v1: true,
+            network_memory_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -1232,6 +1233,1242 @@ const InterventoCampo =
         InterventoCampoSchema,
         'interventi_campo'
     );
+
+
+
+// ============================================================
+// NMA BUILD OS — NETWORK MEMORY v1
+//
+// 1. L'anomalia originale RESTA nell'intervento Campo.
+// 2. La manutenzione è un record separato e tracciabile.
+// 3. Chiudere una manutenzione NON cancella l'anomalia storica.
+// 4. Nessuna telemetria viene inventata.
+// ============================================================
+
+const ManutenzioneReteSchema =
+    new mongoose.Schema({
+
+        id_manutenzione:{
+            type:String,
+            required:true,
+            unique:true,
+            index:true
+        },
+
+        id_intervento:{
+            type:String,
+            required:true,
+            index:true
+        },
+
+        id_cantiere:{
+            type:String,
+            required:true,
+            index:true
+        },
+
+        tipo:{
+            type:String,
+
+            enum:[
+                'ispezione',
+                'verifica',
+                'riparazione',
+                'sostituzione',
+                'altro'
+            ],
+
+            default:'verifica'
+        },
+
+        priorita:{
+            type:String,
+
+            enum:[
+                'bassa',
+                'media',
+                'alta',
+                'urgente'
+            ],
+
+            default:'media'
+        },
+
+        stato:{
+            type:String,
+
+            enum:[
+                'aperta',
+                'pianificata',
+                'in_corso',
+                'chiusa'
+            ],
+
+            default:'aperta',
+
+            index:true
+        },
+
+        descrizione:{
+            type:String,
+            required:true
+        },
+
+        note:{
+            type:String,
+            default:''
+        },
+
+        aperta_da:{
+            type:String,
+            default:''
+        },
+
+        creata_il:{
+            type:Date,
+            default:Date.now,
+            index:true
+        },
+
+        aggiornata_il:{
+            type:Date,
+            default:Date.now
+        },
+
+        chiusa_da:{
+            type:String,
+            default:''
+        },
+
+        chiusa_il:{
+            type:Date
+        }
+
+    },{
+        collection:
+            'manutenzioni_rete'
+    });
+
+
+const ManutenzioneRete =
+    mongoose.models.ManutenzioneRete ||
+    mongoose.model(
+        'ManutenzioneRete',
+        ManutenzioneReteSchema,
+        'manutenzioni_rete'
+    );
+
+
+function nmaManutenzionePublica(doc){
+
+    if(!doc){
+        return null;
+    }
+
+    return {
+        id_manutenzione:
+            String(
+                doc.id_manutenzione ||
+                ''
+            ),
+
+        id_intervento:
+            String(
+                doc.id_intervento ||
+                ''
+            ),
+
+        id_cantiere:
+            String(
+                doc.id_cantiere ||
+                ''
+            ),
+
+        tipo:
+            String(
+                doc.tipo ||
+                ''
+            ),
+
+        priorita:
+            String(
+                doc.priorita ||
+                ''
+            ),
+
+        stato:
+            String(
+                doc.stato ||
+                ''
+            ),
+
+        descrizione:
+            String(
+                doc.descrizione ||
+                ''
+            ),
+
+        note:
+            String(
+                doc.note ||
+                ''
+            ),
+
+        aperta_da:
+            String(
+                doc.aperta_da ||
+                ''
+            ),
+
+        creata_il:
+            doc.creata_il ||
+            null,
+
+        aggiornata_il:
+            doc.aggiornata_il ||
+            null,
+
+        chiusa_da:
+            String(
+                doc.chiusa_da ||
+                ''
+            ),
+
+        chiusa_il:
+            doc.chiusa_il ||
+            null
+    };
+}
+
+
+// ============================================================
+// NETWORK CONTROL STATUS
+//
+// La telemetria resta esplicitamente NON COLLEGATA.
+// I valori null NON sono valori zero.
+// ============================================================
+
+app.get(
+    '/api/network-control/status',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                ).trim();
+
+            const filtroInterventi={};
+
+            const filtroManutenzioni={};
+
+            if(cantiere){
+
+                filtroInterventi
+                    .id_cantiere=
+                        cantiere;
+
+                filtroManutenzioni
+                    .id_cantiere=
+                        cantiere;
+            }
+
+
+            const [
+                anomalie,
+                manutenzioniAperte,
+                manutenzioniChiuse
+            ]=
+                await Promise.all([
+
+                    InterventoCampo
+                        .countDocuments({
+                            ...filtroInterventi,
+
+                            'anomalia.presente':
+                                true
+                        }),
+
+                    ManutenzioneRete
+                        .countDocuments({
+                            ...filtroManutenzioni,
+
+                            stato:{
+                                $ne:'chiusa'
+                            }
+                        }),
+
+                    ManutenzioneRete
+                        .countDocuments({
+                            ...filtroManutenzioni,
+
+                            stato:'chiusa'
+                        })
+                ]);
+
+
+            return res.json({
+
+                ok:true,
+
+                telemetria:{
+                    collegata:false,
+                    sorgente:null,
+
+                    pressione:null,
+                    flusso:null,
+
+                    dispersioni:{
+                        calcolate:false,
+                        valore:null
+                    },
+
+                    ultimo_dato:null
+                },
+
+                rete:{
+                    anomalie_registrate:
+                        anomalie,
+
+                    manutenzioni_aperte:
+                        manutenzioniAperte,
+
+                    manutenzioni_chiuse:
+                        manutenzioniChiuse
+                },
+
+                nota:
+                    'Nessun sensore live collegato. '+
+                    'Pressione, flusso e dispersioni '+
+                    'non vengono simulati come dati reali.',
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Network Control:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Network Control'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// ELENCO MANUTENZIONI
+// ============================================================
+
+app.get(
+    '/api/manutenzioni',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const filtro={};
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                ).trim();
+
+            const stato=
+                String(
+                    req.query.stato ||
+                    ''
+                ).trim();
+
+            if(cantiere){
+                filtro.id_cantiere=
+                    cantiere;
+            }
+
+            if(stato){
+                filtro.stato=
+                    stato;
+            }
+
+
+            const docs=
+                await ManutenzioneRete
+                    .find(filtro)
+                    .sort({
+                        aggiornata_il:-1
+                    })
+                    .limit(500)
+                    .lean();
+
+
+            return res.json({
+                ok:true,
+
+                totale:
+                    docs.length,
+
+                manutenzioni:
+                    docs.map(
+                        nmaManutenzionePublica
+                    )
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore GET manutenzioni:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore lettura manutenzioni'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// APERTURA MANUTENZIONE
+// ============================================================
+
+app.post(
+    '/api/manutenzioni',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const idIntervento=
+                String(
+                    req.body
+                        ?.id_intervento ||
+                    ''
+                ).trim();
+
+            const descrizione=
+                String(
+                    req.body
+                        ?.descrizione ||
+                    ''
+                ).trim();
+
+            const tipo=
+                String(
+                    req.body
+                        ?.tipo ||
+                    'verifica'
+                ).trim();
+
+            const priorita=
+                String(
+                    req.body
+                        ?.priorita ||
+                    'media'
+                ).trim();
+
+
+            const tipi=[
+                'ispezione',
+                'verifica',
+                'riparazione',
+                'sostituzione',
+                'altro'
+            ];
+
+            const prioritaAmmesse=[
+                'bassa',
+                'media',
+                'alta',
+                'urgente'
+            ];
+
+
+            if(
+                !idIntervento ||
+                !descrizione
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Intervento e descrizione sono obbligatori'
+                });
+            }
+
+
+            if(
+                !tipi.includes(tipo)
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Tipo manutenzione non valido'
+                });
+            }
+
+
+            if(
+                !prioritaAmmesse
+                    .includes(priorita)
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Priorità non valida'
+                });
+            }
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            idIntervento
+                    });
+
+
+            if(!intervento){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+
+            const idManutenzione=
+                'MAN-'+
+                crypto
+                    .randomUUID()
+                    .toUpperCase();
+
+
+            const manutenzione=
+                await ManutenzioneRete
+                    .create({
+
+                        id_manutenzione:
+                            idManutenzione,
+
+                        id_intervento:
+                            intervento
+                                .id_intervento,
+
+                        id_cantiere:
+                            intervento
+                                .id_cantiere,
+
+                        tipo,
+
+                        priorita,
+
+                        stato:
+                            'aperta',
+
+                        descrizione,
+
+                        note:
+                            String(
+                                req.body
+                                    ?.note ||
+                                ''
+                            ).trim(),
+
+                        aperta_da:
+                            String(
+                                req.session
+                                    ?.role ||
+                                ''
+                            ),
+
+                        creata_il:
+                            new Date(),
+
+                        aggiornata_il:
+                            new Date()
+                    });
+
+
+            await registraAudit({
+
+                evento:
+                    'MANUTENZIONE_APERTA',
+
+                intervento,
+
+                ruolo:
+                    String(
+                        req.session
+                            ?.role ||
+                        ''
+                    ),
+
+                origine:
+                    'network_memory',
+
+                stato:
+                    intervento.stato,
+
+                note:
+                    idManutenzione+
+                    ' — '+
+                    descrizione
+            });
+
+
+            return res.status(201).json({
+
+                ok:true,
+
+                manutenzione:
+                    nmaManutenzionePublica(
+                        manutenzione
+                    )
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore apertura manutenzione:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore apertura manutenzione'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// CAMBIO STATO MANUTENZIONE
+// ============================================================
+
+app.patch(
+    '/api/manutenzioni/:id/stato',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(
+                    req.params.id ||
+                    ''
+                ).trim();
+
+            const stato=
+                String(
+                    req.body
+                        ?.stato ||
+                    ''
+                ).trim();
+
+            const note=
+                String(
+                    req.body
+                        ?.note ||
+                    ''
+                ).trim();
+
+
+            const stati=[
+                'aperta',
+                'pianificata',
+                'in_corso',
+                'chiusa'
+            ];
+
+
+            if(
+                !id ||
+                !stati.includes(stato)
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Stato manutenzione non valido'
+                });
+            }
+
+
+            const manutenzione=
+                await ManutenzioneRete
+                    .findOne({
+                        id_manutenzione:id
+                    });
+
+
+            if(!manutenzione){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Manutenzione non trovata'
+                });
+            }
+
+
+            manutenzione.stato=
+                stato;
+
+            manutenzione
+                .aggiornata_il=
+                    new Date();
+
+
+            if(note){
+
+                manutenzione.note=
+                    note;
+            }
+
+
+            if(stato==='chiusa'){
+
+                manutenzione.chiusa_il=
+                    new Date();
+
+                manutenzione.chiusa_da=
+                    String(
+                        req.session
+                            ?.role ||
+                        ''
+                    );
+
+            }else{
+
+                manutenzione.chiusa_il=
+                    undefined;
+
+                manutenzione.chiusa_da=
+                    '';
+            }
+
+
+            await manutenzione.save();
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            manutenzione
+                                .id_intervento
+                    });
+
+
+            if(intervento){
+
+                await registraAudit({
+
+                    evento:
+                        stato==='chiusa'
+                            ? 'MANUTENZIONE_CHIUSA'
+                            : 'MANUTENZIONE_STATO_AGGIORNATO',
+
+                    intervento,
+
+                    ruolo:
+                        String(
+                            req.session
+                                ?.role ||
+                            ''
+                        ),
+
+                    origine:
+                        'network_memory',
+
+                    stato:
+                        intervento.stato,
+
+                    note:
+                        manutenzione
+                            .id_manutenzione+
+                        ' -> '+
+                        stato+
+                        (
+                            note
+                                ? ' — '+note
+                                : ''
+                        )
+                });
+            }
+
+
+            return res.json({
+
+                ok:true,
+
+                manutenzione:
+                    nmaManutenzionePublica(
+                        manutenzione
+                    )
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore aggiornamento manutenzione:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore aggiornamento manutenzione'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// NETWORK MEMORY
+//
+// Vista unica della storia rete:
+// intervento + anomalia + As-Built + progetto + manutenzioni.
+//
+// Nessun dato viene duplicato.
+// ============================================================
+
+app.get(
+    '/api/network-memory',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                ).trim();
+
+            const filtro={};
+
+            if(cantiere){
+
+                filtro.id_cantiere=
+                    cantiere;
+            }
+
+
+            const interventi=
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(500)
+                    .lean();
+
+
+            const ids=
+                interventi
+                    .map(
+                        x=>
+                            String(
+                                x.id_intervento ||
+                                ''
+                            )
+                    )
+                    .filter(Boolean);
+
+
+            const [
+                manutenzioni,
+                tratti,
+                progetti
+            ]=
+                await Promise.all([
+
+                    ids.length
+                        ? ManutenzioneRete
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .sort({
+                                aggiornata_il:-1
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? TrattoRete
+                            .find({
+                                id_tratto:{
+                                    $in:
+                                        ids.map(
+                                            id=>
+                                                'ASB-'+id
+                                        )
+                                }
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? ProgettoRiferimento
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .lean()
+                        : []
+                ]);
+
+
+            const maintenanceMap=
+                new Map();
+
+            for(
+                const manutenzione
+                of manutenzioni
+            ){
+
+                const key=
+                    String(
+                        manutenzione
+                            .id_intervento ||
+                        ''
+                    );
+
+                if(
+                    !maintenanceMap
+                        .has(key)
+                ){
+                    maintenanceMap
+                        .set(
+                            key,
+                            []
+                        );
+                }
+
+                maintenanceMap
+                    .get(key)
+                    .push(
+                        nmaManutenzionePublica(
+                            manutenzione
+                        )
+                    );
+            }
+
+
+            const asbuiltSet=
+                new Set(
+                    tratti.map(
+                        x=>
+                            String(
+                                x.id_tratto ||
+                                ''
+                            )
+                            .replace(
+                                /^ASB-/,
+                                ''
+                            )
+                    )
+                );
+
+
+            const projectSet=
+                new Set(
+                    progetti.map(
+                        x=>
+                            String(
+                                x.id_intervento ||
+                                ''
+                            )
+                    )
+                );
+
+
+            const assets=
+                interventi.map(
+                    intervento=>{
+
+                        const id=
+                            String(
+                                intervento
+                                    .id_intervento ||
+                                ''
+                            );
+
+                        const lista=
+                            maintenanceMap
+                                .get(id) ||
+                            [];
+
+
+                        const aperte=
+                            lista.filter(
+                                x=>
+                                    x.stato !==
+                                    'chiusa'
+                            );
+
+
+                        return {
+
+                            id_intervento:id,
+
+                            id_cantiere:
+                                String(
+                                    intervento
+                                        .id_cantiere ||
+                                    ''
+                                ),
+
+                            stato_intervento:
+                                String(
+                                    intervento
+                                        .stato ||
+                                    ''
+                                ),
+
+                            operatore:
+                                String(
+                                    intervento
+                                        .operatore ||
+                                    ''
+                                ),
+
+                            squadra:
+                                String(
+                                    intervento
+                                        .squadra ||
+                                    ''
+                                ),
+
+                            tubazione:{
+                                materiale:
+                                    String(
+                                        intervento
+                                            .tubazione
+                                            ?.materiale ||
+                                        ''
+                                    ),
+
+                                diametro_mm:
+                                    Number(
+                                        intervento
+                                            .tubazione
+                                            ?.diametro_mm ||
+                                        0
+                                    ),
+
+                                metri:
+                                    Number(
+                                        intervento
+                                            .tubazione
+                                            ?.metri ||
+                                        0
+                                    )
+                            },
+
+                            anomalia:{
+                                presente:
+                                    intervento
+                                        .anomalia
+                                        ?.presente ===
+                                    true,
+
+                                descrizione:
+                                    String(
+                                        intervento
+                                            .anomalia
+                                            ?.descrizione ||
+                                        ''
+                                    )
+                            },
+
+                            asbuilt_presente:
+                                asbuiltSet
+                                    .has(id),
+
+                            progetto_presente:
+                                projectSet
+                                    .has(id),
+
+                            manutenzioni:
+                                lista,
+
+                            manutenzioni_aperte:
+                                aperte.length,
+
+                            aggiornato_il:
+                                intervento
+                                    .aggiornato_il ||
+                                intervento
+                                    .creato_il ||
+                                null
+                        };
+                    }
+                );
+
+
+            const anomalie=
+                assets.filter(
+                    x=>
+                        x.anomalia
+                            .presente ===
+                        true
+                );
+
+
+            const manutenzioniAperte=
+                manutenzioni.filter(
+                    x=>
+                        x.stato !==
+                        'chiusa'
+                ).length;
+
+
+            const manutenzioniChiuse=
+                manutenzioni.filter(
+                    x=>
+                        x.stato ===
+                        'chiusa'
+                ).length;
+
+
+            return res.json({
+
+                ok:true,
+
+                totali:{
+                    asset:
+                        assets.length,
+
+                    anomalie:
+                        anomalie.length,
+
+                    manutenzioni:
+                        manutenzioni.length,
+
+                    manutenzioni_aperte:
+                        manutenzioniAperte,
+
+                    manutenzioni_chiuse:
+                        manutenzioniChiuse,
+
+                    asbuilt:
+                        assets.filter(
+                            x=>
+                                x.asbuilt_presente
+                        ).length,
+
+                    progetti:
+                        assets.filter(
+                            x=>
+                                x.progetto_presente
+                        ).length
+                },
+
+                assets,
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Network Memory:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Network Memory'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// UI NETWORK MEMORY
+// ============================================================
+
+app.get(
+    '/network-memory',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/network_memory_v1.html'
+        );
+    }
+);
 
 
 // ============================================================

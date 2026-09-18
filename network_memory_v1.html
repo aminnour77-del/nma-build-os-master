@@ -1,0 +1,1880 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>
+NMA BUILD OS — Network Memory
+</title>
+
+<style>
+
+:root{
+    --bg:#041017;
+    --panel:#081c25;
+    --line:#17495a;
+
+    --cyan:#22c7ed;
+    --green:#22e39b;
+    --orange:#ff9f1c;
+    --red:#ff5964;
+
+    --text:#edf9fc;
+    --muted:#88a7b2;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+
+    background:var(--bg);
+    color:var(--text);
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body{
+    min-height:100dvh;
+
+    padding-bottom:
+        env(safe-area-inset-bottom);
+}
+
+header{
+    position:sticky;
+    top:0;
+
+    z-index:100;
+
+    background:
+        rgba(3,15,21,.96);
+
+    backdrop-filter:
+        blur(16px);
+
+    border-bottom:
+        1px solid var(--line);
+
+    padding:
+        calc(
+            13px +
+            env(safe-area-inset-top)
+        )
+        max(
+            15px,
+            env(safe-area-inset-right)
+        )
+        13px
+        max(
+            15px,
+            env(safe-area-inset-left)
+        );
+}
+
+.top{
+    max-width:1450px;
+    margin:auto;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:space-between;
+
+    gap:12px;
+}
+
+.brand{
+    font-weight:950;
+    letter-spacing:.08em;
+}
+
+.brand small{
+    display:block;
+
+    margin-top:4px;
+
+    color:var(--cyan);
+
+    font-size:9px;
+    letter-spacing:.15em;
+}
+
+.topActions{
+    display:flex;
+    gap:7px;
+}
+
+.topActions a{
+    text-decoration:none;
+
+    color:white;
+
+    padding:9px 11px;
+
+    border-radius:11px;
+
+    background:#0d2b36;
+
+    border:
+        1px solid #205467;
+
+    font-size:11px;
+    font-weight:900;
+}
+
+main{
+    max-width:1450px;
+    margin:auto;
+
+    padding:
+        16px
+        max(
+            16px,
+            env(safe-area-inset-right)
+        )
+        30px
+        max(
+            16px,
+            env(safe-area-inset-left)
+        );
+}
+
+.hero{
+    display:grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    gap:14px;
+
+    align-items:end;
+
+    margin-bottom:14px;
+}
+
+h1{
+    margin:5px 0;
+
+    font-size:
+        clamp(
+            27px,
+            5vw,
+            48px
+        );
+}
+
+.hero p{
+    color:var(--muted);
+
+    margin:0;
+
+    max-width:850px;
+
+    line-height:1.5;
+}
+
+.status{
+    padding:10px 12px;
+
+    border:
+        1px solid var(--line);
+
+    border-radius:999px;
+
+    color:var(--green);
+
+    font-weight:900;
+
+    font-size:11px;
+}
+
+.kpis{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            6,
+            minmax(
+                130px,
+                1fr
+            )
+        );
+
+    gap:8px;
+
+    margin-bottom:14px;
+
+    overflow:auto;
+}
+
+.kpi{
+    min-width:130px;
+
+    padding:13px;
+
+    border-radius:14px;
+
+    background:#071b23;
+
+    border:
+        1px solid #164454;
+}
+
+.kpi small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:9px;
+
+    letter-spacing:.08em;
+}
+
+.kpi b{
+    display:block;
+
+    margin-top:6px;
+
+    font-size:23px;
+}
+
+.green{
+    color:var(--green);
+}
+
+.orange{
+    color:var(--orange);
+}
+
+.red{
+    color:var(--red);
+}
+
+.cyan{
+    color:var(--cyan);
+}
+
+.layout{
+    display:grid;
+
+    grid-template-columns:
+        .8fr 1.2fr;
+
+    gap:13px;
+}
+
+.card{
+    border:
+        1px solid var(--line);
+
+    border-radius:18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #09222c,
+            #06171e
+        );
+
+    padding:16px;
+
+    margin-bottom:13px;
+}
+
+.card h2{
+    margin:0 0 13px;
+
+    font-size:15px;
+
+    color:var(--cyan);
+
+    letter-spacing:.08em;
+}
+
+.grid{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:8px;
+}
+
+label{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:10px;
+
+    margin-bottom:5px;
+
+    letter-spacing:.07em;
+}
+
+input,
+select,
+textarea{
+    width:100%;
+
+    border:
+        1px solid #25566a;
+
+    background:#061820;
+    color:white;
+
+    border-radius:11px;
+
+    min-height:44px;
+
+    padding:10px;
+
+    font-size:16px;
+}
+
+textarea{
+    min-height:100px;
+
+    resize:vertical;
+}
+
+.full{
+    grid-column:
+        1 / -1;
+}
+
+button{
+    border:0;
+
+    border-radius:12px;
+
+    padding:12px 14px;
+
+    font-weight:900;
+
+    cursor:pointer;
+}
+
+.primary{
+    width:100%;
+
+    margin-top:10px;
+
+    background:var(--green);
+
+    color:#02150e;
+}
+
+.filters{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:8px;
+
+    margin-bottom:10px;
+}
+
+.list{
+    display:grid;
+
+    gap:8px;
+
+    max-height:630px;
+
+    overflow:auto;
+}
+
+.row{
+    border:
+        1px solid #184454;
+
+    background:#061820;
+
+    border-radius:13px;
+
+    padding:12px;
+}
+
+.rowHead{
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:10px;
+
+    align-items:flex-start;
+}
+
+.row strong{
+    word-break:break-word;
+}
+
+.small{
+    color:var(--muted);
+
+    font-size:11px;
+
+    line-height:1.45;
+}
+
+.description{
+    margin-top:9px;
+
+    color:#cfdee3;
+
+    font-size:12px;
+
+    line-height:1.45;
+}
+
+.pill{
+    display:inline-block;
+
+    padding:5px 8px;
+
+    border-radius:999px;
+
+    font-size:9px;
+
+    font-weight:900;
+
+    background:#123440;
+}
+
+.pill.red{
+    background:#421820;
+}
+
+.pill.orange{
+    background:#49300b;
+}
+
+.pill.green{
+    background:#073826;
+}
+
+.buttons{
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:6px;
+
+    margin-top:10px;
+}
+
+.buttons button{
+    background:#103541;
+    color:white;
+
+    font-size:10px;
+}
+
+.network{
+    display:grid;
+    gap:7px;
+}
+
+.networkLine{
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:15px;
+
+    padding:10px;
+
+    border-radius:11px;
+
+    background:#061820;
+
+    border:
+        1px solid #174354;
+
+    font-size:11px;
+}
+
+.networkLine span{
+    color:var(--muted);
+}
+
+.warning{
+    margin-top:10px;
+
+    color:#ffc566;
+
+    background:#3b2909;
+
+    border:
+        1px solid #795314;
+
+    border-radius:12px;
+
+    padding:10px;
+
+    font-size:11px;
+
+    line-height:1.45;
+}
+
+.empty{
+    color:var(--muted);
+
+    padding:12px;
+
+    font-size:12px;
+}
+
+@media(max-width:850px){
+
+    .layout,
+    .hero{
+        grid-template-columns:1fr;
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(
+                    130px,
+                    1fr
+                )
+            );
+    }
+}
+
+@media(max-width:600px){
+
+    main{
+        padding:
+            10px
+            max(
+                10px,
+                env(safe-area-inset-right)
+            )
+            24px
+            max(
+                10px,
+                env(safe-area-inset-left)
+            );
+    }
+
+    .top{
+        align-items:flex-start;
+    }
+
+    .topActions{
+        flex-direction:column;
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    125px,
+                    1fr
+                )
+            );
+    }
+
+    .grid,
+    .filters{
+        grid-template-columns:1fr;
+    }
+
+    .full{
+        grid-column:auto;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div class="top">
+
+    <div class="brand">
+        NMA BUILD OS
+        <small>
+            NETWORK CONTROL / MEMORY
+        </small>
+    </div>
+
+    <div class="topActions">
+
+        <a href="/master">
+            MASTER
+        </a>
+
+        <a href="/asset-memory">
+            ASSET
+        </a>
+
+    </div>
+
+</div>
+
+</header>
+
+<main>
+
+<section class="hero">
+
+    <div>
+
+        <div class="cyan">
+            INFRASTRUCTURE OPERATIONS
+        </div>
+
+        <h1>
+            Network Memory
+        </h1>
+
+        <p>
+            Anomalie registrate sul campo,
+            manutenzioni, As-Built e progetto
+            rimangono collegati allo stesso
+            intervento e alla stessa infrastruttura.
+        </p>
+
+    </div>
+
+    <div
+      id="systemStatus"
+      class="status">
+        ● CHECK
+    </div>
+
+</section>
+
+<section class="kpis">
+
+    <div class="kpi">
+        <small>ASSET</small>
+        <b id="kAsset">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>ANOMALIE</small>
+        <b
+          id="kAnomalie"
+          class="red">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>MANUTENZIONI APERTE</small>
+        <b
+          id="kAperte"
+          class="orange">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>MANUTENZIONI CHIUSE</small>
+        <b
+          id="kChiuse"
+          class="green">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>AS-BUILT</small>
+        <b id="kAsbuilt">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>PROGETTI</small>
+        <b id="kProgetti">—</b>
+    </div>
+
+</section>
+
+<div class="layout">
+
+<section>
+
+    <div class="card">
+
+        <h2>
+            NETWORK CONTROL
+        </h2>
+
+        <div class="network">
+
+            <div class="networkLine">
+                <span>Sensori</span>
+                <strong
+                  id="sensorState"
+                  class="orange">
+                  NON COLLEGATI
+                </strong>
+            </div>
+
+            <div class="networkLine">
+                <span>Pressione live</span>
+                <strong id="pressure">
+                    NON DISPONIBILE
+                </strong>
+            </div>
+
+            <div class="networkLine">
+                <span>Flusso live</span>
+                <strong id="flow">
+                    NON DISPONIBILE
+                </strong>
+            </div>
+
+            <div class="networkLine">
+                <span>Dispersioni automatiche</span>
+                <strong id="leaks">
+                    NON CALCOLATE
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="warning">
+            Nessun valore di pressione,
+            flusso o dispersione viene
+            simulato come dato reale.
+            Il modulo è pronto per una
+            futura sorgente IoT/Gateway.
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>
+            APRI MANUTENZIONE
+        </h2>
+
+        <div class="grid">
+
+            <div class="full">
+
+                <label>
+                    INTERVENTO / ASSET
+                </label>
+
+                <select id="maintenanceAsset">
+                    <option value="">
+                        Seleziona anomalia
+                    </option>
+                </select>
+
+            </div>
+
+            <div>
+
+                <label>
+                    TIPO
+                </label>
+
+                <select id="maintenanceType">
+
+                    <option value="verifica">
+                        Verifica
+                    </option>
+
+                    <option value="ispezione">
+                        Ispezione
+                    </option>
+
+                    <option value="riparazione">
+                        Riparazione
+                    </option>
+
+                    <option value="sostituzione">
+                        Sostituzione
+                    </option>
+
+                    <option value="altro">
+                        Altro
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div>
+
+                <label>
+                    PRIORITÀ
+                </label>
+
+                <select id="maintenancePriority">
+
+                    <option value="bassa">
+                        Bassa
+                    </option>
+
+                    <option
+                      value="media"
+                      selected>
+                        Media
+                    </option>
+
+                    <option value="alta">
+                        Alta
+                    </option>
+
+                    <option value="urgente">
+                        Urgente
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="full">
+
+                <label>
+                    DESCRIZIONE
+                </label>
+
+                <textarea
+                  id="maintenanceDescription"
+                  placeholder="Intervento necessario, verifica da effettuare...">
+                </textarea>
+
+            </div>
+
+        </div>
+
+        <button
+          class="primary"
+          onclick="openMaintenance()">
+            APRI MANUTENZIONE
+        </button>
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <div class="card">
+
+        <h2>
+            ANOMALIE DALLA RETE
+        </h2>
+
+        <div class="filters">
+
+            <select
+              id="siteFilter"
+              onchange="refresh()">
+
+                <option value="">
+                    Tutti i cantieri
+                </option>
+
+            </select>
+
+            <select
+              id="assetFilter"
+              onchange="renderAll()">
+
+                <option value="anomalie">
+                    Solo anomalie
+                </option>
+
+                <option value="tutti">
+                    Tutti gli asset
+                </option>
+
+            </select>
+
+        </div>
+
+        <div
+          id="assetList"
+          class="list">
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>
+            MANUTENZIONI
+        </h2>
+
+        <div
+          id="maintenanceList"
+          class="list">
+        </div>
+
+    </div>
+
+</section>
+
+</div>
+
+</main>
+
+<script>
+
+let memory=null;
+let network=null;
+
+
+/* ==========================================================
+   FETCH
+   ========================================================== */
+
+async function api(
+    url,
+    options={}
+){
+
+    const response=
+        await fetch(
+            url,
+            {
+                credentials:
+                    'same-origin',
+
+                ...options
+            }
+        );
+
+
+    if(response.status===401){
+
+        location.href='/';
+
+        throw new Error(
+            'Sessione scaduta'
+        );
+    }
+
+
+    const text=
+        await response.text();
+
+    let data={};
+
+    try{
+        data=
+            text
+                ? JSON.parse(text)
+                : {};
+    }catch{
+        data={};
+    }
+
+
+    if(!response.ok){
+
+        throw new Error(
+            data.error ||
+            (
+                'HTTP '+
+                response.status
+            )
+        );
+    }
+
+
+    return data;
+}
+
+
+/* ==========================================================
+   REFRESH
+   ========================================================== */
+
+async function refresh(){
+
+    const site=
+        document
+            .getElementById(
+                'siteFilter'
+            )
+            .value;
+
+    const query=
+        site
+            ? '?cantiere='+
+                encodeURIComponent(
+                    site
+                )
+            : '';
+
+
+    try{
+
+        [
+            memory,
+            network
+        ]=
+            await Promise.all([
+
+                api(
+                    '/api/network-memory'+
+                    query
+                ),
+
+                api(
+                    '/api/network-control/status'+
+                    query
+                )
+            ]);
+
+
+        renderKpi();
+        renderNetwork();
+        renderAll();
+
+        document
+            .getElementById(
+                'systemStatus'
+            )
+            .textContent=
+                '● OPERATIONAL';
+
+    }catch(error){
+
+        console.error(error);
+
+        document
+            .getElementById(
+                'systemStatus'
+            )
+            .textContent=
+                '● DEGRADED';
+    }
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+function renderKpi(){
+
+    const t=
+        memory?.totali ||
+        {};
+
+    setText(
+        'kAsset',
+        t.asset
+    );
+
+    setText(
+        'kAnomalie',
+        t.anomalie
+    );
+
+    setText(
+        'kAperte',
+        t.manutenzioni_aperte
+    );
+
+    setText(
+        'kChiuse',
+        t.manutenzioni_chiuse
+    );
+
+    setText(
+        'kAsbuilt',
+        t.asbuilt
+    );
+
+    setText(
+        'kProgetti',
+        t.progetti
+    );
+}
+
+
+/* ==========================================================
+   NETWORK
+   ========================================================== */
+
+function renderNetwork(){
+
+    const telemetry=
+        network?.telemetria ||
+        {};
+
+    setText(
+        'sensorState',
+        telemetry.collegata
+            ? 'COLLEGATI'
+            : 'NON COLLEGATI'
+    );
+
+    setText(
+        'pressure',
+        telemetry.pressione === null ||
+        telemetry.pressione === undefined
+            ? 'NON DISPONIBILE'
+            : String(
+                telemetry.pressione
+            )
+    );
+
+    setText(
+        'flow',
+        telemetry.flusso === null ||
+        telemetry.flusso === undefined
+            ? 'NON DISPONIBILE'
+            : String(
+                telemetry.flusso
+            )
+    );
+
+    setText(
+        'leaks',
+        telemetry
+            ?.dispersioni
+            ?.calcolate === true
+            ? String(
+                telemetry
+                    .dispersioni
+                    .valore
+            )
+            : 'NON CALCOLATE'
+    );
+}
+
+
+/* ==========================================================
+   ASSETS / ANOMALIES
+   ========================================================== */
+
+function renderAll(){
+
+    renderAssets();
+    renderMaintenanceOptions();
+    renderMaintenances();
+}
+
+
+function renderAssets(){
+
+    const list=
+        document
+            .getElementById(
+                'assetList'
+            );
+
+    list.innerHTML='';
+
+
+    let assets=
+        Array.isArray(
+            memory?.assets
+        )
+            ? memory.assets
+            : [];
+
+
+    const mode=
+        document
+            .getElementById(
+                'assetFilter'
+            )
+            .value;
+
+
+    if(mode==='anomalie'){
+
+        assets=
+            assets.filter(
+                x=>
+                    x.anomalia
+                        ?.presente ===
+                    true
+            );
+    }
+
+
+    if(!assets.length){
+
+        list.innerHTML=
+            '<div class="empty">'+
+            'Nessun asset nel filtro selezionato.'+
+            '</div>';
+
+        return;
+    }
+
+
+    for(const asset of assets){
+
+        const row=
+            document.createElement(
+                'div'
+            );
+
+        row.className='row';
+
+
+        const anomaly=
+            asset.anomalia
+                ?.presente ===
+            true;
+
+
+        const open=
+            Number(
+                asset
+                    .manutenzioni_aperte ||
+                0
+            );
+
+
+        let gestione='';
+
+        if(anomaly){
+
+            if(open>0){
+
+                gestione=
+                    '<span class="pill orange">'+
+                    'IN GESTIONE'+
+                    '</span>';
+
+            }else{
+
+                gestione=
+                    '<span class="pill red">'+
+                    'DA GESTIRE'+
+                    '</span>';
+            }
+        }
+
+
+        row.innerHTML=
+
+            '<div class="rowHead">'+
+
+                '<div>'+
+                    '<strong>'+
+                    esc(
+                        asset.id_intervento
+                    )+
+                    '</strong>'+
+                    '<div class="small">'+
+                    esc(
+                        asset.id_cantiere
+                    )+
+                    '</div>'+
+                '</div>'+
+
+                gestione+
+
+            '</div>'+
+
+            '<div class="description">'+
+
+                (
+                    anomaly
+                        ? esc(
+                            asset
+                                .anomalia
+                                .descrizione ||
+                            'Anomalia registrata'
+                        )
+                        : 'Nessuna anomalia registrata'
+                )+
+
+            '</div>'+
+
+            '<div class="small" '+
+            'style="margin-top:8px">'+
+
+                'Materiale: '+
+                esc(
+                    asset
+                        .tubazione
+                        ?.materiale ||
+                    '—'
+                )+
+
+                ' · Ø '+
+                esc(
+                    asset
+                        .tubazione
+                        ?.diametro_mm ||
+                    '—'
+                )+
+
+                ' · As-Built: '+
+                (
+                    asset
+                        .asbuilt_presente
+                        ? 'SI'
+                        : 'NO'
+                )+
+
+                ' · Progetto: '+
+                (
+                    asset
+                        .progetto_presente
+                        ? 'SI'
+                        : 'NO'
+                )+
+
+            '</div>';
+
+        list.appendChild(row);
+    }
+}
+
+
+/* ==========================================================
+   OPTIONS
+   ========================================================== */
+
+function renderMaintenanceOptions(){
+
+    const select=
+        document
+            .getElementById(
+                'maintenanceAsset'
+            );
+
+    const current=
+        select.value;
+
+    select.innerHTML=
+        '<option value="">'+
+        'Seleziona anomalia'+
+        '</option>';
+
+
+    const anomalie=
+        (
+            memory?.assets ||
+            []
+        )
+        .filter(
+            x=>
+                x.anomalia
+                    ?.presente ===
+                true
+        );
+
+
+    for(const asset of anomalie){
+
+        const option=
+            document.createElement(
+                'option'
+            );
+
+        option.value=
+            asset.id_intervento;
+
+        option.textContent=
+            asset.id_intervento+
+            ' — '+
+            (
+                asset.anomalia
+                    .descrizione ||
+                'Anomalia'
+            );
+
+
+        if(
+            option.value===
+            current
+        ){
+            option.selected=true;
+        }
+
+        select.appendChild(option);
+    }
+}
+
+
+/* ==========================================================
+   MAINTENANCE LIST
+   ========================================================== */
+
+function renderMaintenances(){
+
+    const list=
+        document
+            .getElementById(
+                'maintenanceList'
+            );
+
+    list.innerHTML='';
+
+
+    const all=
+        (
+            memory?.assets ||
+            []
+        )
+        .flatMap(
+            asset=>
+                (
+                    asset
+                        .manutenzioni ||
+                    []
+                )
+        )
+        .sort(
+            (a,b)=>
+                new Date(
+                    b.aggiornata_il ||
+                    b.creata_il ||
+                    0
+                )
+                -
+                new Date(
+                    a.aggiornata_il ||
+                    a.creata_il ||
+                    0
+                )
+        );
+
+
+    if(!all.length){
+
+        list.innerHTML=
+            '<div class="empty">'+
+            'Nessuna manutenzione registrata.'+
+            '</div>';
+
+        return;
+    }
+
+
+    for(const item of all){
+
+        const row=
+            document.createElement(
+                'div'
+            );
+
+        row.className='row';
+
+
+        const closed=
+            item.stato==='chiusa';
+
+
+        row.innerHTML=
+
+            '<div class="rowHead">'+
+
+                '<div>'+
+                    '<strong>'+
+                    esc(
+                        item.id_intervento
+                    )+
+                    '</strong>'+
+                    '<div class="small">'+
+                    esc(
+                        item.id_manutenzione
+                    )+
+                    '</div>'+
+                '</div>'+
+
+                '<span class="pill '+
+                (
+                    closed
+                        ? 'green'
+                        : 'orange'
+                )+
+                '">'+
+                esc(
+                    item.stato
+                )+
+                '</span>'+
+
+            '</div>'+
+
+            '<div class="description">'+
+                esc(
+                    item.descrizione
+                )+
+            '</div>'+
+
+            '<div class="small" '+
+            'style="margin-top:7px">'+
+
+                esc(
+                    item.tipo
+                )+
+
+                ' · Priorità: '+
+
+                esc(
+                    item.priorita
+                )+
+
+            '</div>'+
+
+            (
+                closed
+                    ? ''
+                    :
+                    '<div class="buttons">'+
+
+                        '<button onclick="'+
+                        "setMaintenanceState('"+
+                        js(
+                            item.id_manutenzione
+                        )+
+                        "','pianificata')"+
+                        '">'+
+                        'PIANIFICA'+
+                        '</button>'+
+
+                        '<button onclick="'+
+                        "setMaintenanceState('"+
+                        js(
+                            item.id_manutenzione
+                        )+
+                        "','in_corso')"+
+                        '">'+
+                        'IN CORSO'+
+                        '</button>'+
+
+                        '<button onclick="'+
+                        "setMaintenanceState('"+
+                        js(
+                            item.id_manutenzione
+                        )+
+                        "','chiusa')"+
+                        '">'+
+                        'CHIUDI'+
+                        '</button>'+
+
+                    '</div>'
+            );
+
+        list.appendChild(row);
+    }
+}
+
+
+/* ==========================================================
+   OPEN MAINTENANCE
+   ========================================================== */
+
+async function openMaintenance(){
+
+    const id=
+        document
+            .getElementById(
+                'maintenanceAsset'
+            )
+            .value;
+
+    const tipo=
+        document
+            .getElementById(
+                'maintenanceType'
+            )
+            .value;
+
+    const priorita=
+        document
+            .getElementById(
+                'maintenancePriority'
+            )
+            .value;
+
+    const descrizione=
+        document
+            .getElementById(
+                'maintenanceDescription'
+            )
+            .value
+            .trim();
+
+
+    if(
+        !id ||
+        !descrizione
+    ){
+
+        alert(
+            'Seleziona un intervento e inserisci una descrizione.'
+        );
+
+        return;
+    }
+
+
+    if(
+        !confirm(
+            'Aprire la manutenzione per '+
+            id+
+            '?'
+        )
+    ){
+        return;
+    }
+
+
+    try{
+
+        await api(
+            '/api/manutenzioni',
+            {
+                method:'POST',
+
+                headers:{
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify({
+
+                        id_intervento:
+                            id,
+
+                        tipo,
+
+                        priorita,
+
+                        descrizione
+                    })
+            }
+        );
+
+
+        document
+            .getElementById(
+                'maintenanceDescription'
+            )
+            .value='';
+
+
+        await refresh();
+
+    }catch(error){
+
+        alert(
+            error.message
+        );
+    }
+}
+
+
+/* ==========================================================
+   STATE
+   ========================================================== */
+
+async function setMaintenanceState(
+    id,
+    stato
+){
+
+    if(
+        !confirm(
+            'Impostare la manutenzione come "'+
+            stato+
+            '"?'
+        )
+    ){
+        return;
+    }
+
+
+    let note='';
+
+
+    if(stato==='chiusa'){
+
+        note=
+            prompt(
+                'Nota di chiusura (opzionale):',
+                ''
+            ) || '';
+    }
+
+
+    try{
+
+        await api(
+            '/api/manutenzioni/'+
+            encodeURIComponent(id)+
+            '/stato',
+            {
+                method:'PATCH',
+
+                headers:{
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify({
+                        stato,
+                        note
+                    })
+            }
+        );
+
+
+        await refresh();
+
+    }catch(error){
+
+        alert(
+            error.message
+        );
+    }
+}
+
+
+/* ==========================================================
+   CANTIERI
+   ========================================================== */
+
+async function loadSites(){
+
+    try{
+
+        const cantieri=
+            await api(
+                '/api/cantieri'
+            );
+
+
+        const select=
+            document
+                .getElementById(
+                    'siteFilter'
+                );
+
+
+        for(const cantiere of cantieri){
+
+            const option=
+                document.createElement(
+                    'option'
+                );
+
+            option.value=
+                cantiere;
+
+            option.textContent=
+                cantiere;
+
+            select.appendChild(
+                option
+            );
+        }
+
+    }catch(error){
+
+        console.error(error);
+    }
+}
+
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
+
+function setText(
+    id,
+    value
+){
+
+    document
+        .getElementById(id)
+        .textContent=
+            value ?? '—';
+}
+
+
+function esc(value){
+
+    return String(
+        value ?? ''
+    )
+    .replaceAll(
+        '&',
+        '&amp;'
+    )
+    .replaceAll(
+        '<',
+        '&lt;'
+    )
+    .replaceAll(
+        '>',
+        '&gt;'
+    )
+    .replaceAll(
+        '"',
+        '&quot;'
+    )
+    .replaceAll(
+        "'",
+        '&#039;'
+    );
+}
+
+
+function js(value){
+
+    return String(
+        value ?? ''
+    )
+    .replaceAll(
+        '\\',
+        '\\\\'
+    )
+    .replaceAll(
+        "'",
+        "\\'"
+    );
+}
+
+
+/* ==========================================================
+   START
+   ========================================================== */
+
+loadSites()
+    .then(refresh);
+
+setInterval(
+    refresh,
+    30000
+);
+
+</script>
+
+</body>
+
+</html>
