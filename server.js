@@ -10254,6 +10254,115 @@ app.get(
 );
 
 
+
+// ============================================================
+// NMA BUILD OS — MASTER JOB CONFIG API v1
+//
+// Configurazioni visuali MASTER.
+// SOLO LETTURA.
+// Nessuna scrittura MongoDB.
+// ============================================================
+
+app.get(
+    '/api/master-job/:jobId',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    (req,res)=>{
+
+        try{
+
+            const jobId=
+                String(
+                    req.params.jobId || ''
+                )
+                .trim();
+
+            if(
+                !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/
+                    .test(jobId)
+            ){
+                return res.status(400).json({
+                    ok:false,
+                    error:'Job ID non valido'
+                });
+            }
+
+            const fs=
+                require('fs');
+
+            const path=
+                require('path');
+
+            const directory=
+                path.join(
+                    __dirname,
+                    'master_jobs'
+                );
+
+            const file=
+                path.join(
+                    directory,
+                    jobId+'.json'
+                );
+
+            if(
+                !file.startsWith(
+                    directory+
+                    path.sep
+                )
+            ){
+                return res.status(400).json({
+                    ok:false,
+                    error:'Percorso non valido'
+                });
+            }
+
+            if(
+                !fs.existsSync(file)
+            ){
+                return res.status(404).json({
+                    ok:false,
+                    error:'Job MASTER non trovato'
+                });
+            }
+
+            const data=
+                JSON.parse(
+                    fs.readFileSync(
+                        file,
+                        'utf8'
+                    )
+                );
+
+            res.setHeader(
+                'Cache-Control',
+                'no-store'
+            );
+
+            return res.json(data);
+
+        }catch(error){
+
+            console.error(
+                'Errore MASTER JOB:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:'Errore configurazione MASTER'
+            });
+        }
+    }
+);
+
+
 // ============================================================
 // NMA BUILD OS — MASTER FOUNDATION v1
 // Home unica + Digital Twin + Asset Memory

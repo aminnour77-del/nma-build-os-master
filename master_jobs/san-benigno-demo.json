@@ -1,0 +1,151 @@
+{
+  "schema": "nma-master-job-v1",
+  "jobId": "san-benigno-demo",
+  "title": "San Benigno Sector DEMO",
+  "subtitle": "San Benigno Canavese, Piemonte",
+  "simulation": true,
+  "simulationLabel": "SIMULATED DATA",
+  "center": {
+    "lat": 45.228000,
+    "lng": 7.786100,
+    "zoom": 18.55,
+    "pitch": 65,
+    "bearing": -33
+  },
+
+  "stats": {
+    "network": "DEMO",
+    "assets": 8,
+    "workOrders": 1,
+    "health": "DEMO"
+  },
+
+  "hero": {
+    "assetId": "GAS-DEMO-SB-001",
+    "network": "Gas Distribution DEMO",
+    "material": "PE100",
+    "diameter": "DN63",
+    "depth": "0.82 m",
+    "status": "SIMULATED",
+    "visualRadiusMeters": 2.15,
+
+    "points": [
+      [7.785420, 45.227820],
+      [7.785610, 45.227865],
+      [7.785810, 45.227915],
+      [7.786010, 45.227965],
+      [7.786215, 45.228010],
+      [7.786420, 45.228035],
+      [7.786625, 45.228025],
+      [7.786825, 45.227985]
+    ],
+
+    "components": [
+      {
+        "type": "valve",
+        "name": "VG-DEMO-01",
+        "at": 0.22
+      },
+      {
+        "type": "flange",
+        "name": "FL-DEMO-01",
+        "at": 0.43
+      },
+      {
+        "type": "junction",
+        "name": "RC-DEMO-01",
+        "at": 0.58
+      },
+      {
+        "type": "anomaly",
+        "name": "AN-DEMO-01",
+        "at": 0.73
+      },
+      {
+        "type": "riser",
+        "name": "RS-DEMO-01",
+        "at": 0.88
+      }
+    ]
+  },
+
+  "backgroundNetwork": [
+    {
+      "id": "DEMO-NET-CYAN-01",
+      "color": "#15d9ff",
+      "points": [
+        [7.78480,45.22842],
+        [7.78528,45.22828],
+        [7.78579,45.22816],
+        [7.78622,45.22801],
+        [7.78668,45.22786],
+        [7.78718,45.22774]
+      ]
+    },
+    {
+      "id": "DEMO-NET-CYAN-02",
+      "color": "#15d9ff",
+      "points": [
+        [7.78522,45.22745],
+        [7.78552,45.22770],
+        [7.78579,45.22816],
+        [7.78592,45.22850]
+      ]
+    },
+    {
+      "id": "DEMO-NET-GREEN-01",
+      "color": "#17e5a0",
+      "points": [
+        [7.78485,45.22772],
+        [7.78535,45.22782],
+        [7.78581,45.227915],
+        [7.78630,45.22812],
+        [7.78674,45.22834]
+      ]
+    },
+    {
+      "id": "DEMO-NET-GREEN-02",
+      "color": "#17e5a0",
+      "points": [
+        [7.78630,45.22812],
+        [7.78656,45.22777],
+        [7.78682,45.22747]
+      ]
+    },
+    {
+      "id": "DEMO-WORK-AREA",
+      "color": "#ff5365",
+      "points": [
+        [7.78644,45.22813],
+        [7.78668,45.22819],
+        [7.78688,45.22809],
+        [7.78670,45.22795]
+      ]
+    }
+  ],
+
+  "history": [
+    {
+      "label": "Designed",
+      "detail": "Demo geometry"
+    },
+    {
+      "label": "Installed",
+      "detail": "Visual Twin"
+    },
+    {
+      "label": "Reviewed",
+      "detail": "Pending"
+    },
+    {
+      "label": "Current",
+      "detail": "Simulation"
+    }
+  ],
+
+  "operations": {
+    "pressure": "22.5 mbar",
+    "flow": "DEMO",
+    "temperature": "11.2 °C"
+  }
+}
