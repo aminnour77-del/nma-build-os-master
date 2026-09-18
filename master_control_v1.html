@@ -1437,6 +1437,19 @@ input{
 }
 
 </style>
+
+<!-- NMA XRAY FINAL CSS START -->
+<style id="nma-xray-final-style">
+#nmaXrayOverlay{position:absolute;z-index:9;left:7%;right:3%;top:24%;bottom:2%;pointer-events:none;transition:all .35s ease,opacity .25s ease;filter:drop-shadow(0 18px 18px rgba(0,0,0,.38));}
+#nmaXrayCanvas{width:100%;height:100%;display:block;}
+#nmaXrayBadge{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);padding:6px 10px;border:1px solid rgba(20,217,255,.45);border-radius:999px;background:rgba(1,18,26,.82);color:#84eaff;font:800 8px/1.1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;white-space:nowrap;backdrop-filter:blur(8px);}
+#nmaXrayOverlay.nmaXrayHidden{opacity:0;visibility:hidden;}
+#nmaXrayOverlay.nmaXrayFocus{left:2%;right:1%;top:16%;bottom:0%;transform:scale(1.08);transform-origin:50% 65%;}
+@media(max-width:900px){#nmaXrayOverlay{left:1%;right:1%;top:28%;bottom:4%;}#nmaXrayBadge{font-size:7px;max-width:90%;overflow:hidden;text-overflow:ellipsis;}}
+
+</style>
+<!-- NMA XRAY FINAL CSS END -->
+
 </head>
 
 <body>
@@ -1603,6 +1616,13 @@ input{
 <section class="mapWrap">
 
  <div id="map"></div>
+<!-- NMA XRAY FINAL HTML START -->
+<div id="nmaXrayOverlay">
+ <canvas id="nmaXrayCanvas"></canvas>
+ <div id="nmaXrayBadge">ASSET X-RAY · INITIALIZING</div>
+</div>
+<!-- NMA XRAY FINAL HTML END -->
+
 
  <div class="mapShade"></div>
 
@@ -4406,6 +4426,241 @@ loadJob()
 </script>
 
 <!-- NMA DEFINITIVE MASTER ENGINE v1 -->
+
+
+<!-- NMA XRAY FINAL JS START -->
+<script>
+(() => {
+'use strict';
+const MARK='NMA XRAY ASSET ENGINE v1';
+const overlay=document.getElementById('nmaXrayOverlay');
+const canvas=document.getElementById('nmaXrayCanvas');
+const badge=document.getElementById('nmaXrayBadge');
+if(!overlay||!canvas||typeof THREE==='undefined') return;
+
+const X={renderer:null,scene:null,camera:null,root:null,particles:[],raf:0,ready:false,source:null};
+
+function getSource(){
+  try{
+    if(typeof JOB!=='undefined' && JOB && JOB.hero && Array.isArray(JOB.hero.points)){
+      return {id:JOB.hero.assetId||'SELECTED-ASSET',points:JOB.hero.points,components:JOB.hero.components||[],material:JOB.hero.material||'PE100',diameter:JOB.hero.diameter||'—'};
+    }
+  }catch(e){}
+  try{
+    if(typeof NETWORK!=='undefined' && Array.isArray(NETWORK) && NETWORK[0]){
+      return {id:NETWORK[0].id||'SELECTED-ASSET',points:NETWORK[0].points||[],components:[{type:'valve',at:.22,name:'VALVE'},{type:'junction',at:.55,name:'TEE'},{type:'anomaly',at:.72,name:'ANOMALY'},{type:'riser',at:.86,name:'RISER'}],material:'PE100',diameter:'DN63'};
+    }
+  }catch(e){}
+  return null;
+}
+
+function waitForData(){
+  const src=getSource();
+  if(src && src.points.length>=2){ X.source=src; init(); return; }
+  setTimeout(waitForData,150);
+}
+
+function normalizedPoints(points){
+  const p0=points[0];
+  const lat0=p0[1]*Math.PI/180;
+  const raw=points.map(p=>new THREE.Vector3((p[0]-p0[0])*111320*Math.cos(lat0),0,-(p[1]-p0[1])*110540));
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  raw.forEach(p=>{minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minZ=Math.min(minZ,p.z);maxZ=Math.max(maxZ,p.z);});
+  const cx=(minX+maxX)/2,cz=(minZ+maxZ)/2;
+  const span=Math.max(maxX-minX,maxZ-minZ,1);
+  const scale=24/span;
+  return raw.map(p=>new THREE.Vector3((p.x-cx)*scale,-.15,(p.z-cz)*scale));
+}
+
+function matSteel(){return new THREE.MeshStandardMaterial({color:0xb8cbd3,roughness:.12,metalness:.98});}
+function matDark(){return new THREE.MeshStandardMaterial({color:0x101a20,roughness:.15,metalness:.94});}
+function matEarth(){return new THREE.MeshStandardMaterial({color:0x4c3828,roughness:.98,metalness:0,transparent:true,opacity:.90});}
+function matEarthDark(){return new THREE.MeshStandardMaterial({color:0x17100c,roughness:1,metalness:0,transparent:true,opacity:.94});}
+function matShell(){return new THREE.MeshPhysicalMaterial({color:0x203b47,roughness:.08,metalness:.66,transparent:true,opacity:.50,depthWrite:false,side:THREE.DoubleSide,clearcoat:1,clearcoatRoughness:.04});}
+function matCyan(power=2){return new THREE.MeshStandardMaterial({color:0x00d7ff,roughness:.04,metalness:.25,emissive:new THREE.Color(0x00bfff),emissiveIntensity:power});}
+function matGlow(){return new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending});}
+function matRed(){return new THREE.MeshStandardMaterial({color:0xff4055,roughness:.08,metalness:.62,emissive:new THREE.Color(0xff1028),emissiveIntensity:1.0});}
+
+function orient(group,curve,t){
+  const pos=curve.getPointAt(t),tan=curve.getTangentAt(t).normalize();
+  group.position.copy(pos);
+  group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),tan);
+}
+
+function flange(root,curve,t,r,major=true){
+  const g=new THREE.Group();
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(r*(major?1.43:1.18),r*(major?.22:.10),16,52),major?matSteel():matDark());
+  g.add(ring);
+  if(major){
+    const inner=new THREE.Mesh(new THREE.TorusGeometry(r*1.20,r*.07,12,44),matDark());
+    g.add(inner);
+    for(let i=0;i<8;i++){
+      const a=(i/8)*Math.PI*2;
+      const bolt=new THREE.Mesh(new THREE.SphereGeometry(r*.075,8,6),matSteel());
+      bolt.position.set(Math.cos(a)*r*1.42,Math.sin(a)*r*1.42,0);
+      g.add(bolt);
+    }
+  }
+  orient(g,curve,t); root.add(g);
+}
+
+function trench(root,pts){
+  const width=5.4;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz),ang=Math.atan2(dz,dx);
+    if(len<.05) continue;
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(len,.25,width),matEarthDark());
+    floor.position.set((a.x+b.x)/2,-1.32,(a.z+b.z)/2); floor.rotation.y=-ang; root.add(floor);
+    for(const side of [-1,1]){
+      const wall=new THREE.Mesh(new THREE.BoxGeometry(len,2.35,.72),matEarth());
+      const off=width*.53;
+      wall.position.set((a.x+b.x)/2-Math.sin(ang)*off*side,-.28,(a.z+b.z)/2+Math.cos(ang)*off*side);
+      wall.rotation.y=-ang; root.add(wall);
+      const lip=new THREE.Mesh(new THREE.BoxGeometry(len,.24,1.25),new THREE.MeshStandardMaterial({color:0x5b4a36,roughness:1,transparent:true,opacity:.72}));
+      lip.position.set((a.x+b.x)/2-Math.sin(ang)*(off+.45)*side,.93,(a.z+b.z)/2+Math.cos(ang)*(off+.45)*side);
+      lip.rotation.y=-ang; root.add(lip);
+    }
+  }
+}
+
+function pipe(root,pts){
+  const r=.72;
+  const curve=new THREE.CatmullRomCurve3(pts,false,'centripetal',.12);
+  const shell=new THREE.Mesh(new THREE.TubeGeometry(curve,320,r,40,false),matShell()); shell.renderOrder=4; root.add(shell);
+  const edge=new THREE.Mesh(new THREE.TubeGeometry(curve,320,r*1.025,32,false),new THREE.MeshStandardMaterial({color:0x172931,roughness:.13,metalness:.9,transparent:true,opacity:.24,depthWrite:false})); edge.renderOrder=3; root.add(edge);
+  const core=new THREE.Mesh(new THREE.TubeGeometry(curve,320,r*.28,22,false),matCyan(2.25)); core.renderOrder=2; root.add(core);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(curve,300,r*.49,18,false),matGlow()));
+  [0,.08,.17,.27,.38,.49,.60,.71,.82,.92,1].forEach((t,i)=>flange(root,curve,Math.min(.998,Math.max(.002,t)),r,[2,5,8].includes(i)));
+  return {curve,r};
+}
+
+function valve(root,curve,r,t){
+  const p=curve.getPointAt(t);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(r*1.42,32,24),matDark()); body.position.copy(p); body.scale.set(1.15,.92,1.15); root.add(body);
+  flange(root,curve,Math.max(.02,t-.025),r,true); flange(root,curve,Math.min(.98,t+.025),r,true);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(r*.14,r*.18,r*2.9,24),matSteel()); stem.position.set(p.x,p.y+r*1.65,p.z); root.add(stem);
+  const wheel=new THREE.Mesh(new THREE.TorusGeometry(r*.86,r*.12,14,48),matCyan(1.35)); wheel.rotation.x=Math.PI/2; wheel.position.set(p.x,p.y+r*3.08,p.z); root.add(wheel);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(r*.14,r*.14,r*.30,18),matSteel()); hub.position.copy(wheel.position); root.add(hub);
+}
+
+function riser(root,curve,r,t){
+  const p=curve.getPointAt(t),h=r*4.3;
+  const outer=new THREE.Mesh(new THREE.CylinderGeometry(r*.56,r*.56,h,30),matShell()); outer.position.set(p.x,p.y+h*.5,p.z); root.add(outer);
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(r*.17,r*.17,h*.94,20),matCyan(1.7)); inner.position.copy(outer.position); root.add(inner);
+  const cap=new THREE.Mesh(new THREE.TorusGeometry(r*.70,r*.11,14,46),matSteel()); cap.rotation.x=Math.PI/2; cap.position.set(p.x,p.y+h,p.z); root.add(cap);
+}
+
+function tee(root,curve,r,t){
+  const p=curve.getPointAt(t),tan=curve.getTangentAt(t).normalize();
+  const side=new THREE.Vector3(-tan.z,0,tan.x).normalize();
+  const end=p.clone().add(side.multiplyScalar(7.0));
+  const mid=p.clone().lerp(end,.48); mid.y+=.15;
+  const branchCurve=new THREE.CatmullRomCurve3([p.clone(),mid,end],false,'centripetal',.2);
+  const joint=new THREE.Mesh(new THREE.SphereGeometry(r*1.28,30,24),matDark()); joint.position.copy(p); root.add(joint);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(branchCurve,120,r*.62,28,false),matShell()));
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(branchCurve,120,r*.18,16,false),matCyan(1.7)));
+  flange(root,branchCurve,.55,r*.62,true); flange(root,branchCurve,.94,r*.62,false);
+}
+
+function anomaly(root,curve,r,t){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(r*1.42,r*.18,14,48),matRed()));
+  orient(g,curve,t); root.add(g);
+}
+
+function flow(root,curve,r,count=36){
+  for(let i=0;i<count;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r*.085,9,7),matCyan(2.8)); root.add(m);
+    X.particles.push({mesh:m,curve,offset:i/count,speed:.055+(i%4)*.004});
+  }
+}
+
+function grid(root){
+  const mat=new THREE.LineBasicMaterial({color:0x1b7089,transparent:true,opacity:.14});
+  const pts=[];
+  for(let x=-16;x<=16;x+=2){pts.push(new THREE.Vector3(x,-1.18,-9),new THREE.Vector3(x,-1.18,9));}
+  for(let z=-9;z<=9;z+=2){pts.push(new THREE.Vector3(-16,-1.18,z),new THREE.Vector3(16,-1.18,z));}
+  const geo=new THREE.BufferGeometry().setFromPoints(pts); root.add(new THREE.LineSegments(geo,mat));
+}
+
+function build(){
+  const pts=normalizedPoints(X.source.points);
+  const root=new THREE.Group();
+  root.position.y=-.7;
+  grid(root);
+  trench(root,pts);
+  const P=pipe(root,pts);
+  const comps=X.source.components||[];
+  const has=(type)=>comps.find(c=>c.type===type);
+  valve(root,P.curve,P.r,Number((has('valve')||{}).at ?? .22));
+  tee(root,P.curve,P.r,Number((has('junction')||{}).at ?? .55));
+  anomaly(root,P.curve,P.r,Number((has('anomaly')||{}).at ?? .72));
+  riser(root,P.curve,P.r,Number((has('riser')||{}).at ?? .86));
+  flow(root,P.curve,P.r,38);
+  return root;
+}
+
+function init(){
+  try{
+    try{if(typeof ENGINE!=='undefined') ENGINE.enabled=false;}catch(e){}
+    try{if(typeof S!=='undefined') S.active=false;}catch(e){}
+    X.scene=new THREE.Scene();
+    X.camera=new THREE.PerspectiveCamera(38,1,.1,300);
+    X.camera.position.set(0,10.8,25.5);
+    X.camera.lookAt(0,-.5,0);
+    X.renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:false});
+    X.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    X.renderer.setClearColor(0x000000,0);
+    X.renderer.outputColorSpace=THREE.SRGBColorSpace;
+    X.scene.add(new THREE.HemisphereLight(0xcff6ff,0x080706,3.1));
+    const key=new THREE.DirectionalLight(0xffffff,5.2); key.position.set(-8,15,12); X.scene.add(key);
+    const rim=new THREE.DirectionalLight(0x00cfff,3.2); rim.position.set(12,5,-8); X.scene.add(rim);
+    const warm=new THREE.DirectionalLight(0xffad66,1.1); warm.position.set(-12,4,-4); X.scene.add(warm);
+    X.root=build(); X.scene.add(X.root);
+    resize();
+    new ResizeObserver(resize).observe(overlay);
+    X.ready=true;
+    badge.textContent='ASSET X-RAY · '+X.source.id+' · VISUAL SCALE';
+    hookControls();
+    animate();
+  }catch(err){
+    console.error('[NMA XRAY]',err);
+    badge.textContent='ASSET X-RAY ERROR';
+  }
+}
+
+function resize(){
+  if(!X.renderer||!X.camera) return;
+  const w=Math.max(1,overlay.clientWidth),h=Math.max(1,overlay.clientHeight);
+  X.renderer.setSize(w,h,false); X.camera.aspect=w/h; X.camera.updateProjectionMatrix();
+}
+
+function animate(){
+  if(!X.ready) return;
+  const now=performance.now()/1000;
+  X.particles.forEach(p=>{const t=(p.offset+now*p.speed)%1;p.mesh.position.copy(p.curve.getPointAt(t));});
+  X.renderer.render(X.scene,X.camera);
+  X.raf=requestAnimationFrame(animate);
+}
+
+function setVisible(v){overlay.classList.toggle('nmaXrayHidden',!v);}
+function hookControls(){
+  const two=document.getElementById('mode2D')||document.getElementById('view2d');
+  const three=document.getElementById('mode3D')||document.getElementById('view3d');
+  const hero=document.getElementById('modeHero')||document.getElementById('focusPipe');
+  const gas=document.getElementById('networkToggle')||document.getElementById('gasToggle');
+  if(two) two.addEventListener('click',()=>setVisible(false));
+  if(three) three.addEventListener('click',()=>{setVisible(true);overlay.classList.remove('nmaXrayFocus');});
+  if(hero) hero.addEventListener('click',()=>{setVisible(true);overlay.classList.add('nmaXrayFocus');});
+  if(gas) gas.addEventListener('click',()=>setTimeout(()=>setVisible(gas.classList.contains('active')),0));
+}
+
+waitForData();
+})();
+
+</script>
+<!-- NMA XRAY FINAL JS END -->
 
 </body>
 </html>
