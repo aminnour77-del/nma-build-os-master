@@ -2230,11 +2230,11 @@ const map=
    SAN_BENIGNO_REFERENCE.lat
   ],
 
-  zoom:17.65,
+  zoom:18.15,
 
-  pitch:64,
+  pitch:62,
 
-  bearing:-28,
+  bearing:-30,
 
   antialias:true,
 
@@ -2344,19 +2344,24 @@ function shellMaterial(){
 
  return new THREE.MeshPhysicalMaterial({
 
-  color:0x1e333d,
+  color:0x15252d,
 
-  roughness:.18,
+  roughness:.14,
 
-  metalness:.76,
+  metalness:.86,
 
-  transparent:true,
-
-  opacity:.80,
+  transparent:false,
 
   clearcoat:1,
 
-  clearcoatRoughness:.12
+  clearcoatRoughness:.08,
+
+  emissive:
+   new THREE.Color(
+    0x03131a
+   ),
+
+  emissiveIntensity:.12
  });
 }
 
@@ -2482,17 +2487,42 @@ function createPipe(
 
 
  /*
-  Internal cyan core.
+  HERO SHELL DETAIL.
+
+  Il tubo esterno resta pienamente leggibile.
+  La luce cyan viene resa SOPRA la superficie,
+  non nascosta dentro una mesh opaca.
  */
 
- const core=
+ const lightPoints=
+  spec.points.map(
+   point=>
+    localPoint(
+     point[0],
+     point[1],
+
+     radius*1.78
+    )
+  );
+
+
+ const lightCurve=
+  new THREE.CatmullRomCurve3(
+   lightPoints,
+   false,
+   'centripetal',
+   .15
+  );
+
+
+ const surfaceLight=
   new THREE.Mesh(
 
    new THREE.TubeGeometry(
-    curve,
+    lightCurve,
     260,
-    radius*.46,
-    20,
+    radius*.115,
+    14,
     false
    ),
 
@@ -2500,34 +2530,90 @@ function createPipe(
   );
 
 
- root.add(core);
+ root.add(surfaceLight);
 
 
- /*
-  Metallic lower shell gives the pipe
-  a physically heavier appearance.
- */
-
- const metallic=
+ const surfaceGlow=
   new THREE.Mesh(
 
    new THREE.TubeGeometry(
-    curve,
+    lightCurve,
     260,
-    radius*.88,
-    26,
+    radius*.24,
+    12,
     false
    ),
 
-   steelMaterial()
+   new THREE.MeshBasicMaterial({
+
+    color:0x00c8ff,
+
+    transparent:true,
+
+    opacity:.17,
+
+    depthWrite:false,
+
+    blending:
+     THREE.AdditiveBlending
+   })
   );
 
 
- metallic.material.transparent=true;
- metallic.material.opacity=.48;
+ root.add(surfaceGlow);
 
 
- root.add(metallic);
+ /*
+  Riflesso metallico superiore.
+
+  Non è un secondo tubo:
+  è un highlight grafico della superficie.
+ */
+
+ const shinePoints=
+  spec.points.map(
+   point=>
+    localPoint(
+     point[0],
+     point[1],
+
+     radius*1.62
+    )
+  );
+
+
+ const shineCurve=
+  new THREE.CatmullRomCurve3(
+   shinePoints,
+   false,
+   'centripetal',
+   .15
+  );
+
+
+ const shine=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    shineCurve,
+    260,
+    radius*.055,
+    10,
+    false
+   ),
+
+   new THREE.MeshBasicMaterial({
+
+    color:0xc9f4ff,
+
+    transparent:true,
+
+    opacity:.72
+   })
+  );
+
+
+ root.add(shine);
 
 
  /*
@@ -2638,15 +2724,15 @@ function createCollar(
     radius*
     (
      major
-      ? 1.27
-      : 1.14
+      ? 1.34
+      : 1.20
     ),
 
     radius*
     (
      major
-      ? .18
-      : .10
+      ? .22
+      : .13
     ),
 
     14,
@@ -2743,9 +2829,9 @@ function createValve(
   new THREE.Mesh(
 
    new THREE.SphereGeometry(
-    radius*1.45,
-    28,
-    20
+    radius*1.62,
+    32,
+    24
    ),
 
    steelMaterial()
@@ -2834,10 +2920,10 @@ function createValve(
   new THREE.Mesh(
 
    new THREE.TorusGeometry(
-    radius*.88,
-    radius*.12,
-    14,
-    42
+    radius*1.02,
+    radius*.14,
+    16,
+    48
    ),
 
    cyanMaterial()
@@ -2941,19 +3027,19 @@ function createGroundCradle(
 
     new THREE.BoxGeometry(
      length,
-     4.0,
-     .10
+     8.0,
+     .14
     ),
 
     new THREE.MeshStandardMaterial({
 
-     color:0x221d18,
+     color:0x1a1511,
 
      roughness:.98,
 
      transparent:true,
 
-     opacity:.62
+     opacity:.80
     })
    );
 
@@ -2983,6 +3069,198 @@ function createGroundCradle(
 /* =========================================================
    FLOW PARTICLES
    ========================================================= */
+
+
+/* =========================================================
+   PIPE SHADOW / GROUND CONTACT
+
+   Ombra grafica sul piano del terreno.
+   Evita la sensazione di tubo fluttuante.
+   ========================================================= */
+
+function createPipeShadow(
+ root,
+ spec,
+ radius
+){
+
+ const shadowPoints=
+  spec.points.map(
+   p=>
+    localPoint(
+     p[0],
+     p[1],
+     .10
+    )
+  );
+
+
+ const shadowCurve=
+  new THREE.CatmullRomCurve3(
+   shadowPoints,
+   false,
+   'centripetal',
+   .15
+  );
+
+
+ const shadow=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    shadowCurve,
+    220,
+    radius*1.18,
+    18,
+    false
+   ),
+
+   new THREE.MeshBasicMaterial({
+
+    color:0x000000,
+
+    transparent:true,
+
+    opacity:.34,
+
+    depthWrite:false
+   })
+  );
+
+
+ shadow.scale.z=.08;
+
+
+ root.add(shadow);
+}
+
+
+/* =========================================================
+   FLANGE ASSEMBLY
+   ========================================================= */
+
+function createFlangeAssembly(
+ root,
+ pipeline,
+ t
+){
+
+ const {
+  curve,
+  radius
+ }=pipeline;
+
+
+ for(
+  const dt
+  of [-.022,-.010,.010,.022]
+ ){
+
+  const outer=
+   new THREE.Mesh(
+
+    new THREE.TorusGeometry(
+     radius*1.35,
+     radius*.14,
+     16,
+     48
+    ),
+
+    dt<0
+     ? collarMaterial()
+     : darkMaterial()
+   );
+
+
+  orientAlong(
+   outer,
+   curve,
+   Math.max(
+    .01,
+    Math.min(
+     .99,
+     t+dt
+    )
+   )
+  );
+
+
+  root.add(outer);
+ }
+}
+
+
+/* =========================================================
+   CYAN GROUND NODE
+   ========================================================= */
+
+function createNode(
+ root,
+ pipeline,
+ t
+){
+
+ const p=
+  pipeline.curve
+   .getPointAt(t);
+
+
+ const halo=
+  new THREE.Mesh(
+
+   new THREE.SphereGeometry(
+    pipeline.radius*.40,
+    18,
+    14
+   ),
+
+   cyanMaterial()
+  );
+
+
+ halo.position.set(
+  p.x,
+  p.y,
+  pipeline.radius*2.1
+ );
+
+
+ root.add(halo);
+
+
+ const glow=
+  new THREE.Mesh(
+
+   new THREE.SphereGeometry(
+    pipeline.radius*.68,
+    18,
+    14
+   ),
+
+   new THREE.MeshBasicMaterial({
+
+    color:0x00cfff,
+
+    transparent:true,
+
+    opacity:.14,
+
+    depthWrite:false,
+
+    blending:
+     THREE.AdditiveBlending
+   })
+  );
+
+
+ glow.position.copy(
+  halo.position
+ );
+
+
+ root.add(glow);
+}
+
 
 function createFlow(
  root,
@@ -3042,8 +3320,16 @@ function buildNetwork(){
   It is NOT the physical pipe diameter.
  */
 
- const MAIN_RADIUS=.95;
- const BRANCH_RADIUS=.72;
+ /*
+  SCALA GRAFICA DEMO.
+
+  Questi raggi NON rappresentano il diametro reale
+  della condotta. Servono esclusivamente alla
+  leggibilità del Digital Twin dimostrativo.
+ */
+
+ const MAIN_RADIUS=2.75;
+ const BRANCH_RADIUS=1.65;
 
 
  for(
@@ -3051,21 +3337,29 @@ function buildNetwork(){
   of DEMO_PIPELINES
  ){
 
+  const visualRadius=
+   spec.id==='GAS-DEMO-SB-001'
+    ? MAIN_RADIUS
+    : BRANCH_RADIUS;
+
+
   createGroundCradle(
    root,
    spec.points
   );
 
 
-  createPipe(
-
+  createPipeShadow(
    root,
-
    spec,
+   visualRadius
+  );
 
-   spec.id==='GAS-DEMO-SB-001'
-    ? MAIN_RADIUS
-    : BRANCH_RADIUS
+
+  createPipe(
+   root,
+   spec,
+   visualRadius
   );
  }
 
@@ -3109,10 +3403,45 @@ function buildNetwork(){
   );
 
 
+  createFlangeAssembly(
+   root,
+   main,
+   .40
+  );
+
+
+  createFlangeAssembly(
+   root,
+   main,
+   .61
+  );
+
+
+  createNode(
+   root,
+   main,
+   .16
+  );
+
+
+  createNode(
+   root,
+   main,
+   .56
+  );
+
+
+  createNode(
+   root,
+   main,
+   .91
+  );
+
+
   createFlow(
    root,
    main,
-   14
+   18
   );
  }
 
@@ -3307,7 +3636,18 @@ const true3DLayer={
     f.curve.getPointAt(t);
 
 
-   f.mesh.position.copy(p);
+   f.mesh.position.set(
+    p.x,
+    p.y,
+    p.z+
+    (
+     f.mesh.geometry
+      ?.parameters
+      ?.radius ||
+     0
+    )+
+    1.65
+   );
   }
 
 
@@ -3605,11 +3945,11 @@ map.on(
     45.22803
    ],
 
-   zoom:17.75,
+   zoom:18.15,
 
-   pitch:66,
+   pitch:62,
 
-   bearing:-28,
+   bearing:-30,
 
    duration:900
   });
@@ -3672,5 +4012,6 @@ document
 
 <!-- NMA SAN BENIGNO GROUND TWIN v1 -->
 
+<!-- NMA GROUND TWIN PIPE V2 -->
 </body>
 </html>
