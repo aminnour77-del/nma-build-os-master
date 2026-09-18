@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>
+NMA BUILD OS — Spatial Twin
+</title>
+
+<script
+  src="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.js">
+</script>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/maplibre-gl@3.x/dist/maplibre-gl.css"
+>
+
+<style>
+
+:root{
+    --bg:#041017;
+    --panel:#071c24;
+    --line:#195064;
+
+    --cyan:#25c8ef;
+    --green:#20e39a;
+    --orange:#ff9e1c;
+    --violet:#c178ff;
+
+    --text:#eefaff;
+    --muted:#89a7b2;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+
+    background:var(--bg);
+    color:var(--text);
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body{
+    min-height:100dvh;
+}
+
+header{
+    position:sticky;
+    top:0;
+
+    z-index:1000;
+
+    background:
+        rgba(3,15,21,.96);
+
+    backdrop-filter:
+        blur(15px);
+
+    border-bottom:
+        1px solid var(--line);
+
+    padding:
+        calc(
+            12px +
+            env(safe-area-inset-top)
+        )
+        max(
+            14px,
+            env(safe-area-inset-right)
+        )
+        12px
+        max(
+            14px,
+            env(safe-area-inset-left)
+        );
+}
+
+.top{
+    max-width:1500px;
+    margin:auto;
+
+    display:flex;
+
+    justify-content:space-between;
+    align-items:center;
+
+    gap:12px;
+}
+
+.brand{
+    font-weight:950;
+    letter-spacing:.08em;
+}
+
+.brand small{
+    display:block;
+
+    margin-top:3px;
+
+    color:var(--cyan);
+
+    font-size:9px;
+    letter-spacing:.14em;
+}
+
+.nav{
+    display:flex;
+    gap:6px;
+}
+
+.nav a{
+    text-decoration:none;
+
+    color:white;
+
+    border:
+        1px solid #245a6e;
+
+    background:#0a2a35;
+
+    border-radius:10px;
+
+    padding:9px 10px;
+
+    font-size:10px;
+
+    font-weight:900;
+}
+
+main{
+    max-width:1500px;
+    margin:auto;
+
+    padding:
+        14px
+        max(
+            14px,
+            env(safe-area-inset-right)
+        )
+        calc(
+            24px +
+            env(safe-area-inset-bottom)
+        )
+        max(
+            14px,
+            env(safe-area-inset-left)
+        );
+}
+
+.hero{
+    display:flex;
+
+    justify-content:space-between;
+    align-items:flex-end;
+
+    gap:14px;
+
+    margin-bottom:12px;
+}
+
+h1{
+    margin:4px 0;
+
+    font-size:
+        clamp(
+            27px,
+            5vw,
+            48px
+        );
+}
+
+.hero p{
+    margin:0;
+
+    max-width:800px;
+
+    color:var(--muted);
+
+    line-height:1.45;
+}
+
+.badge{
+    border:
+        1px solid var(--line);
+
+    border-radius:999px;
+
+    padding:9px 12px;
+
+    color:var(--green);
+
+    font-size:10px;
+
+    font-weight:900;
+}
+
+.kpis{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            6,
+            minmax(
+                120px,
+                1fr
+            )
+        );
+
+    gap:8px;
+
+    overflow:auto;
+
+    margin-bottom:12px;
+}
+
+.kpi{
+    min-width:120px;
+
+    padding:11px;
+
+    border:
+        1px solid #16485a;
+
+    border-radius:13px;
+
+    background:#061820;
+}
+
+.kpi small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:9px;
+}
+
+.kpi b{
+    display:block;
+
+    margin-top:5px;
+
+    font-size:21px;
+}
+
+.layout{
+    display:grid;
+
+    grid-template-columns:
+        minmax(0,1.55fr)
+        minmax(330px,.65fr);
+
+    gap:12px;
+}
+
+.mapCard{
+    position:relative;
+
+    min-height:760px;
+
+    border:
+        1px solid var(--line);
+
+    border-radius:18px;
+
+    overflow:hidden;
+}
+
+#map{
+    position:absolute;
+    inset:0;
+}
+
+.toolbar{
+    position:absolute;
+
+    top:10px;
+    left:10px;
+    right:10px;
+
+    z-index:10;
+
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:6px;
+
+    pointer-events:none;
+}
+
+.toolbar > *{
+    pointer-events:auto;
+}
+
+select,
+button{
+    min-height:42px;
+
+    border-radius:10px;
+
+    border:
+        1px solid #2a6174;
+
+    background:
+        rgba(4,19,25,.94);
+
+    color:white;
+
+    padding:0 10px;
+
+    font-size:12px;
+
+    font-weight:800;
+}
+
+.layer.on{
+    color:var(--green);
+
+    border-color:
+        var(--green);
+}
+
+.positionBanner{
+    display:none;
+
+    position:absolute;
+
+    left:10px;
+    right:10px;
+    bottom:10px;
+
+    z-index:11;
+
+    border:
+        1px solid var(--orange);
+
+    border-radius:13px;
+
+    background:
+        rgba(
+            55,
+            35,
+            5,
+            .96
+        );
+
+    color:#ffc467;
+
+    padding:12px;
+
+    font-size:12px;
+
+    line-height:1.4;
+}
+
+.side{
+    display:grid;
+    gap:10px;
+    align-content:start;
+}
+
+.card{
+    border:
+        1px solid var(--line);
+
+    border-radius:17px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #09222c,
+            #06171e
+        );
+
+    padding:14px;
+}
+
+.card h2{
+    margin:0 0 11px;
+
+    color:var(--cyan);
+
+    font-size:14px;
+
+    letter-spacing:.08em;
+}
+
+.list{
+    display:grid;
+    gap:7px;
+
+    max-height:290px;
+
+    overflow:auto;
+}
+
+.item{
+    border:
+        1px solid #164656;
+
+    border-radius:11px;
+
+    background:#061820;
+
+    padding:10px;
+
+    font-size:11px;
+}
+
+.item strong{
+    display:block;
+
+    word-break:break-word;
+}
+
+.muted{
+    color:var(--muted);
+
+    margin-top:4px;
+
+    line-height:1.4;
+}
+
+.itemActions{
+    display:flex;
+    gap:5px;
+
+    margin-top:8px;
+}
+
+.itemActions button,
+.itemActions a{
+    min-height:34px;
+
+    display:inline-flex;
+
+    align-items:center;
+
+    text-decoration:none;
+
+    color:white;
+
+    border:
+        1px solid #23586b;
+
+    border-radius:9px;
+
+    background:#0c303c;
+
+    padding:6px 9px;
+
+    font-size:9px;
+
+    font-weight:900;
+}
+
+.visionState{
+    border:
+        1px solid #664387;
+
+    background:#241333;
+
+    color:#d9b8f7;
+
+    padding:10px;
+
+    border-radius:11px;
+
+    font-size:11px;
+
+    line-height:1.45;
+
+    margin-bottom:9px;
+}
+
+.visionImages{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:7px;
+}
+
+.preview{
+    border:
+        1px solid #214b5c;
+
+    border-radius:10px;
+
+    overflow:hidden;
+
+    background:#061820;
+}
+
+.preview img{
+    display:block;
+
+    width:100%;
+    aspect-ratio:1.2;
+
+    object-fit:cover;
+}
+
+.preview div{
+    padding:7px;
+
+    font-size:9px;
+
+    word-break:break-word;
+}
+
+input{
+    width:100%;
+
+    min-height:42px;
+
+    border:
+        1px solid #24586c;
+
+    border-radius:10px;
+
+    background:#061820;
+
+    color:white;
+
+    padding:8px;
+
+    font-size:15px;
+}
+
+@media(max-width:900px){
+
+    .layout{
+        grid-template-columns:1fr;
+    }
+
+    .mapCard{
+        min-height:620px;
+    }
+
+    .hero{
+        align-items:flex-start;
+    }
+}
+
+@media(max-width:600px){
+
+    main{
+        padding:
+            9px
+            max(
+                9px,
+                env(safe-area-inset-right)
+            )
+            calc(
+                20px +
+                env(safe-area-inset-bottom)
+            )
+            max(
+                9px,
+                env(safe-area-inset-left)
+            );
+    }
+
+    .hero{
+        flex-direction:column;
+    }
+
+    .top{
+        align-items:flex-start;
+    }
+
+    .nav{
+        flex-direction:column;
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    120px,
+                    1fr
+                )
+            );
+    }
+
+    .mapCard{
+        min-height:560px;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div class="top">
+
+    <div class="brand">
+
+        NMA BUILD OS
+
+        <small>
+            SPATIAL DIGITAL TWIN / VISION
+        </small>
+
+    </div>
+
+    <div class="nav">
+
+        <a href="/master">
+            MASTER
+        </a>
+
+        <a href="/network-memory">
+            NETWORK
+        </a>
+
+    </div>
+
+</div>
+
+</header>
+
+<main>
+
+<section class="hero">
+
+    <div>
+
+        <div style="color:var(--cyan)">
+            SPATIAL INFRASTRUCTURE MEMORY
+        </div>
+
+        <h1>
+            Digital Twin Evoluto
+        </h1>
+
+        <p>
+            As-Built, progetto, componenti ed evidenze
+            vengono collegati spazialmente senza inventare
+            coordinate. Un punto compare solo dopo una
+            registrazione esplicita.
+        </p>
+
+    </div>
+
+    <div
+      id="status"
+      class="badge">
+        ● CHECK
+    </div>
+
+</section>
+
+<section class="kpis">
+
+    <div class="kpi">
+        <small>INTERVENTI</small>
+        <b id="kInterventi">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>AS-BUILT</small>
+        <b id="kAsbuilt">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>PROGETTI</small>
+        <b id="kProjects">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>PUNTI SPAZIALI</small>
+        <b id="kAnchors">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>COMPONENTI DA POSIZIONARE</small>
+        <b id="kComponents">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>EVIDENZE DA POSIZIONARE</small>
+        <b id="kEvidence">—</b>
+    </div>
+
+</section>
+
+
+<div class="layout">
+
+<section class="mapCard">
+
+    <div id="map"></div>
+
+    <div class="toolbar">
+
+        <select
+          id="site"
+          onchange="refresh()">
+
+            <option value="">
+                Tutti i cantieri
+            </option>
+
+        </select>
+
+        <button
+          id="btnAsbuilt"
+          class="layer on"
+          onclick="toggleLayer('asbuilt')">
+            AS-BUILT
+        </button>
+
+        <button
+          id="btnProject"
+          class="layer on"
+          onclick="toggleLayer('project')">
+            PROGETTO
+        </button>
+
+        <button
+          id="btnAnchor"
+          class="layer on"
+          onclick="toggleLayer('anchor')">
+            PUNTI
+        </button>
+
+    </div>
+
+    <div
+      id="positionBanner"
+      class="positionBanner">
+    </div>
+
+</section>
+
+
+<aside class="side">
+
+    <section class="card">
+
+        <h2>
+            COMPONENTI NON POSIZIONATI
+        </h2>
+
+        <div
+          id="componentsList"
+          class="list">
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h2>
+            EVIDENZE NON POSIZIONATE
+        </h2>
+
+        <div
+          id="evidenceList"
+          class="list">
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h2>
+            VISION FOUNDATION
+        </h2>
+
+        <div class="visionState">
+            AI ANALYSIS: NON ATTIVA.<br>
+            Questa schermata prepara il contesto tecnico
+            e visuale per una futura pipeline Vision/AI.
+        </div>
+
+        <select
+          id="visionAsset"
+          onchange="loadVision()">
+
+            <option value="">
+                Seleziona intervento
+            </option>
+
+        </select>
+
+        <div
+          id="visionContext"
+          style="margin-top:10px">
+        </div>
+
+    </section>
+
+</aside>
+
+</div>
+
+</main>
+
+<script>
+
+let twin=null;
+let mapReady=false;
+let pending=null;
+
+let visibility={
+    asbuilt:true,
+    project:true,
+    anchor:true
+};
+
+
+/* ==========================================================
+   MAP
+   ========================================================== */
+
+const map=
+    new maplibregl.Map({
+
+        container:'map',
+
+        style:{
+            version:8,
+
+            sources:{
+                satellite:{
+                    type:'raster',
+
+                    tiles:[
+                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    ],
+
+                    tileSize:256
+                }
+            },
+
+            layers:[
+                {
+                    id:'satellite',
+                    type:'raster',
+                    source:'satellite'
+                }
+            ]
+        },
+
+        center:[
+            7.68625,
+            45.07035
+        ],
+
+        zoom:12,
+
+        pitch:50,
+
+        bearing:-15
+    });
+
+
+map.addControl(
+    new maplibregl.NavigationControl(),
+    'bottom-right'
+);
+
+
+map.on('load',()=>{
+
+    mapReady=true;
+
+
+    map.addSource(
+        'asbuilt',
+        {
+            type:'geojson',
+            data:emptyCollection()
+        }
+    );
+
+
+    map.addLayer({
+
+        id:'asbuilt-line',
+
+        type:'line',
+
+        source:'asbuilt',
+
+        paint:{
+            'line-color':'#20e39a',
+            'line-width':6
+        }
+    });
+
+
+    map.addSource(
+        'project',
+        {
+            type:'geojson',
+            data:emptyCollection()
+        }
+    );
+
+
+    map.addLayer({
+
+        id:'project-line',
+
+        type:'line',
+
+        source:'project',
+
+        paint:{
+            'line-color':'#25c8ef',
+            'line-width':4,
+            'line-dasharray':[2,2]
+        }
+    });
+
+
+    map.addSource(
+        'anchors',
+        {
+            type:'geojson',
+            data:emptyCollection()
+        }
+    );
+
+
+    map.addLayer({
+
+        id:'anchors-circle',
+
+        type:'circle',
+
+        source:'anchors',
+
+        paint:{
+
+            'circle-radius':9,
+
+            'circle-color':[
+                'match',
+                [
+                    'get',
+                    'entity_type'
+                ],
+
+                'component',
+                '#ff9e1c',
+
+                'evidence',
+                '#c178ff',
+
+                'anomaly',
+                '#ff5964',
+
+                '#ffffff'
+            ],
+
+            'circle-stroke-color':
+                '#ffffff',
+
+            'circle-stroke-width':
+                2
+        }
+    });
+
+
+    map.on(
+        'click',
+        'anchors-circle',
+        event=>{
+
+            if(pending){
+                return;
+            }
+
+            const f=
+                event
+                    .features
+                    ?.[0];
+
+            if(!f){
+                return;
+            }
+
+            const p=
+                f.properties || {};
+
+            new maplibregl
+                .Popup()
+                .setLngLat(
+                    event.lngLat
+                )
+                .setHTML(
+                    '<b>'+
+                    esc(
+                        p.label ||
+                        p.entity_type
+                    )+
+                    '</b><br>'+
+                    esc(
+                        p.entity_type
+                    )+
+                    '<br>'+
+                    esc(
+                        p.id_intervento
+                    )
+                )
+                .addTo(map);
+        }
+    );
+
+
+    map.on(
+        'click',
+        event=>{
+
+            if(!pending){
+                return;
+            }
+
+            saveAnchor(
+                event.lngLat.lng,
+                event.lngLat.lat
+            );
+        }
+    );
+
+
+    refresh();
+});
+
+
+function emptyCollection(){
+
+    return {
+        type:'FeatureCollection',
+        features:[]
+    };
+}
+
+
+/* ==========================================================
+   API
+   ========================================================== */
+
+async function api(
+    url,
+    options={}
+){
+
+    const response=
+        await fetch(
+            url,
+            {
+                credentials:
+                    'same-origin',
+                ...options
+            }
+        );
+
+
+    if(response.status===401){
+
+        location.href='/';
+
+        throw new Error(
+            'Sessione scaduta'
+        );
+    }
+
+
+    const text=
+        await response.text();
+
+    let data={};
+
+    try{
+        data=
+            text
+                ? JSON.parse(text)
+                : {};
+    }catch{
+        data={};
+    }
+
+
+    if(!response.ok){
+
+        throw new Error(
+            data.error ||
+            (
+                'HTTP '+
+                response.status
+            )
+        );
+    }
+
+
+    return data;
+}
+
+
+/* ==========================================================
+   REFRESH
+   ========================================================== */
+
+async function refresh(){
+
+    if(!mapReady){
+        return;
+    }
+
+
+    try{
+
+        const site=
+            document
+                .getElementById(
+                    'site'
+                )
+                .value;
+
+
+        const query=
+            site
+                ? '?cantiere='+
+                    encodeURIComponent(
+                        site
+                    )
+                : '';
+
+
+        twin=
+            await api(
+                '/api/spatial-twin'+
+                query
+            );
+
+
+        map
+            .getSource('asbuilt')
+            .setData(
+                twin
+                    .feature_collections
+                    .asbuilt
+            );
+
+
+        map
+            .getSource('project')
+            .setData(
+                twin
+                    .feature_collections
+                    .project
+            );
+
+
+        map
+            .getSource('anchors')
+            .setData(
+                twin
+                    .feature_collections
+                    .anchors
+            );
+
+
+        renderKpi();
+        renderUnpositioned();
+        renderVisionAssets();
+        fitTwin();
+
+
+        document
+            .getElementById(
+                'status'
+            )
+            .textContent=
+                '● OPERATIONAL';
+
+
+    }catch(error){
+
+        console.error(error);
+
+        document
+            .getElementById(
+                'status'
+            )
+            .textContent=
+                '● DEGRADED';
+    }
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+function renderKpi(){
+
+    const t=
+        twin?.totali ||
+        {};
+
+    setText(
+        'kInterventi',
+        t.interventi
+    );
+
+    setText(
+        'kAsbuilt',
+        t.asbuilt
+    );
+
+    setText(
+        'kProjects',
+        t.progetti
+    );
+
+    setText(
+        'kAnchors',
+        t.anchors
+    );
+
+    setText(
+        'kComponents',
+        t.componenti_non_posizionati
+    );
+
+    setText(
+        'kEvidence',
+        t.evidenze_non_posizionate
+    );
+}
+
+
+/* ==========================================================
+   UNPOSITIONED
+   ========================================================== */
+
+function renderUnpositioned(){
+
+    const components=
+        document
+            .getElementById(
+                'componentsList'
+            );
+
+    const evidence=
+        document
+            .getElementById(
+                'evidenceList'
+            );
+
+
+    components.innerHTML='';
+    evidence.innerHTML='';
+
+
+    const comp=
+        twin
+            ?.non_posizionati
+            ?.componenti ||
+        [];
+
+
+    if(!comp.length){
+
+        components.innerHTML=
+            '<div class="muted">'+
+            'Nessun componente da posizionare.'+
+            '</div>';
+
+    }else{
+
+        for(const item of comp){
+
+            components
+                .appendChild(
+                    buildSpatialItem(
+                        item,
+                        'component'
+                    )
+                );
+        }
+    }
+
+
+    const ev=
+        twin
+            ?.non_posizionati
+            ?.evidenze ||
+        [];
+
+
+    if(!ev.length){
+
+        evidence.innerHTML=
+            '<div class="muted">'+
+            'Nessuna evidenza da posizionare.'+
+            '</div>';
+
+    }else{
+
+        for(const item of ev){
+
+            const el=
+                buildSpatialItem(
+                    item,
+                    'evidence'
+                );
+
+
+            const actions=
+                el.querySelector(
+                    '.itemActions'
+                );
+
+
+            const preview=
+                document
+                    .createElement(
+                        'a'
+                    );
+
+            preview.href=
+                '/api/evidenze/'+
+                encodeURIComponent(
+                    item.entity_id
+                )+
+                '/file';
+
+            preview.target='_blank';
+
+            preview.textContent=
+                'APRI';
+
+
+            actions.appendChild(
+                preview
+            );
+
+            evidence.appendChild(el);
+        }
+    }
+}
+
+
+function buildSpatialItem(
+    item,
+    type
+){
+
+    const el=
+        document.createElement(
+            'div'
+        );
+
+    el.className='item';
+
+
+    const title=
+        document.createElement(
+            'strong'
+        );
+
+    title.textContent=
+        item.label ||
+        item.entity_id;
+
+
+    const meta=
+        document.createElement(
+            'div'
+        );
+
+    meta.className='muted';
+
+    meta.textContent=
+        item.id_intervento+
+        ' · '+
+        item.id_cantiere;
+
+
+    const actions=
+        document.createElement(
+            'div'
+        );
+
+    actions.className=
+        'itemActions';
+
+
+    const position=
+        document.createElement(
+            'button'
+        );
+
+    position.textContent=
+        'POSIZIONA';
+
+
+    position.onclick=
+        ()=>startPosition(
+            {
+                ...item,
+                entity_type:type
+            }
+        );
+
+
+    actions.appendChild(
+        position
+    );
+
+
+    el.append(
+        title,
+        meta,
+        actions
+    );
+
+
+    return el;
+}
+
+
+/* ==========================================================
+   POSITION
+   ========================================================== */
+
+function startPosition(item){
+
+    pending=item;
+
+
+    const banner=
+        document
+            .getElementById(
+                'positionBanner'
+            );
+
+
+    banner.style.display=
+        'block';
+
+
+    banner.innerHTML=
+
+        '<b>POSIZIONAMENTO ESPLICITO</b><br>'+
+        esc(
+            item.label ||
+            item.entity_id
+        )+
+        '<br>'+
+        'Tocca sulla mappa la posizione reale. '+
+        'Nessuna coordinata viene calcolata automaticamente.'+
+        '<br><br>'+
+        '<button onclick="cancelPosition()">'+
+        'ANNULLA'+
+        '</button>';
+}
+
+
+function cancelPosition(){
+
+    pending=null;
+
+    document
+        .getElementById(
+            'positionBanner'
+        )
+        .style
+        .display='none';
+}
+
+
+async function saveAnchor(
+    lng,
+    lat
+){
+
+    if(!pending){
+        return;
+    }
+
+
+    if(
+        !confirm(
+            'Confermare questa posizione per "'+
+            (
+                pending.label ||
+                pending.entity_id
+            )+
+            '"?'
+        )
+    ){
+        return;
+    }
+
+
+    const item=pending;
+
+
+    try{
+
+        await api(
+            '/api/spatial-anchors',
+            {
+                method:'POST',
+
+                headers:{
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify({
+
+                        id_intervento:
+                            item.id_intervento,
+
+                        entity_type:
+                            item.entity_type,
+
+                        entity_id:
+                            item.entity_id,
+
+                        label:
+                            item.label ||
+                            item.entity_id,
+
+                        lng,
+                        lat,
+
+                        source:
+                            'manual_map'
+                    })
+            }
+        );
+
+
+        cancelPosition();
+
+        await refresh();
+
+
+    }catch(error){
+
+        alert(
+            error.message
+        );
+    }
+}
+
+
+/* ==========================================================
+   VISION FOUNDATION
+   ========================================================== */
+
+function renderVisionAssets(){
+
+    const select=
+        document
+            .getElementById(
+                'visionAsset'
+            );
+
+    const current=
+        select.value;
+
+
+    select.innerHTML=
+        '<option value="">'+
+        'Seleziona intervento'+
+        '</option>';
+
+
+    for(
+        const item
+        of twin?.interventi || []
+    ){
+
+        const option=
+            document
+                .createElement(
+                    'option'
+                );
+
+        option.value=
+            item.id_intervento;
+
+        option.textContent=
+            item.id_intervento+
+            ' — '+
+            item.id_cantiere;
+
+
+        if(
+            option.value===
+            current
+        ){
+            option.selected=true;
+        }
+
+
+        select.appendChild(
+            option
+        );
+    }
+}
+
+
+async function loadVision(){
+
+    const id=
+        document
+            .getElementById(
+                'visionAsset'
+            )
+            .value;
+
+
+    const box=
+        document
+            .getElementById(
+                'visionContext'
+            );
+
+
+    if(!id){
+
+        box.innerHTML='';
+        return;
+    }
+
+
+    box.innerHTML=
+        '<div class="muted">'+
+        'Caricamento contesto...'+
+        '</div>';
+
+
+    try{
+
+        const data=
+            await api(
+                '/api/vision-context/'+
+                encodeURIComponent(id)
+            );
+
+
+        let html=
+
+            '<div class="item">'+
+
+                '<strong>'+
+                esc(
+                    data.id_intervento
+                )+
+                '</strong>'+
+
+                '<div class="muted">'+
+                esc(
+                    data.id_cantiere
+                )+
+                '</div>'+
+
+                '<div class="muted">'+
+                'Componenti: '+
+                (
+                    data
+                        .contesto
+                        ?.componenti
+                        ?.length ||
+                    0
+                )+
+                ' · Evidenze: '+
+                (
+                    data
+                        .evidenze
+                        ?.length ||
+                    0
+                )+
+                ' · Anchor: '+
+                (
+                    data
+                        .spatial_anchors
+                        ?.length ||
+                    0
+                )+
+                '</div>'+
+
+            '</div>';
+
+
+        html+=
+            '<div class="visionState">'+
+            '<b>VISION / AI</b><br>'+
+            'FOUNDATION ONLY — nessuna analisi automatica attiva.'+
+            '</div>';
+
+
+        const photos=
+            (
+                data.evidenze ||
+                []
+            )
+            .filter(
+                x=>
+                    x.tipo ===
+                    'foto'
+            );
+
+
+        if(photos.length){
+
+            html+=
+                '<div class="visionImages">';
+
+
+            for(
+                const photo
+                of photos.slice(0,8)
+            ){
+
+                html+=
+
+                    '<a '+
+                    'class="preview" '+
+                    'href="'+
+                    esc(
+                        photo.file_url
+                    )+
+                    '" target="_blank">'+
+
+                        '<img '+
+                        'src="'+
+                        esc(
+                            photo.file_url
+                        )+
+                        '" alt="">'+
+
+                        '<div>'+
+                        esc(
+                            photo.nome_file
+                        )+
+                        '</div>'+
+
+                    '</a>';
+            }
+
+
+            html+='</div>';
+
+        }else{
+
+            html+=
+                '<div class="muted">'+
+                'Nessuna fotografia collegata.'+
+                '</div>';
+        }
+
+
+        box.innerHTML=
+            html;
+
+
+    }catch(error){
+
+        box.innerHTML=
+            '<div class="muted">'+
+            esc(
+                error.message
+            )+
+            '</div>';
+    }
+}
+
+
+/* ==========================================================
+   MAP VISIBILITY
+   ========================================================== */
+
+function toggleLayer(type){
+
+    visibility[type]=
+        !visibility[type];
+
+
+    const config={
+
+        asbuilt:[
+            'asbuilt-line',
+            'btnAsbuilt'
+        ],
+
+        project:[
+            'project-line',
+            'btnProject'
+        ],
+
+        anchor:[
+            'anchors-circle',
+            'btnAnchor'
+        ]
+    };
+
+
+    const [
+        layer,
+        button
+    ]=
+        config[type];
+
+
+    if(map.getLayer(layer)){
+
+        map.setLayoutProperty(
+            layer,
+            'visibility',
+            visibility[type]
+                ? 'visible'
+                : 'none'
+        );
+    }
+
+
+    document
+        .getElementById(
+            button
+        )
+        .classList
+        .toggle(
+            'on',
+            visibility[type]
+        );
+}
+
+
+/* ==========================================================
+   FIT
+   ========================================================== */
+
+function fitTwin(){
+
+    const points=[];
+
+
+    const collections=[
+        twin
+            ?.feature_collections
+            ?.asbuilt,
+
+        twin
+            ?.feature_collections
+            ?.project,
+
+        twin
+            ?.feature_collections
+            ?.anchors
+    ];
+
+
+    for(const collection of collections){
+
+        for(
+            const feature
+            of collection?.features || []
+        ){
+
+            const g=
+                feature.geometry;
+
+            if(
+                g?.type ===
+                'Point'
+            ){
+
+                points.push(
+                    g.coordinates
+                );
+            }
+
+
+            if(
+                g?.type ===
+                'LineString'
+            ){
+
+                points.push(
+                    ...g.coordinates
+                );
+            }
+        }
+    }
+
+
+    if(!points.length){
+        return;
+    }
+
+
+    const valid=
+        points.filter(
+            p=>
+                Array.isArray(p)
+                &&
+                Number.isFinite(
+                    Number(p[0])
+                )
+                &&
+                Number.isFinite(
+                    Number(p[1])
+                )
+        );
+
+
+    if(!valid.length){
+        return;
+    }
+
+
+    const bounds=
+        valid.reduce(
+            (
+                b,
+                point
+            )=>
+                b.extend(point),
+
+            new maplibregl
+                .LngLatBounds(
+                    valid[0],
+                    valid[0]
+                )
+        );
+
+
+    map.fitBounds(
+        bounds,
+        {
+            padding:55,
+            maxZoom:18,
+            duration:600
+        }
+    );
+}
+
+
+/* ==========================================================
+   SITES
+   ========================================================== */
+
+async function loadSites(){
+
+    try{
+
+        const sites=
+            await api(
+                '/api/cantieri'
+            );
+
+
+        const select=
+            document
+                .getElementById(
+                    'site'
+                );
+
+
+        for(const site of sites){
+
+            const option=
+                document
+                    .createElement(
+                        'option'
+                    );
+
+            option.value=site;
+            option.textContent=site;
+
+            select.appendChild(
+                option
+            );
+        }
+
+    }catch(error){
+
+        console.error(error);
+    }
+}
+
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
+
+function setText(
+    id,
+    value
+){
+
+    document
+        .getElementById(id)
+        .textContent=
+            value ?? '—';
+}
+
+
+function esc(value){
+
+    return String(
+        value ?? ''
+    )
+    .replaceAll(
+        '&',
+        '&amp;'
+    )
+    .replaceAll(
+        '<',
+        '&lt;'
+    )
+    .replaceAll(
+        '>',
+        '&gt;'
+    )
+    .replaceAll(
+        '"',
+        '&quot;'
+    )
+    .replaceAll(
+        "'",
+        '&#039;'
+    );
+}
+
+
+/* ==========================================================
+   START
+   ========================================================== */
+
+loadSites();
+
+</script>
+
+</body>
+
+</html>

@@ -325,7 +325,8 @@ app.get('/api/health', async (req, res) => {
             server_guard_v1: true,
             resilience_v1: true,
             master_foundation_v1: true,
-            network_memory_v1: true
+            network_memory_v1: true,
+            spatial_vision_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -2466,6 +2467,1624 @@ app.get(
         res.sendFile(
             __dirname+
             '/network_memory_v1.html'
+        );
+    }
+);
+
+
+
+// ============================================================
+// NMA BUILD OS — SPATIAL VISION v1
+//
+// Coordinate spaziali ESPLICITE:
+// - nessuna posizione componente viene inventata
+// - nessuna posizione evidenza viene inventata
+// - gli anchor esistono solo dopo registrazione esplicita
+//
+// Vision Foundation:
+// aggrega dati/evidenze/asset per futura analisi,
+// ma NON dichiara alcuna AI attiva.
+// ============================================================
+
+const SpatialAnchorSchema =
+    new mongoose.Schema({
+
+        id_anchor:{
+            type:String,
+            required:true,
+            unique:true,
+            index:true
+        },
+
+        id_intervento:{
+            type:String,
+            required:true,
+            index:true
+        },
+
+        id_cantiere:{
+            type:String,
+            required:true,
+            index:true
+        },
+
+        entity_type:{
+            type:String,
+
+            enum:[
+                'component',
+                'evidence',
+                'anomaly'
+            ],
+
+            required:true,
+            index:true
+        },
+
+        entity_id:{
+            type:String,
+            required:true
+        },
+
+        label:{
+            type:String,
+            default:''
+        },
+
+        geometry:{
+
+            type:{
+                type:String,
+                enum:['Point'],
+                default:'Point',
+                required:true
+            },
+
+            coordinates:{
+                type:[Number],
+                required:true
+            }
+        },
+
+        source:{
+            type:String,
+
+            enum:[
+                'manual_map',
+                'field_gps'
+            ],
+
+            default:'manual_map'
+        },
+
+        accuracy_m:{
+            type:Number,
+            default:null
+        },
+
+        note:{
+            type:String,
+            default:''
+        },
+
+        created_by_role:{
+            type:String,
+            default:''
+        },
+
+        created_at:{
+            type:Date,
+            default:Date.now
+        },
+
+        updated_at:{
+            type:Date,
+            default:Date.now
+        }
+
+    },{
+        collection:
+            'spatial_anchors'
+    });
+
+
+SpatialAnchorSchema.index(
+    {
+        id_intervento:1,
+        entity_type:1,
+        entity_id:1
+    },
+    {
+        unique:true
+    }
+);
+
+
+const SpatialAnchor =
+    mongoose.models.SpatialAnchor ||
+    mongoose.model(
+        'SpatialAnchor',
+        SpatialAnchorSchema,
+        'spatial_anchors'
+    );
+
+
+function nmaSpatialPublic(anchor){
+
+    if(!anchor){
+        return null;
+    }
+
+    return {
+
+        id_anchor:
+            String(
+                anchor.id_anchor ||
+                ''
+            ),
+
+        id_intervento:
+            String(
+                anchor.id_intervento ||
+                ''
+            ),
+
+        id_cantiere:
+            String(
+                anchor.id_cantiere ||
+                ''
+            ),
+
+        entity_type:
+            String(
+                anchor.entity_type ||
+                ''
+            ),
+
+        entity_id:
+            String(
+                anchor.entity_id ||
+                ''
+            ),
+
+        label:
+            String(
+                anchor.label ||
+                ''
+            ),
+
+        geometry:
+            anchor.geometry || null,
+
+        source:
+            String(
+                anchor.source ||
+                ''
+            ),
+
+        accuracy_m:
+            anchor.accuracy_m == null
+                ? null
+                : Number(
+                    anchor.accuracy_m
+                ),
+
+        note:
+            String(
+                anchor.note ||
+                ''
+            ),
+
+        created_at:
+            anchor.created_at || null,
+
+        updated_at:
+            anchor.updated_at || null
+    };
+}
+
+
+// ============================================================
+// DIGITAL TWIN SPATIAL READ MODEL
+// ============================================================
+
+app.get(
+    '/api/spatial-twin',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                ).trim();
+
+
+            const filtroInterventi={};
+            const filtroCantiere={};
+
+            if(cantiere){
+
+                filtroInterventi
+                    .id_cantiere=
+                        cantiere;
+
+                filtroCantiere
+                    .id_cantiere=
+                        cantiere;
+            }
+
+
+            const interventi=
+                await InterventoCampo
+                    .find(
+                        filtroInterventi
+                    )
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(500)
+                    .lean();
+
+
+            const ids=
+                interventi
+                    .map(
+                        x=>
+                            String(
+                                x.id_intervento ||
+                                ''
+                            )
+                    )
+                    .filter(Boolean);
+
+
+            const [
+                evidenze,
+                anchors,
+                tratti,
+                progetti
+            ]=
+                await Promise.all([
+
+                    ids.length
+                        ? Evidenza
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .sort({
+                                creato_il:-1
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? SpatialAnchor
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .lean()
+                        : [],
+
+                    TrattoRete
+                        .find(
+                            filtroCantiere
+                        )
+                        .lean(),
+
+                    ProgettoRiferimento
+                        .find(
+                            filtroCantiere
+                        )
+                        .lean()
+                ]);
+
+
+            const evidenceMap=
+                new Map();
+
+            for(const evidenza of evidenze){
+
+                const id=
+                    String(
+                        evidenza
+                            .id_intervento ||
+                        ''
+                    );
+
+                if(
+                    !evidenceMap
+                        .has(id)
+                ){
+                    evidenceMap
+                        .set(
+                            id,
+                            []
+                        );
+                }
+
+                evidenceMap
+                    .get(id)
+                    .push(evidenza);
+            }
+
+
+            const anchorKeys=
+                new Set(
+                    anchors.map(
+                        a=>
+                            String(
+                                a.id_intervento
+                            )+
+                            '::'+
+                            String(
+                                a.entity_type
+                            )+
+                            '::'+
+                            String(
+                                a.entity_id
+                            )
+                    )
+                );
+
+
+            const componentiNonPosizionati=[];
+            const evidenzeNonPosizionate=[];
+
+
+            const interventiPublic=
+                interventi.map(
+                    intervento=>{
+
+                        const id=
+                            String(
+                                intervento
+                                    .id_intervento ||
+                                ''
+                            );
+
+                        const componenti=
+                            Array.isArray(
+                                intervento
+                                    .componenti
+                            )
+                                ? intervento
+                                    .componenti
+                                    .map(
+                                        x=>
+                                            String(
+                                                x ||
+                                                ''
+                                            ).trim()
+                                    )
+                                    .filter(Boolean)
+                                : [];
+
+
+                        for(const componente of componenti){
+
+                            const key=
+                                id+
+                                '::component::'+
+                                componente;
+
+                            if(
+                                !anchorKeys
+                                    .has(key)
+                            ){
+
+                                componentiNonPosizionati
+                                    .push({
+
+                                        id_intervento:id,
+
+                                        id_cantiere:
+                                            String(
+                                                intervento
+                                                    .id_cantiere ||
+                                                ''
+                                            ),
+
+                                        entity_id:
+                                            componente,
+
+                                        label:
+                                            componente
+                                    });
+                            }
+                        }
+
+
+                        const ev=
+                            evidenceMap
+                                .get(id) ||
+                            [];
+
+
+                        for(const evidenza of ev){
+
+                            const evidenceId=
+                                String(
+                                    evidenza
+                                        .id_evidenza ||
+                                    ''
+                                );
+
+                            const key=
+                                id+
+                                '::evidence::'+
+                                evidenceId;
+
+                            if(
+                                !anchorKeys
+                                    .has(key)
+                            ){
+
+                                evidenzeNonPosizionate
+                                    .push({
+
+                                        id_intervento:id,
+
+                                        id_cantiere:
+                                            String(
+                                                intervento
+                                                    .id_cantiere ||
+                                                ''
+                                            ),
+
+                                        entity_id:
+                                            evidenceId,
+
+                                        label:
+                                            String(
+                                                evidenza
+                                                    .nome_file ||
+                                                'Evidenza'
+                                            ),
+
+                                        tipo:
+                                            String(
+                                                evidenza
+                                                    .tipo ||
+                                                ''
+                                            )
+                                    });
+                            }
+                        }
+
+
+                        return {
+
+                            id_intervento:id,
+
+                            id_cantiere:
+                                String(
+                                    intervento
+                                        .id_cantiere ||
+                                    ''
+                                ),
+
+                            stato:
+                                String(
+                                    intervento
+                                        .stato ||
+                                    ''
+                                ),
+
+                            componenti,
+
+                            evidenze:
+                                ev.map(
+                                    evidenza=>({
+
+                                        id_evidenza:
+                                            String(
+                                                evidenza
+                                                    .id_evidenza ||
+                                                ''
+                                            ),
+
+                                        nome_file:
+                                            String(
+                                                evidenza
+                                                    .nome_file ||
+                                                ''
+                                            ),
+
+                                        tipo:
+                                            String(
+                                                evidenza
+                                                    .tipo ||
+                                                ''
+                                            ),
+
+                                        mime_type:
+                                            String(
+                                                evidenza
+                                                    .mime_type ||
+                                                ''
+                                            ),
+
+                                        sha256:
+                                            String(
+                                                evidenza
+                                                    .sha256 ||
+                                                ''
+                                            )
+                                    })
+                                ),
+
+                            anomalia:
+                                intervento
+                                    .anomalia ||
+                                {
+                                    presente:false,
+                                    descrizione:''
+                                }
+                        };
+                    }
+                );
+
+
+            const asbuiltFeatures=
+                tratti
+                    .filter(
+                        tratto=>
+                            tratto
+                                ?.geometry
+                                ?.type ===
+                            'LineString'
+                            &&
+                            Array.isArray(
+                                tratto
+                                    .geometry
+                                    .coordinates
+                            )
+                            &&
+                            tratto
+                                .geometry
+                                .coordinates
+                                .length >= 2
+                    )
+                    .map(
+                        tratto=>({
+
+                            type:'Feature',
+
+                            geometry:
+                                tratto.geometry,
+
+                            properties:{
+
+                                layer:
+                                    'asbuilt',
+
+                                id_tratto:
+                                    String(
+                                        tratto
+                                            .id_tratto ||
+                                        ''
+                                    ),
+
+                                id_intervento:
+                                    String(
+                                        tratto
+                                            .id_tratto ||
+                                        ''
+                                    )
+                                    .replace(
+                                        /^ASB-/,
+                                        ''
+                                    ),
+
+                                id_cantiere:
+                                    String(
+                                        tratto
+                                            .id_cantiere ||
+                                        ''
+                                    ),
+
+                                sorgente_gps:
+                                    String(
+                                        tratto
+                                            .sorgente_gps ||
+                                        ''
+                                    ),
+
+                                qualita_gps:
+                                    String(
+                                        tratto
+                                            .qualita_gps ||
+                                        ''
+                                    )
+                            }
+                        })
+                    );
+
+
+            const projectFeatures=
+                progetti
+                    .filter(
+                        progetto=>
+                            progetto
+                                ?.geometry
+                                ?.type ===
+                            'LineString'
+                            &&
+                            Array.isArray(
+                                progetto
+                                    .geometry
+                                    .coordinates
+                            )
+                    )
+                    .map(
+                        progetto=>({
+
+                            type:'Feature',
+
+                            geometry:
+                                progetto.geometry,
+
+                            properties:{
+
+                                layer:
+                                    'project',
+
+                                id_intervento:
+                                    String(
+                                        progetto
+                                            .id_intervento ||
+                                        ''
+                                    ),
+
+                                id_cantiere:
+                                    String(
+                                        progetto
+                                            .id_cantiere ||
+                                        ''
+                                    ),
+
+                                materiale:
+                                    String(
+                                        progetto
+                                            .materiale ||
+                                        ''
+                                    ),
+
+                                diametro_mm:
+                                    Number(
+                                        progetto
+                                            .diametro_mm ||
+                                        0
+                                    )
+                            }
+                        })
+                    );
+
+
+            const anchorFeatures=
+                anchors
+                    .filter(
+                        anchor=>
+                            anchor
+                                ?.geometry
+                                ?.type ===
+                            'Point'
+                            &&
+                            Array.isArray(
+                                anchor
+                                    .geometry
+                                    .coordinates
+                            )
+                            &&
+                            anchor
+                                .geometry
+                                .coordinates
+                                .length === 2
+                    )
+                    .map(
+                        anchor=>({
+
+                            type:'Feature',
+
+                            geometry:
+                                anchor.geometry,
+
+                            properties:{
+
+                                layer:
+                                    'spatial_anchor',
+
+                                id_anchor:
+                                    String(
+                                        anchor
+                                            .id_anchor ||
+                                        ''
+                                    ),
+
+                                id_intervento:
+                                    String(
+                                        anchor
+                                            .id_intervento ||
+                                        ''
+                                    ),
+
+                                id_cantiere:
+                                    String(
+                                        anchor
+                                            .id_cantiere ||
+                                        ''
+                                    ),
+
+                                entity_type:
+                                    String(
+                                        anchor
+                                            .entity_type ||
+                                        ''
+                                    ),
+
+                                entity_id:
+                                    String(
+                                        anchor
+                                            .entity_id ||
+                                        ''
+                                    ),
+
+                                label:
+                                    String(
+                                        anchor
+                                            .label ||
+                                        ''
+                                    ),
+
+                                source:
+                                    String(
+                                        anchor
+                                            .source ||
+                                        ''
+                                    )
+                            }
+                        })
+                    );
+
+
+            return res.json({
+
+                ok:true,
+
+                feature_collections:{
+
+                    asbuilt:{
+                        type:'FeatureCollection',
+                        features:
+                            asbuiltFeatures
+                    },
+
+                    project:{
+                        type:'FeatureCollection',
+                        features:
+                            projectFeatures
+                    },
+
+                    anchors:{
+                        type:'FeatureCollection',
+                        features:
+                            anchorFeatures
+                    }
+                },
+
+                interventi:
+                    interventiPublic,
+
+                non_posizionati:{
+
+                    componenti:
+                        componentiNonPosizionati,
+
+                    evidenze:
+                        evidenzeNonPosizionate
+                },
+
+                totali:{
+
+                    interventi:
+                        interventiPublic.length,
+
+                    asbuilt:
+                        asbuiltFeatures.length,
+
+                    progetti:
+                        projectFeatures.length,
+
+                    anchors:
+                        anchorFeatures.length,
+
+                    componenti_non_posizionati:
+                        componentiNonPosizionati
+                            .length,
+
+                    evidenze_non_posizionate:
+                        evidenzeNonPosizionate
+                            .length
+                },
+
+                regole_spaziali:{
+
+                    coordinate_inferite:
+                        false,
+
+                    componenti_inferiti:
+                        false,
+
+                    evidenze_inferite:
+                        false,
+
+                    nota:
+                        'I punti vengono mostrati '+
+                        'solo quando una posizione '+
+                        'è stata registrata esplicitamente.'
+                },
+
+                generato_il:
+                    new Date().toISOString()
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Spatial Twin:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Spatial Twin'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// REGISTRA / AGGIORNA ANCHOR SPAZIALE
+// ============================================================
+
+app.post(
+    '/api/spatial-anchors',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const idIntervento=
+                String(
+                    req.body
+                        ?.id_intervento ||
+                    ''
+                ).trim();
+
+            const entityType=
+                String(
+                    req.body
+                        ?.entity_type ||
+                    ''
+                ).trim();
+
+            const entityId=
+                String(
+                    req.body
+                        ?.entity_id ||
+                    ''
+                ).trim();
+
+            const label=
+                String(
+                    req.body
+                        ?.label ||
+                    ''
+                )
+                .trim()
+                .slice(
+                    0,
+                    180
+                );
+
+            const lng=
+                Number(
+                    req.body?.lng
+                );
+
+            const lat=
+                Number(
+                    req.body?.lat
+                );
+
+            const source=
+                String(
+                    req.body
+                        ?.source ||
+                    'manual_map'
+                ).trim();
+
+
+            const allowedTypes=[
+                'component',
+                'evidence',
+                'anomaly'
+            ];
+
+            const allowedSources=[
+                'manual_map',
+                'field_gps'
+            ];
+
+
+            if(
+                !idIntervento ||
+                !entityId ||
+                !allowedTypes
+                    .includes(
+                        entityType
+                    )
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Entità spaziale non valida'
+                });
+            }
+
+
+            if(
+                !Number.isFinite(lng) ||
+                !Number.isFinite(lat) ||
+                lng < -180 ||
+                lng > 180 ||
+                lat < -90 ||
+                lat > 90
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Coordinate non valide'
+                });
+            }
+
+
+            if(
+                !allowedSources
+                    .includes(source)
+            ){
+
+                return res.status(422).json({
+                    ok:false,
+                    error:
+                        'Sorgente posizione non valida'
+                });
+            }
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:
+                            idIntervento
+                    });
+
+
+            if(!intervento){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+
+            if(
+                entityType ===
+                'component'
+            ){
+
+                const componenti=
+                    Array.isArray(
+                        intervento
+                            .componenti
+                    )
+                        ? intervento
+                            .componenti
+                            .map(
+                                x=>
+                                    String(
+                                        x ||
+                                        ''
+                                    )
+                            )
+                        : [];
+
+
+                if(
+                    !componenti
+                        .includes(
+                            entityId
+                        )
+                ){
+
+                    return res.status(404).json({
+                        ok:false,
+                        error:
+                            'Componente non collegato '+
+                            'all’intervento'
+                    });
+                }
+            }
+
+
+            if(
+                entityType ===
+                'evidence'
+            ){
+
+                const evidenza=
+                    await Evidenza
+                        .findOne({
+
+                            id_evidenza:
+                                entityId,
+
+                            id_intervento:
+                                idIntervento
+                        })
+                        .lean();
+
+
+                if(!evidenza){
+
+                    return res.status(404).json({
+                        ok:false,
+                        error:
+                            'Evidenza non collegata '+
+                            'all’intervento'
+                    });
+                }
+            }
+
+
+            if(
+                entityType ===
+                'anomaly'
+            ){
+
+                if(
+                    intervento
+                        ?.anomalia
+                        ?.presente !==
+                    true
+                ){
+
+                    return res.status(409).json({
+                        ok:false,
+                        error:
+                            'Nessuna anomalia '+
+                            'registrata per questo intervento'
+                    });
+                }
+            }
+
+
+            const filtro={
+
+                id_intervento:
+                    idIntervento,
+
+                entity_type:
+                    entityType,
+
+                entity_id:
+                    entityId
+            };
+
+
+            const existing=
+                await SpatialAnchor
+                    .findOne(filtro)
+                    .lean();
+
+
+            const now=
+                new Date();
+
+
+            const anchor=
+                await SpatialAnchor
+                    .findOneAndUpdate(
+
+                        filtro,
+
+                        {
+                            $set:{
+
+                                id_cantiere:
+                                    intervento
+                                        .id_cantiere,
+
+                                label,
+
+                                geometry:{
+                                    type:'Point',
+                                    coordinates:[
+                                        lng,
+                                        lat
+                                    ]
+                                },
+
+                                source,
+
+                                accuracy_m:
+                                    req.body
+                                        ?.accuracy_m ==
+                                    null
+                                        ? null
+                                        : Number(
+                                            req.body
+                                                .accuracy_m
+                                        ),
+
+                                note:
+                                    String(
+                                        req.body
+                                            ?.note ||
+                                        ''
+                                    )
+                                    .trim()
+                                    .slice(
+                                        0,
+                                        1000
+                                    ),
+
+                                updated_at:
+                                    now
+                            },
+
+                            $setOnInsert:{
+
+                                id_anchor:
+                                    crypto
+                                        .randomUUID(),
+
+                                created_by_role:
+                                    String(
+                                        req.session
+                                            ?.role ||
+                                        ''
+                                    ),
+
+                                created_at:
+                                    now
+                            }
+                        },
+
+                        {
+                            upsert:true,
+                            new:true,
+                            runValidators:true
+                        }
+                    );
+
+
+            await registraAudit({
+
+                evento:
+                    existing
+                        ? 'SPATIAL_ANCHOR_UPDATED'
+                        : 'SPATIAL_ANCHOR_CREATED',
+
+                intervento,
+
+                ruolo:
+                    String(
+                        req.session
+                            ?.role ||
+                        ''
+                    ),
+
+                origine:
+                    'spatial_twin',
+
+                stato:
+                    intervento.stato,
+
+                note:
+                    entityType+
+                    ' — '+
+                    entityId+
+                    ' — posizione esplicita'
+            });
+
+
+            return res.status(
+                existing
+                    ? 200
+                    : 201
+            ).json({
+
+                ok:true,
+
+                aggiornato:
+                    !!existing,
+
+                anchor:
+                    nmaSpatialPublic(
+                        anchor
+                    )
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Spatial Anchor:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore registrazione posizione spaziale'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// VISION FOUNDATION CONTEXT
+//
+// Costruisce un contesto strutturato.
+// NON esegue computer vision.
+// NON genera diagnosi AI.
+// ============================================================
+
+app.get(
+    '/api/vision-context/:id',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(
+                    req.params.id ||
+                    ''
+                ).trim();
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean();
+
+
+            if(!intervento){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+
+            const [
+                evidenze,
+                anchors,
+                asbuilt,
+                progetto,
+                manutenzioni
+            ]=
+                await Promise.all([
+
+                    Evidenza
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            creato_il:1
+                        })
+                        .lean(),
+
+                    SpatialAnchor
+                        .find({
+                            id_intervento:id
+                        })
+                        .lean(),
+
+                    TrattoRete
+                        .findOne({
+                            id_tratto:
+                                'ASB-'+id
+                        })
+                        .lean(),
+
+                    ProgettoRiferimento
+                        .findOne({
+                            id_intervento:id
+                        })
+                        .lean(),
+
+                    ManutenzioneRete
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            aggiornata_il:-1
+                        })
+                        .lean()
+                ]);
+
+
+            return res.json({
+
+                ok:true,
+
+                id_intervento:id,
+
+                id_cantiere:
+                    String(
+                        intervento
+                            .id_cantiere ||
+                        ''
+                    ),
+
+                contesto:{
+
+                    operatore:
+                        String(
+                            intervento
+                                .operatore ||
+                            ''
+                        ),
+
+                    squadra:
+                        String(
+                            intervento
+                                .squadra ||
+                            ''
+                        ),
+
+                    tubazione:
+                        intervento
+                            .tubazione ||
+                        {},
+
+                    componenti:
+                        Array.isArray(
+                            intervento
+                                .componenti
+                        )
+                            ? intervento
+                                .componenti
+                            : [],
+
+                    scavo:
+                        intervento.scavo ||
+                        {},
+
+                    posa:
+                        intervento.posa ||
+                        {},
+
+                    misure:
+                        intervento.misure ||
+                        {},
+
+                    anomalia:
+                        intervento.anomalia ||
+                        {
+                            presente:false,
+                            descrizione:''
+                        },
+
+                    collaudo:
+                        intervento.collaudo ||
+                        {}
+                },
+
+                evidenze:
+                    evidenze.map(
+                        evidenza=>({
+
+                            id_evidenza:
+                                String(
+                                    evidenza
+                                        .id_evidenza ||
+                                    ''
+                                ),
+
+                            nome_file:
+                                String(
+                                    evidenza
+                                        .nome_file ||
+                                    ''
+                                ),
+
+                            tipo:
+                                String(
+                                    evidenza
+                                        .tipo ||
+                                    ''
+                                ),
+
+                            mime_type:
+                                String(
+                                    evidenza
+                                        .mime_type ||
+                                    ''
+                                ),
+
+                            sha256:
+                                String(
+                                    evidenza
+                                        .sha256 ||
+                                    ''
+                                ),
+
+                            file_url:
+                                '/api/evidenze/'+
+                                encodeURIComponent(
+                                    String(
+                                        evidenza
+                                            .id_evidenza ||
+                                        ''
+                                    )
+                                )+
+                                '/file'
+                        })
+                    ),
+
+                spatial_anchors:
+                    anchors.map(
+                        nmaSpatialPublic
+                    ),
+
+                asbuilt:
+                    asbuilt
+                        ? {
+                            geometry:
+                                asbuilt.geometry,
+
+                            sorgente_gps:
+                                asbuilt
+                                    .sorgente_gps ||
+                                '',
+
+                            qualita_gps:
+                                asbuilt
+                                    .qualita_gps ||
+                                '',
+
+                            accuratezza_media_m:
+                                Number(
+                                    asbuilt
+                                        .accuratezza_media_m ||
+                                    0
+                                )
+                        }
+                        : null,
+
+                progetto:
+                    progetto
+                        ? {
+                            geometry:
+                                progetto.geometry,
+
+                            materiale:
+                                progetto.materiale ||
+                                '',
+
+                            diametro_mm:
+                                Number(
+                                    progetto
+                                        .diametro_mm ||
+                                    0
+                                )
+                        }
+                        : null,
+
+                manutenzioni:
+                    manutenzioni.map(
+                        nmaManutenzionePublica
+                    ),
+
+                vision_ai:{
+
+                    enabled:false,
+
+                    status:
+                        'FOUNDATION_ONLY',
+
+                    analisi_automatica:
+                        false,
+
+                    diagnosi:
+                        null,
+
+                    nota:
+                        'Il contesto è pronto '+
+                        'per una futura pipeline Vision/AI, '+
+                        'ma nessuna analisi AI viene '+
+                        'attualmente dichiarata.'
+                }
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Vision Context:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Vision Foundation'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// SPATIAL TWIN UI
+// ============================================================
+
+app.get(
+    '/spatial-twin',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/spatial_twin_v1.html'
         );
     }
 );
