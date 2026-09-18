@@ -1,471 +1,277 @@
 <!doctype html>
 <html lang="it">
-
 <head>
-
 <meta charset="utf-8">
-
-<meta
- name="viewport"
- content="width=device-width,initial-scale=1,viewport-fit=cover"
->
-
-<meta name="theme-color" content="#03131c">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020d14">
 <title>NMA BUILD OS — Network Operations</title>
 
-<link
- rel="stylesheet"
- href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
->
+<link rel="stylesheet"
+ href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
 
 <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 
 <style>
-
 :root{
- --bg:#020d14;
+ --bg:#020c12;
  --panel:#031722;
- --panel2:#041d29;
- --card:#062330;
- --border:#11475a;
-
- --cyan:#18d8ff;
- --blue:#00a9ff;
- --green:#16e3a0;
- --orange:#ffad22;
- --red:#ff5265;
-
- --text:#f1fbff;
- --muted:#8eafbc;
+ --panel2:#05212d;
+ --border:#12485a;
+ --cyan:#15d9ff;
+ --cyan2:#009cff;
+ --green:#13e6a1;
+ --orange:#ffad23;
+ --red:#ff5162;
+ --text:#f2fbff;
+ --muted:#83a7b5;
 }
 
-*{
- box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
-html,
-body{
+html,body{
  margin:0;
  width:100%;
  height:100%;
  overflow:hidden;
-
  background:var(--bg);
  color:var(--text);
-
- font-family:
- -apple-system,
- BlinkMacSystemFont,
- "Segoe UI",
- sans-serif;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
-button,
-input{
- font:inherit;
-}
-
-/* =========================================================
-   APP
-   ========================================================= */
+button,input{font:inherit}
 
 .app{
  width:100%;
  height:100%;
-
  display:grid;
-
- grid-template-rows:
- 58px
- minmax(0,1fr)
- 28px;
+ grid-template-rows:58px minmax(0,1fr) 27px;
+ background:#020d14;
 }
 
-/* =========================================================
-   TOP BAR
-   ========================================================= */
-
-.topbar{
+/* TOP */
+.top{
  display:grid;
-
- grid-template-columns:
- 620px
- minmax(260px,1fr)
- auto;
-
+ grid-template-columns:570px minmax(260px,1fr) auto;
  align-items:center;
-
+ border-bottom:1px solid #115064;
+ background:linear-gradient(180deg,#041b27,#020e15);
  min-width:0;
-
- border-bottom:
- 1px solid var(--border);
-
- background:
- linear-gradient(
-  180deg,
-  #041824,
-  #020e15
- );
 }
 
-.brandLine{
+.brandWrap{
  height:100%;
-
  display:flex;
  align-items:center;
-
  min-width:0;
 }
 
-.logoIcon{
+.nmaMark{
  margin-left:17px;
-
- color:var(--cyan);
-
- font-size:28px;
- font-weight:1000;
-
- letter-spacing:-.12em;
+ color:#18ceff;
+ font-size:26px;
+ font-weight:950;
+ letter-spacing:-.09em;
 }
 
 .brand{
- margin-left:16px;
-
- padding-right:25px;
-
- border-right:
- 1px solid #326174;
-
- font-size:21px;
- font-weight:900;
-
+ margin-left:15px;
+ padding-right:22px;
+ border-right:1px solid #315c6c;
+ font-size:20px;
+ font-weight:850;
  white-space:nowrap;
 }
 
 .product{
- margin-left:25px;
-
- font-size:19px;
- font-weight:750;
-
+ margin-left:22px;
+ font-size:18px;
+ font-weight:720;
  white-space:nowrap;
 }
 
-.searchTop{
- min-width:0;
-
- padding:
- 0
- 15px;
+.search{
+ padding:0 18px;
 }
 
-.searchTop input{
+.search input{
  width:100%;
- height:36px;
-
- padding:
- 0
- 14px;
-
- border:
- 1px solid #23586c;
-
- border-radius:8px;
-
- outline:none;
-
- background:#041923;
+ height:35px;
+ padding:0 14px;
+ border:1px solid #20576c;
+ border-radius:7px;
+ outline:0;
+ background:#041a24;
  color:white;
-
- font-size:12px;
+ font-size:11px;
 }
 
-.statusTop{
- padding-right:16px;
-
+.topStatus{
+ padding-right:15px;
  display:flex;
  align-items:center;
-
- gap:17px;
-
+ gap:15px;
  white-space:nowrap;
-
- font-size:9px;
+ font-size:8px;
  font-weight:900;
 }
 
-.status{
- display:flex;
- align-items:center;
-
- gap:6px;
-}
-
-.statusDot{
+.dot{
  width:8px;
  height:8px;
-
+ display:inline-block;
+ margin-right:5px;
  border-radius:50%;
-
  background:currentColor;
-
- box-shadow:
- 0 0 10px currentColor;
+ box-shadow:0 0 10px currentColor;
 }
 
-.online{
- color:var(--green);
-}
-
-.audit{
- color:var(--cyan);
-}
-
-.simulated{
- color:#91adba;
-}
+.core{color:var(--green)}
+.audit{color:var(--cyan)}
+.sim{color:#91a9b4}
 
 .avatar{
- width:33px;
- height:33px;
-
+ width:32px;
+ height:32px;
  display:grid;
  place-items:center;
-
- border:
- 1px solid #3b7184;
-
+ border:1px solid #3a6a7d;
  border-radius:50%;
-
- background:#173848;
-
- font-size:11px;
+ background:#173746;
+ color:#fff;
 }
 
-/* =========================================================
-   WORKSPACE
-   ========================================================= */
-
+/* MAIN GRID */
 .workspace{
  min-height:0;
-
  display:grid;
-
- grid-template-columns:
- 200px
- minmax(0,1fr)
- 360px;
+ grid-template-columns:205px minmax(0,1fr) 365px;
 }
 
-/* =========================================================
-   LEFT
-   ========================================================= */
-
-.leftbar{
+/* LEFT */
+.left{
  min-height:0;
-
  overflow:auto;
-
- border-right:
- 1px solid var(--border);
-
- background:
- linear-gradient(
-  180deg,
-  #031822,
-  #02131c
- );
+ border-right:1px solid var(--border);
+ background:linear-gradient(180deg,#031822,#02121a);
 }
 
-.leftTitle{
- padding:
- 15px
- 15px
- 10px;
-
- font-size:15px;
+.panelTitle{
+ padding:14px 15px 8px;
+ font-size:14px;
  font-weight:800;
 }
 
-.layerList{
- padding:
- 0
- 8px;
-
+.menu{
+ padding:0 8px;
  display:grid;
-
  gap:3px;
 }
 
-.layerBtn{
- min-height:39px;
-
- padding:
- 0
- 11px;
-
+.menuBtn{
+ height:39px;
+ padding:0 10px;
  display:flex;
  align-items:center;
-
- gap:11px;
-
- border:
- 1px solid transparent;
-
+ gap:10px;
+ border:1px solid transparent;
  border-radius:6px;
-
  background:transparent;
- color:#b0c7d0;
-
+ color:#a4c0ca;
  cursor:pointer;
-
- font-size:11px;
-
- text-align:left;
+ font-size:10px;
+ text-decoration:none;
 }
 
-.layerBtn.active{
- border-color:
- rgba(24,216,255,.28);
-
- background:
- linear-gradient(
-  90deg,
-  rgba(0,159,210,.20),
-  rgba(3,28,39,.4)
- );
-
+.menuBtn.active{
  color:var(--cyan);
-
- box-shadow:
- inset 2px 0 0 var(--cyan);
+ border-color:rgba(20,210,255,.27);
+ background:linear-gradient(90deg,rgba(0,167,220,.20),rgba(3,28,39,.25));
+ box-shadow:inset 2px 0 0 var(--cyan);
 }
 
-.layerIcon{
+.ico{
  width:20px;
-
  text-align:center;
-
- font-size:17px;
+ font-size:15px;
 }
 
-.toggle{
+.switch{
  margin-left:auto;
-
- width:30px;
- height:17px;
-
+ width:29px;
+ height:16px;
  padding:2px;
-
  border-radius:999px;
-
- background:#345b6b;
+ background:#345967;
 }
 
-.toggle:after{
+.switch:after{
  content:"";
-
  display:block;
-
- width:13px;
- height:13px;
-
+ width:12px;
+ height:12px;
  border-radius:50%;
-
- background:#a8c1ca;
+ background:#aac0c8;
 }
 
-.layerBtn.active .toggle{
+.active .switch{
  background:var(--cyan);
 }
 
-.layerBtn.active .toggle:after{
+.active .switch:after{
  margin-left:13px;
-
- background:white;
+ background:#fff;
 }
 
 .toolTitle{
- padding:
- 17px
- 15px
- 7px;
-
- font-size:13px;
- font-weight:850;
+ padding:17px 15px 7px;
+ font-size:12px;
+ font-weight:800;
 }
 
-.locationCard{
- margin:
- 12px
- 9px;
-
+.place{
+ margin:13px 9px;
  padding:11px;
-
- border:
- 1px solid #17485a;
-
- border-radius:9px;
-
- background:
- linear-gradient(
-  145deg,
-  #082938,
-  #031823
- );
+ border:1px solid #154a5d;
+ border-radius:8px;
+ background:#05202c;
 }
 
-.locationCard small{
- color:#6d9eae;
-
+.place small{
+ color:#759ba8;
  font-size:8px;
+ letter-spacing:.08em;
 }
 
-.locationCard strong{
+.place strong{
  display:block;
-
- margin-top:3px;
-
- font-size:14px;
+ margin-top:4px;
+ font-size:13px;
 }
 
-.locationCard p{
- margin:
- 8px
- 0
- 0;
-
- color:#9cb8c2;
-
- font-size:9px;
+.place p{
+ margin:7px 0 0;
+ color:#91adb7;
+ font-size:8px;
  line-height:1.45;
 }
 
-/* =========================================================
-   CENTER
-   ========================================================= */
+.demoText{color:var(--orange)!important}
 
+/* CENTER */
 .center{
  min-width:0;
  min-height:0;
-
  display:grid;
-
- grid-template-rows:
- minmax(0,1fr)
- 205px;
+ grid-template-rows:minmax(0,1fr) 210px;
 }
 
 .mapWrap{
  position:relative;
-
  min-width:0;
  min-height:0;
-
  overflow:hidden;
+ background:#03131b;
 }
 
 #map{
@@ -473,261 +279,206 @@ input{
  inset:0;
 }
 
-.mapShade{
+.mapTint{
  position:absolute;
  inset:0;
-
  z-index:4;
-
  pointer-events:none;
-
  background:
- linear-gradient(
-  180deg,
-  rgba(0,15,22,.05),
-  transparent 24%,
-  transparent 70%,
-  rgba(0,10,15,.14)
- );
+  linear-gradient(180deg,rgba(0,14,20,.03),transparent 28%,transparent 70%,rgba(0,10,15,.13));
 }
 
-.mapHeader{
+.location{
  position:absolute;
-
  z-index:15;
-
- top:13px;
- left:13px;
-
- display:flex;
-
- gap:8px;
-}
-
-.mapCard{
- min-height:54px;
-
- padding:
- 9px
- 13px;
-
- border:
- 1px solid rgba(31,107,130,.50);
-
+ top:14px;
+ left:14px;
+ min-width:250px;
+ padding:9px 13px;
+ border:1px solid rgba(36,112,135,.50);
  border-radius:7px;
-
- background:
- rgba(3,22,31,.92);
-
- backdrop-filter:
- blur(10px);
+ background:rgba(2,19,27,.93);
+ backdrop-filter:blur(12px);
 }
 
-.mapCard strong{
+.location strong{
  display:block;
-
  font-size:17px;
 }
 
-.mapCard span{
+.location span{
  display:block;
-
  margin-top:3px;
-
- color:#94b4bf;
-
- font-size:9px;
+ color:#91b1bd;
+ font-size:8px;
 }
 
-.demoBadge{
- color:var(--orange) !important;
-}
+.location .orange{color:var(--orange)}
 
-.mapMetrics{
+.metrics{
  position:absolute;
-
  z-index:15;
-
- top:13px;
+ top:14px;
  right:65px;
-
  display:flex;
-
  gap:6px;
 }
 
 .metric{
- min-width:100px;
-
- padding:
- 8px
- 10px;
-
- border:
- 1px solid rgba(25,91,111,.46);
-
+ min-width:91px;
+ padding:8px 10px;
+ border:1px solid rgba(24,84,104,.55);
  border-radius:7px;
-
- background:
- rgba(3,22,31,.91);
-
- backdrop-filter:
- blur(10px);
+ background:rgba(2,19,27,.92);
+ backdrop-filter:blur(10px);
 }
 
 .metric strong{
  display:block;
-
  font-size:14px;
 }
 
 .metric small{
- color:#8caab5;
-
- font-size:8px;
+ color:#789fab;
+ font-size:7px;
+ text-transform:uppercase;
+ letter-spacing:.05em;
 }
 
-.assetLabel{
- padding:
- 8px
- 10px;
+.modeControls{
+ position:absolute;
+ z-index:18;
+ right:13px;
+ top:50%;
+ transform:translateY(-50%);
+ display:grid;
+ gap:5px;
+}
 
- border:
- 1px solid var(--cyan);
-
+.modeControls button{
+ width:43px;
+ height:35px;
+ border:1px solid #17566c;
  border-radius:6px;
-
- background:
- rgba(3,20,28,.95);
-
- color:white;
-
- font-size:10px;
+ background:rgba(2,20,29,.94);
+ color:#c3d9df;
+ cursor:pointer;
+ font-size:9px;
  font-weight:850;
+}
 
- box-shadow:
- 0 7px 18px rgba(0,0,0,.34);
+.modeControls button.active{
+ color:#001218;
+ background:var(--cyan);
+}
+
+.watermark{
+ position:absolute;
+ z-index:17;
+ left:50%;
+ bottom:16px;
+ transform:translateX(-50%);
+ padding:7px 11px;
+ border:1px solid rgba(255,173,35,.55);
+ border-radius:999px;
+ background:rgba(37,23,2,.89);
+ color:#ffc354;
+ font-size:8px;
+ font-weight:900;
+ letter-spacing:.07em;
+ white-space:nowrap;
+}
+
+.legend{
+ position:absolute;
+ z-index:16;
+ left:14px;
+ bottom:14px;
+ padding:8px 10px;
+ border:1px solid #17495a;
+ border-radius:6px;
+ background:rgba(2,18,26,.90);
+ font-size:8px;
+ color:#9bb7c1;
+}
+
+.legendLine{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ margin:3px 0;
+}
+
+.sw{
+ width:20px;
+ height:4px;
+ border-radius:999px;
+}
+
+.cyanSw{background:#00d3ff;box-shadow:0 0 8px #00cfff}
+.greenSw{background:#15e7a0;box-shadow:0 0 8px #15e7a0}
+.orangeSw{background:#ff9f18;box-shadow:0 0 8px #ff9f18}
+
+.mapError{
+ position:absolute;
+ z-index:50;
+ inset:0;
+ display:none;
+ place-items:center;
+ background:#03131b;
+ color:#ff7a88;
+ text-align:center;
+ padding:30px;
+}
+
+.mapError strong{
+ display:block;
+ font-size:18px;
+ margin-bottom:8px;
+}
+
+/* MAP LABELS */
+.assetLabel{
+ padding:7px 9px;
+ border:1px solid var(--cyan);
+ border-radius:6px;
+ background:rgba(1,14,21,.96);
+ color:#fff;
+ font-size:9px;
+ font-weight:800;
+ box-shadow:0 8px 20px rgba(0,0,0,.38),0 0 12px rgba(0,205,255,.10);
 }
 
 .assetLabel b{
  display:block;
-
  color:var(--cyan);
+ margin-bottom:2px;
 }
 
 .assetLabel.orange{
  border-color:var(--orange);
 }
 
-.assetLabel.orange b{
- color:var(--orange);
+.assetLabel.orange b{color:var(--orange)}
+
+.assetLabel.red{
+ border-color:var(--red);
 }
 
-.gpsBox{
- position:absolute;
+.assetLabel.red b{color:var(--red)}
 
- z-index:15;
-
- right:14px;
- bottom:14px;
-
- padding:
- 9px
- 12px;
-
- border:
- 1px solid rgba(30,96,116,.52);
-
- border-radius:7px;
-
- background:
- rgba(2,18,26,.91);
-
- color:#c3d7dd;
-
- font-size:9px;
-
- line-height:1.5;
-}
-
-.scaleBox{
- position:absolute;
-
- z-index:15;
-
- left:15px;
- bottom:16px;
-
- color:white;
-
- font-size:8px;
-}
-
-.scaleLine{
- width:190px;
-
- margin-top:5px;
-
- border-bottom:
- 2px solid white;
-}
-
-.demoWatermark{
- position:absolute;
-
- z-index:16;
-
- top:80px;
- left:50%;
-
- transform:
- translateX(-50%);
-
- padding:
- 7px
- 11px;
-
- border:
- 1px solid rgba(255,173,34,.55);
-
- border-radius:999px;
-
- background:
- rgba(41,26,4,.90);
-
- color:#ffc456;
-
- font-size:8px;
- font-weight:950;
-
- letter-spacing:.08em;
-}
-
-/* =========================================================
-   LOWER CENTER
-   ========================================================= */
-
+/* LOWER */
 .lower{
  min-height:0;
-
  display:grid;
-
- grid-template-columns:
- minmax(0,1fr)
- 330px;
-
- border-top:
- 1px solid var(--border);
-
- background:#031620;
+ grid-template-columns:minmax(0,1fr) 330px;
+ border-top:1px solid var(--border);
+ background:#03151e;
 }
 
 .history{
+ padding:11px 14px;
  min-width:0;
-
- padding:
- 10px
- 14px;
 }
 
 .lowerHead{
@@ -736,180 +487,113 @@ input{
  justify-content:space-between;
 }
 
-.lowerHead strong{
- font-size:15px;
+.lowerHead strong{font-size:15px}
+.lowerHead span{
+ color:var(--green);
+ font-size:8px;
+ font-weight:850;
 }
 
-.historyLine{
+.timeline{
  position:relative;
-
- margin:
- 20px
- 20px
- 15px;
-
  height:3px;
-
- background:
- linear-gradient(
-  90deg,
-  var(--green),
-  var(--green) 45%,
-  #587786 45%,
-  #587786 73%,
-  var(--cyan) 73%
- );
+ margin:26px 26px 15px;
+ background:linear-gradient(90deg,var(--green) 0 46%,#557581 46% 72%,var(--cyan) 72% 100%);
 }
 
-.historyNodes{
+.nodes{
  position:absolute;
-
  left:0;
  right:0;
  top:-10px;
-
  display:flex;
  justify-content:space-between;
 }
 
-.historyNode{
- width:22px;
- height:22px;
-
+.node{
+ width:23px;
+ height:23px;
  display:grid;
  place-items:center;
-
- border:
- 2px solid var(--cyan);
-
+ border:2px solid var(--cyan);
  border-radius:50%;
-
- background:#031721;
-
- color:white;
-
- font-size:9px;
+ background:#031822;
+ font-size:8px;
 }
 
-.historyLabels{
+.timelineLabels{
  display:flex;
-
  justify-content:space-between;
-
- margin:
- 0
- 5px;
-
+ margin:0 6px;
  text-align:center;
+}
 
+.timelineLabels span{
+ width:115px;
+ color:#8babb6;
+ font-size:8px;
+}
+
+.timelineLabels b{
+ display:block;
+ margin-bottom:3px;
+ color:white;
  font-size:9px;
 }
 
-.historyLabels span{
- width:110px;
-
- color:#89abb7;
-}
-
-.historyLabels b{
- display:block;
-
- margin-bottom:3px;
-
- color:white;
-}
-
-.historyDocs{
- margin-top:12px;
-
+.docs{
+ margin-top:13px;
  display:grid;
-
- grid-template-columns:
- repeat(4,1fr);
-
+ grid-template-columns:repeat(4,1fr);
  gap:6px;
 }
 
 .doc{
- min-width:0;
-
- padding:
- 8px;
-
- border:
- 1px solid #15485b;
-
+ padding:8px;
+ border:1px solid #144658;
  border-radius:6px;
-
- background:#05202c;
-
- color:#9db8c2;
-
+ background:#05202b;
+ color:#8faeba;
  font-size:8px;
 }
 
 .doc b{
  display:block;
-
- margin-bottom:3px;
-
+ margin-bottom:4px;
  color:white;
-
  font-size:9px;
 }
 
-/* =========================================================
-   LIVE OPS
-   ========================================================= */
-
-.liveOps{
- padding:
- 10px;
-
- border-left:
- 1px solid var(--border);
+/* LIVE */
+.live{
+ padding:11px;
+ border-left:1px solid var(--border);
 }
 
 .liveCard{
  margin-top:7px;
-
- padding:
- 8px
- 10px;
-
+ padding:8px 9px;
  display:grid;
-
- grid-template-columns:
- 100px
- 1fr;
-
- gap:8px;
-
- border:
- 1px solid #15485b;
-
+ grid-template-columns:105px 1fr;
+ gap:7px;
+ border:1px solid #144658;
  border-radius:6px;
-
- background:#05202c;
+ background:#05202b;
 }
 
 .liveCard small{
- color:#84a7b3;
-
+ color:#7e9fab;
  font-size:8px;
 }
 
 .liveCard strong{
  display:block;
-
- margin-top:3px;
-
+ margin-top:2px;
  font-size:13px;
 }
 
 .spark{
  align-self:center;
-
  height:27px;
 }
 
@@ -918,1746 +602,771 @@ input{
  height:100%;
 }
 
-/* =========================================================
-   RIGHT
-   ========================================================= */
-
-.inspector{
+/* RIGHT INSPECTOR */
+.right{
  min-height:0;
-
  overflow:auto;
-
- border-left:
- 1px solid var(--border);
-
- background:
- linear-gradient(
-  180deg,
-  #031822,
-  #02131c
- );
+ border-left:1px solid var(--border);
+ background:linear-gradient(180deg,#031822,#02131b);
 }
 
-.inspectorHead{
- padding:
- 13px
- 14px
- 10px;
-
- border-bottom:
- 1px solid #17495b;
+.rightHead{
+ padding:13px 14px 10px;
+ border-bottom:1px solid #16495a;
 }
 
-.inspectorHeadTop{
+.inspectorTitle{
  display:flex;
- align-items:center;
  justify-content:space-between;
-
- color:#c7dbe1;
-
- font-size:13px;
+ color:#c4d9df;
+ font-size:12px;
  font-weight:800;
 }
 
 .assetId{
- margin-top:20px;
-
+ margin-top:18px;
  font-size:19px;
  font-weight:900;
 }
 
-.assetState{
- margin-top:8px;
-
+.assetMeta{
+ margin-top:7px;
  display:flex;
- justify-content:space-between;
  align-items:center;
+ justify-content:space-between;
+ color:#89a8b3;
+ font-size:8px;
 }
 
-.assetState span{
- color:#91b0ba;
-
- font-size:9px;
-}
-
-.valid{
- padding:
- 5px
- 9px;
-
- border:
- 1px solid var(--orange);
-
+.badge{
+ padding:5px 8px;
+ border:1px solid var(--orange);
  border-radius:5px;
-
- color:var(--orange) !important;
-
- font-size:9px !important;
+ color:var(--orange);
  font-weight:900;
 }
 
 .tabs{
- padding:
- 0
- 13px;
-
  display:flex;
-
- gap:19px;
-
- border-bottom:
- 1px solid #17495b;
+ gap:18px;
+ padding:0 13px;
+ border-bottom:1px solid #16495a;
 }
 
 .tabs button{
- height:40px;
-
+ height:39px;
  border:0;
-
  background:transparent;
- color:#91aeb8;
-
- font-size:9px;
+ color:#8daab5;
+ font-size:8px;
  font-weight:800;
 }
 
-.tabs button.active{
+.tabs .active{
  color:var(--cyan);
-
- box-shadow:
- inset 0 -2px 0 var(--cyan);
+ box-shadow:inset 0 -2px 0 var(--cyan);
 }
 
-.inspectorBody{
- padding:
- 10px
- 13px
- 20px;
+.rightBody{
+ padding:10px 13px 18px;
 }
 
-.assetOverview{
+.overview{
  display:grid;
-
- grid-template-columns:
- 120px
- 1fr;
-
+ grid-template-columns:125px 1fr;
  gap:7px;
 }
 
 .pipePreview{
  position:relative;
-
- min-height:165px;
-
+ height:170px;
  overflow:hidden;
-
- border:
- 1px solid #164c5e;
-
+ border:1px solid #175064;
  border-radius:6px;
-
  background:
- radial-gradient(
-  circle at 50% 50%,
-  #0b3a4c,
-  #02131b 70%
- );
+  radial-gradient(circle at 50% 50%,#0a3849,#021119 72%);
 }
 
-.previewPipe{
+.previewShell{
  position:absolute;
-
- left:-20px;
- right:-20px;
-
- top:70px;
-
- height:32px;
-
+ left:-28px;
+ right:-28px;
+ top:64px;
+ height:44px;
+ border:6px solid #607681;
  border-radius:999px;
-
- background:
- linear-gradient(
-  180deg,
-  #46535a,
-  #141f24 36%,
-  #090f12 58%,
-  #556770
- );
-
+ background:rgba(11,28,35,.68);
  box-shadow:
- 0 0 20px rgba(0,190,255,.17);
+  inset 0 6px 9px rgba(255,255,255,.12),
+  0 0 22px rgba(0,190,255,.20);
 }
 
 .previewCore{
  position:absolute;
-
- left:-20px;
- right:-20px;
-
+ left:-25px;
+ right:-25px;
  top:79px;
-
- height:12px;
-
+ height:13px;
  border-radius:999px;
-
- background:
- #00caff;
-
- box-shadow:
- 0 0 14px #00bfff;
+ background:#00ccff;
+ box-shadow:0 0 17px #00c8ff;
 }
 
-.previewRing{
+.previewBand{
  position:absolute;
-
- top:61px;
-
- width:14px;
- height:51px;
-
+ top:56px;
+ width:15px;
+ height:60px;
  border-radius:5px;
-
- background:
- linear-gradient(
-  90deg,
-  #54636b,
-  #d6e7ec,
-  #35434a
- );
+ background:linear-gradient(90deg,#35444b,#e1f2f6 45%,#53646b 70%,#cedfe4);
 }
 
-.r1{ left:24px; }
-.r2{ right:26px; }
+.pb1{left:29px}
+.pb2{right:29px}
 
-.details{
+.previewFlow{
+ position:absolute;
+ top:82px;
+ width:5px;
+ height:5px;
+ border-radius:50%;
+ background:#fff;
+ box-shadow:0 0 10px #00d8ff;
+ animation:flowPreview 2.8s linear infinite;
+}
+
+@keyframes flowPreview{
+ from{left:0}
+ to{left:100%}
+}
+
+.detailGrid{
  display:grid;
-
- grid-template-columns:
- 1fr 1fr;
+ grid-template-columns:1fr 1fr;
 }
 
 .detail{
- padding:
- 7px
- 8px;
-
- border-right:
- 1px solid #164758;
-
- border-bottom:
- 1px solid #164758;
-
- font-size:9px;
+ padding:7px;
+ border-right:1px solid #154557;
+ border-bottom:1px solid #154557;
 }
 
 .detail small{
  display:block;
-
- color:#72a1b0;
-
- margin-bottom:2px;
+ color:#709aa8;
+ font-size:7px;
 }
 
 .detail b{
- font-size:10px;
+ display:block;
+ margin-top:2px;
+ font-size:9px;
 }
 
-.modelCard{
+.pipeModel{
  margin-top:10px;
-
  padding:9px;
-
- border:
- 1px solid #16536a;
-
+ border:1px solid #175267;
  border-radius:6px;
-
- background:#041a24;
+ background:#041b25;
 }
 
-.modelTitle{
- font-size:11px;
+.pipeModelTitle{
+ font-size:10px;
  font-weight:850;
 }
 
 .cross{
  position:relative;
-
- height:76px;
-
+ height:82px;
  margin-top:7px;
-
  overflow:hidden;
-
- border:
- 1px solid #124455;
-
+ border:1px solid #154657;
  border-radius:5px;
-
- background:
- linear-gradient(
-  180deg,
-  #071b24,
-  #020e14
- );
+ background:linear-gradient(180deg,#071b24,#020d13);
 }
 
-.crossPipe{
+.crossShell{
  position:absolute;
+ left:-20px;
+ right:-20px;
+ top:24px;
+ height:36px;
+ border:6px solid #71858d;
+ border-radius:999px;
+ background:rgba(10,24,30,.72);
+}
 
+.crossCore{
+ position:absolute;
  left:-15px;
  right:-15px;
-
- top:26px;
-
- height:25px;
-
+ top:37px;
+ height:10px;
  border-radius:999px;
-
- border:
- 5px solid #6e8088;
-
- background:#061117;
-}
-
-.crossPipe:before{
- content:"";
-
- position:absolute;
-
- left:10%;
- right:10%;
-
- top:5px;
-
- height:5px;
-
- border-radius:999px;
-
- background:#00c9ff;
-
- box-shadow:
- 0 0 12px #00c9ff;
+ background:#00d0ff;
+ box-shadow:0 0 15px #00cfff;
 }
 
 .passport{
  margin-top:10px;
-
- min-height:43px;
-
+ height:43px;
+ padding:0 12px;
  display:flex;
  align-items:center;
-
- padding:
- 0
- 13px;
-
- border:
- 1px solid #12b9e7;
-
+ border:1px solid #12bfe9;
  border-radius:7px;
-
  background:#063044;
-
  color:white;
-
- font-size:11px;
+ font-size:10px;
  font-weight:850;
 }
 
 .passport span{
  margin-left:auto;
-
  font-size:18px;
 }
 
-.gpsList{
+.gpsPanel{
  margin-top:10px;
-
- border:
- 1px solid #16495a;
-
- border-radius:6px;
-
  overflow:hidden;
+ border:1px solid #15495b;
+ border-radius:6px;
 }
 
-.gpsTitle{
- padding:
- 8px
- 9px;
-
+.gpsHead{
+ padding:8px;
  background:#06212d;
-
  color:var(--cyan);
-
- font-size:9px;
+ font-size:8px;
  font-weight:900;
 }
 
 .gpsRow{
- padding:
- 6px
- 9px;
-
+ padding:6px 8px;
  display:grid;
-
- grid-template-columns:
- 30px
- 1fr
- 1fr;
-
- gap:5px;
-
- border-top:
- 1px solid #123e4d;
-
- color:#a5bec7;
-
- font-size:8px;
+ grid-template-columns:38px 1fr 1fr;
+ gap:4px;
+ border-top:1px solid #123d4b;
+ color:#91adb7;
+ font-size:7px;
 }
 
-.gpsRow b{
- color:white;
-}
+.gpsRow b{color:white}
 
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
+/* FOOT */
 .footer{
- padding:
- 0
- 17px;
-
+ padding:0 16px;
  display:flex;
  align-items:center;
-
- color:#6f96a5;
-
+ border-top:1px solid #123b49;
  background:#021019;
-
- border-top:
- 1px solid #123b4a;
-
- font-size:8px;
+ color:#688e9c;
+ font-size:7px;
 }
 
-.footer span:last-child{
- margin-left:auto;
-}
-
-/* =========================================================
-   MAPLIBRE
-   ========================================================= */
-
-.maplibregl-ctrl-bottom-right{
- right:10px;
- bottom:10px;
-}
+.footer span:last-child{margin-left:auto}
 
 .maplibregl-ctrl-group{
- border:
- 1px solid #175069 !important;
-
- background:
- rgba(2,18,26,.92) !important;
-
- box-shadow:none !important;
+ border:1px solid #17536a!important;
+ background:rgba(2,17,25,.92)!important;
+ box-shadow:none!important;
 }
 
-.maplibregl-ctrl button{
- filter:invert(1);
-}
+.maplibregl-ctrl button{filter:invert(1)}
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media(max-width:1050px){
-
+@media(max-width:1100px){
  .workspace{
-  grid-template-columns:
-  165px
-  minmax(0,1fr)
-  300px;
+  grid-template-columns:170px minmax(0,1fr) 300px;
  }
-
- .topbar{
-  grid-template-columns:
-  430px
-  minmax(200px,1fr)
-  auto;
+ .top{
+  grid-template-columns:430px minmax(200px,1fr) auto;
  }
-
- .brand{
-  font-size:16px;
- }
-
- .product{
-  font-size:14px;
- }
-
- .mapMetrics{
-  display:none;
- }
-
- .assetOverview{
-  grid-template-columns:1fr;
- }
-
- .pipePreview{
-  min-height:110px;
- }
+ .brand{font-size:16px}
+ .product{font-size:14px}
+ .metrics{display:none}
+ .overview{grid-template-columns:1fr}
+ .pipePreview{height:115px}
 }
 
 </style>
-
-
-<style id="nma-hero-final-css">
-
-/* NMA HERO PIPE FINAL VISUAL v1 */
-
-.mapWrap{
- box-shadow:
-  inset 0 0 90px rgba(0,10,16,.18);
-}
-
-.demoWatermark{
- top:auto !important;
- bottom:66px !important;
-
- background:
-  rgba(2,17,24,.88) !important;
-
- border-color:
-  rgba(255,173,34,.52) !important;
-}
-
-.assetLabel{
- padding:9px 12px;
-
- background:
-  rgba(1,15,22,.96);
-
- box-shadow:
-  0 10px 25px rgba(0,0,0,.42),
-  0 0 13px rgba(0,207,255,.12);
-}
-
-</style>
-
 </head>
 
 <body>
 
 <div class="app">
 
-<!-- =======================================================
-     TOP
-     ======================================================= -->
-
-<header class="topbar">
-
- <div class="brandLine">
-
-  <div class="logoIcon">
-   NMA
-  </div>
-
-  <div class="brand">
-   NMA BUILD OS
-  </div>
-
-  <div class="product">
-   Network Operations
-  </div>
-
+<header class="top">
+ <div class="brandWrap">
+  <div class="nmaMark">NMA</div>
+  <div class="brand">NMA BUILD OS</div>
+  <div class="product">Network Operations</div>
  </div>
 
- <div class="searchTop">
-
-  <input
-   type="search"
-   placeholder="Search assets, addresses, work orders, documents..."
-  >
-
+ <div class="search">
+  <input type="search"
+   placeholder="Search assets, addresses, work orders, documents...">
  </div>
 
- <div class="statusTop">
-
-  <div class="status online">
-   <span class="statusDot"></span>
-   CORE ONLINE
-  </div>
-
-  <div class="status audit">
-   <span class="statusDot"></span>
-   AUDIT ACTIVE
-  </div>
-
-  <div class="status simulated">
-   ◉ SIMULATED DATA
-  </div>
-
-  <div class="avatar">
-   NA
-  </div>
-
+ <div class="topStatus">
+  <span class="core"><i class="dot"></i>CORE ONLINE</span>
+  <span class="audit"><i class="dot"></i>AUDIT ACTIVE</span>
+  <span class="sim">◉ SIMULATED DATA</span>
+  <div class="avatar">NA</div>
  </div>
-
 </header>
-
-
-<!-- =======================================================
-     WORKSPACE
-     ======================================================= -->
 
 <div class="workspace">
 
+<aside class="left">
+ <div class="panelTitle">Layers</div>
 
-<!-- LEFT -->
-
-<aside class="leftbar">
-
- <div class="leftTitle">
-  Layers
+ <div class="menu">
+  <button class="menuBtn active" id="gasToggle">
+   <span class="ico">⌁</span>Gas Network<span class="switch"></span>
+  </button>
+  <button class="menuBtn">
+   <span class="ico">▣</span>Work Orders<span class="switch"></span>
+  </button>
+  <button class="menuBtn active">
+   <span class="ico">⬡</span>Assets<span class="switch"></span>
+  </button>
+  <button class="menuBtn">
+   <span class="ico">▧</span>Evidence<span class="switch"></span>
+  </button>
+  <button class="menuBtn">
+   <span class="ico">△</span>Tests<span class="switch"></span>
+  </button>
+  <button class="menuBtn active">
+   <span class="ico">⚠</span>Anomalies<span class="switch"></span>
+  </button>
+  <button class="menuBtn">
+   <span class="ico">◉</span>Sensors<span class="switch"></span>
+  </button>
+  <button class="menuBtn active">
+   <span class="ico">≋</span>Demo Flow<span class="switch"></span>
+  </button>
+  <button class="menuBtn active">
+   <span class="ico">▱</span>Ground / Trench<span class="switch"></span>
+  </button>
+  <button class="menuBtn active">
+   <span class="ico">◆</span>Base Map<span class="switch"></span>
+  </button>
  </div>
 
- <div class="layerList">
+ <div class="toolTitle">Tools</div>
 
-  <button class="layerBtn active">
-   <span class="layerIcon">⌁</span>
-   Gas Network
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn">
-   <span class="layerIcon">▣</span>
-   Work Orders
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn active">
-   <span class="layerIcon">⬡</span>
-   Assets
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn">
-   <span class="layerIcon">▧</span>
-   Evidence
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn">
-   <span class="layerIcon">△</span>
-   Tests
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn active">
-   <span class="layerIcon">⚠</span>
-   Anomalies
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn">
-   <span class="layerIcon">◉</span>
-   Sensors
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn active">
-   <span class="layerIcon">≋</span>
-   Demo Flow
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn">
-   <span class="layerIcon">▱</span>
-   Geology (3D)
-   <span class="toggle"></span>
-  </button>
-
-  <button class="layerBtn active">
-   <span class="layerIcon">◆</span>
-   Base Maps
-   <span class="toggle"></span>
-  </button>
-
+ <div class="menu">
+  <a class="menuBtn" href="/cantiere">
+   <span class="ico">＋</span>Campo
+  </a>
+  <a class="menuBtn" href="/supervisore">
+   <span class="ico">✓</span>Supervisore
+  </a>
+  <a class="menuBtn" href="/audit">
+   <span class="ico">▤</span>Audit
+  </a>
+  <a class="menuBtn" href="/sal">
+   <span class="ico">⇩</span>SAL
+  </a>
  </div>
 
- <div class="toolTitle">
-  Tools
- </div>
-
- <div class="layerList">
-
-  <a
-   class="layerBtn"
-   href="/cantiere"
-   style="text-decoration:none">
-   <span class="layerIcon">＋</span>
-   Campo
-  </a>
-
-  <a
-   class="layerBtn"
-   href="/asset-memory"
-   style="text-decoration:none">
-   <span class="layerIcon">⌖</span>
-   Asset Memory
-  </a>
-
-  <a
-   class="layerBtn"
-   href="/audit"
-   style="text-decoration:none">
-   <span class="layerIcon">▤</span>
-   Audit
-  </a>
-
-  <a
-   class="layerBtn"
-   href="/sal"
-   style="text-decoration:none">
-   <span class="layerIcon">⇩</span>
-   SAL
-  </a>
-
- </div>
-
- <div class="locationCard">
-
-  <small>
-   DEMO LOCATION
-  </small>
-
-  <strong>
-   San Benigno Canavese
-  </strong>
-
+ <div class="place">
+  <small>DEMO LOCATION</small>
+  <strong>San Benigno Canavese</strong>
   <p>
-   GPS base ufficiale Comune:<br>
+   Base geografica:<br>
    45.228000 N · 7.786100 E
   </p>
-
-  <p style="color:var(--orange)">
-   Tubazioni sintetiche.
-   Non rappresentano sottoservizi reali.
+  <p class="demoText">
+   Percorso e tubazioni sono dimostrativi,
+   non sottoservizi reali.
   </p>
-
  </div>
-
 </aside>
-
-
-<!-- CENTER -->
 
 <main class="center">
 
  <section class="mapWrap">
-
   <div id="map"></div>
+  <div class="mapTint"></div>
 
-  <div class="mapShade"></div>
-
-  <div class="mapHeader">
-
-   <div class="mapCard">
-
-    <strong>
-     San Benigno Sector DEMO
-    </strong>
-
-    <span>
-     San Benigno Canavese, Piemonte
-    </span>
-
-    <span class="demoBadge">
-     ● GPS-ANCHORED SIMULATION
-    </span>
-
-   </div>
-
+  <div class="location">
+   <strong>San Benigno — Digital Twin DEMO</strong>
+   <span>Piemonte · Ground Infrastructure View</span>
+   <span class="orange">● TRUE 3D · SIMULATED NETWORK</span>
   </div>
 
-  <div class="mapMetrics">
-
+  <div class="metrics">
    <div class="metric">
     <strong>3</strong>
-    <small>Demo pipelines</small>
+    <small>3D pipe sections</small>
    </div>
-
    <div class="metric">
-    <strong id="vertexCount">—</strong>
-    <small>GPS vertices</small>
+    <strong id="gpsCount">16</strong>
+    <small>GPS demo vertices</small>
    </div>
-
    <div class="metric">
-    <strong id="demoLength">—</strong>
-    <small>Visual route</small>
+    <strong id="routeLength">—</strong>
+    <small>Demo route</small>
    </div>
-
    <div class="metric">
-    <strong>3D</strong>
-    <small>Ground mode</small>
+    <strong id="engineState">LOAD</strong>
+    <small>3D engine</small>
    </div>
-
   </div>
 
-  <div class="demoWatermark">
-   SIMULATED GPS PIPE NETWORK · NOT REAL INFRASTRUCTURE
+  <div class="modeControls">
+   <button id="view2d">2D</button>
+   <button class="active" id="view3d">3D</button>
+   <button id="focusPipe">PIPE</button>
   </div>
 
-  <div class="gpsBox">
-   BASE GPS<br>
-   45.228000 N<br>
-   7.786100 E<br>
-   <span style="color:var(--orange)">
-    DEMO COORDINATES
-   </span>
+  <div class="legend">
+   <div class="legendLine"><i class="sw cyanSw"></i>Main PE100 / flow</div>
+   <div class="legendLine"><i class="sw greenSw"></i>Secondary branch</div>
+   <div class="legendLine"><i class="sw orangeSw"></i>Anomaly / work area</div>
   </div>
 
-  <div class="scaleBox">
-   0&nbsp;&nbsp;&nbsp;&nbsp;25&nbsp;&nbsp;&nbsp;&nbsp;50&nbsp;&nbsp;&nbsp;&nbsp;100 m
-   <div class="scaleLine"></div>
+  <div class="watermark">
+   SIMULATED 3D PIPE NETWORK · NOT REAL GAS INFRASTRUCTURE
   </div>
 
+  <div class="mapError" id="mapError">
+   <div>
+    <strong>3D SCENE ERROR</strong>
+    <span id="mapErrorText"></span>
+   </div>
+  </div>
  </section>
 
-
- <!-- LOWER -->
-
  <section class="lower">
-
   <div class="history">
-
    <div class="lowerHead">
-
-    <strong>
-     ↶ History
-    </strong>
-
-    <span style="
-     color:var(--orange);
-     font-size:9px;">
-     DEMO SCENARIO
-    </span>
-
+    <strong>↶ History</strong>
+    <span>DEMO INFRASTRUCTURE MEMORY</span>
    </div>
 
-   <div class="historyLine">
-
-    <div class="historyNodes">
-
-     <div class="historyNode">
-      ✓
-     </div>
-
-     <div class="historyNode">
-      ✓
-     </div>
-
-     <div class="historyNode">
-      ◇
-     </div>
-
-     <div class="historyNode">
-      ●
-     </div>
-
+   <div class="timeline">
+    <div class="nodes">
+     <div class="node">✓</div>
+     <div class="node">✓</div>
+     <div class="node">◇</div>
+     <div class="node">●</div>
     </div>
-
    </div>
 
-   <div class="historyLabels">
-
-    <span>
-     <b>Designed</b>
-     GPS demo
-    </span>
-
-    <span>
-     <b>Placed</b>
-     Browser
-    </span>
-
-    <span>
-     <b>Reviewed</b>
-     Pending
-    </span>
-
-    <span>
-     <b>Current</b>
-     Simulation
-    </span>
-
+   <div class="timelineLabels">
+    <span><b>Designed</b>Demo geometry</span>
+    <span><b>Installed</b>Visual scene</span>
+    <span><b>Reviewed</b>Pending</span>
+    <span><b>Current</b>Simulation</span>
    </div>
 
-   <div class="historyDocs">
-
-    <div class="doc">
-     <b>As-Built</b>
-     Demo geometry
-    </div>
-
-    <div class="doc">
-     <b>GPS vertices</b>
-     Exact decimals
-    </div>
-
-    <div class="doc">
-     <b>Components</b>
-     Visual only
-    </div>
-
-    <div class="doc">
-     <b>MongoDB</b>
-     No writes
-    </div>
-
+   <div class="docs">
+    <div class="doc"><b>As-Built</b>Demo coordinates</div>
+    <div class="doc"><b>Pipe Model</b>Three.js mesh</div>
+    <div class="doc"><b>Components</b>Valves / flanges / T</div>
+    <div class="doc"><b>Database</b>No writes</div>
    </div>
-
   </div>
 
-
-  <div class="liveOps">
-
+  <div class="live">
    <div class="lowerHead">
-
-    <strong>
-     Live Operations
-    </strong>
-
-    <span style="
-     color:var(--orange);
-     font-size:9px;">
-     SIMULATED
-    </span>
-
+    <strong>Live Operations</strong>
+    <span style="color:var(--orange)">SIMULATED</span>
    </div>
 
    <div class="liveCard">
-
     <div>
      <small>Demo pressure</small>
      <strong>22.5 mbar</strong>
     </div>
-
     <div class="spark">
-     <svg viewBox="0 0 130 30">
-
-      <polyline
-       fill="none"
-       stroke="#16e3a0"
-       stroke-width="2"
-       points="
-       0,17
-       10,13
-       18,19
-       27,9
-       37,16
-       47,12
-       58,18
-       68,11
-       77,15
-       88,7
-       99,11
-       109,8
-       120,14
-       130,10"
-      />
-
+     <svg viewBox="0 0 140 30">
+      <polyline fill="none" stroke="#13e6a1" stroke-width="2"
+       points="0,18 12,11 22,17 34,8 47,15 60,12 71,19 84,9 96,14 108,6 122,11 140,8"/>
      </svg>
     </div>
-
    </div>
 
    <div class="liveCard">
-
     <div>
-     <small>Demo flow</small>
-     <strong>SIMULATED</strong>
+     <small>Flow visualization</small>
+     <strong>DEMO</strong>
     </div>
-
     <div class="spark">
-     <svg viewBox="0 0 130 30">
-
-      <polyline
-       fill="none"
-       stroke="#18d8ff"
-       stroke-width="2"
-       points="
-       0,18
-       11,16
-       22,9
-       33,12
-       45,13
-       57,16
-       69,10
-       81,12
-       94,15
-       105,8
-       116,11
-       130,9"
-      />
-
+     <svg viewBox="0 0 140 30">
+      <polyline fill="none" stroke="#15d9ff" stroke-width="2"
+       points="0,18 13,16 27,10 40,13 53,12 68,18 81,9 94,13 107,11 122,15 140,8"/>
      </svg>
     </div>
-
    </div>
 
    <div class="liveCard">
-
     <div>
-     <small>Ground offset</small>
-     <strong>0.00 m</strong>
+     <small>3D status</small>
+     <strong id="lower3dState">INITIALIZING</strong>
     </div>
-
-    <div style="
-     align-self:center;
-     color:var(--green);
-     font-size:9px;">
-     PIPE ANCHORED
+    <div style="align-self:center;color:var(--green);font-size:8px">
+     GROUND ANCHORED
     </div>
-
    </div>
-
   </div>
-
  </section>
-
 </main>
 
+<aside class="right">
 
-<!-- RIGHT -->
-
-<aside class="inspector">
-
- <div class="inspectorHead">
-
-  <div class="inspectorHeadTop">
-
-   <span>
-    ▣ &nbsp; Asset Inspector
-   </span>
-
-   <span>
-    ⋮ &nbsp; ×
-   </span>
-
+ <div class="rightHead">
+  <div class="inspectorTitle">
+   <span>▣ &nbsp; Asset Inspector</span>
+   <span>⋮ &nbsp; ×</span>
   </div>
 
-  <div class="assetId">
-   GAS-DEMO-SB-001
+  <div class="assetId">GAS-DEMO-SB-001</div>
+
+  <div class="assetMeta">
+   <span>◇ Gas Distribution Demo · San Benigno</span>
+   <span class="badge">SIMULATED</span>
   </div>
-
-  <div class="assetState">
-
-   <span>
-    ◇ Demo Gas Network &nbsp;•&nbsp;
-    San Benigno
-   </span>
-
-   <span class="valid">
-    SIMULATED
-   </span>
-
-  </div>
-
  </div>
 
  <div class="tabs">
-
-  <button class="active">
-   Overview
-  </button>
-
-  <button>
-   GPS Points
-  </button>
-
-  <button>
-   Components
-  </button>
-
-  <button>
-   Notes
-  </button>
-
+  <button class="active">Overview</button>
+  <button>Evidence</button>
+  <button>Tests</button>
+  <button>Components</button>
  </div>
 
- <div class="inspectorBody">
+ <div class="rightBody">
 
-  <div class="assetOverview">
+  <div class="overview">
 
    <div class="pipePreview">
-
-    <div class="previewPipe"></div>
+    <div class="previewShell"></div>
     <div class="previewCore"></div>
-
-    <div class="previewRing r1"></div>
-    <div class="previewRing r2"></div>
-
+    <div class="previewBand pb1"></div>
+    <div class="previewBand pb2"></div>
+    <div class="previewFlow"></div>
    </div>
 
-   <div class="details">
-
-    <div class="detail">
-     <small>Network</small>
-     <b>Gas DEMO</b>
-    </div>
-
-    <div class="detail">
-     <small>Material</small>
-     <b>PE100 visual</b>
-    </div>
-
-    <div class="detail">
-     <small>Model</small>
-     <b>True 3D</b>
-    </div>
-
-    <div class="detail">
-     <small>Ground</small>
-     <b>Anchored</b>
-    </div>
-
-    <div class="detail">
-     <small>GPS Base</small>
-     <b>45.228000</b>
-    </div>
-
-    <div class="detail">
-     <small>Longitude</small>
-     <b>7.786100</b>
-    </div>
-
-    <div class="detail">
-     <small>Data</small>
-     <b>Simulated</b>
-    </div>
-
-    <div class="detail">
-     <small>MongoDB</small>
-     <b>No writes</b>
-    </div>
-
+   <div class="detailGrid">
+    <div class="detail"><small>Network</small><b>Gas DEMO</b></div>
+    <div class="detail"><small>Material</small><b>PE100 visual</b></div>
+    <div class="detail"><small>Model</small><b>True 3D</b></div>
+    <div class="detail"><small>Mode</small><b>Ground Twin</b></div>
+    <div class="detail"><small>Main radius</small><b>Visual scale</b></div>
+    <div class="detail"><small>Flow</small><b>Simulated</b></div>
+    <div class="detail"><small>Coordinates</small><b>WGS84 demo</b></div>
+    <div class="detail"><small>MongoDB</small><b>NO WRITES</b></div>
    </div>
 
   </div>
 
-  <div class="modelCard">
-
-   <div class="modelTitle">
-   ⌃ &nbsp; 3D Pipe Model
-   </div>
-
+  <div class="pipeModel">
+   <div class="pipeModelTitle">⌃ &nbsp; 3D Pipe Model</div>
    <div class="cross">
-    <div class="crossPipe"></div>
+    <div class="crossShell"></div>
+    <div class="crossCore"></div>
    </div>
-
-   <div style="
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    margin-top:5px;
-    color:#84a9b6;
-    font-size:8px;
-    text-align:center;">
-
+   <div style="display:grid;grid-template-columns:repeat(4,1fr);margin-top:6px;color:#7ca3b0;font-size:7px;text-align:center">
     <span>Model</span>
     <span>Cross-section</span>
     <span>Material</span>
     <span>Flow</span>
-
    </div>
-
   </div>
 
   <div class="passport">
-
-   ◫ &nbsp;
-   Demo Asset Passport
-
-   <span>
-    →
-   </span>
-
+   ◫ &nbsp; Demo Asset Passport
+   <span>→</span>
   </div>
 
-  <div class="gpsList">
-
-   <div class="gpsTitle">
-    EXACT DEMO GPS VERTICES
+  <div class="gpsPanel">
+   <div class="gpsHead">
+    EXACT DEMO WGS84 VERTICES
    </div>
-
    <div id="gpsRows"></div>
-
   </div>
 
  </div>
-
 </aside>
 
 </div>
 
-
 <footer class="footer">
-
- <span>
-  NMA BUILD OS &nbsp; | &nbsp;
-  Ground Twin Demo
- </span>
-
- <span>
-  SAN BENIGNO CANAVESE
-  &nbsp; | &nbsp;
-  SIMULATED PIPE NETWORK
- </span>
-
+ <span>NMA BUILD OS · Clean Reference Master</span>
+ <span>SAN BENIGNO CANAVESE · SIMULATED INFRASTRUCTURE</span>
 </footer>
 
 </div>
 
-
 <script>
+'use strict';
 
-/* =========================================================
-   NMA BUILD OS — FINAL REFERENCE ENGINE v1
+/*
+ ============================================================
+ NMA BUILD OS — CLEAN REFERENCE MASTER v1
 
-   DEMO GEOSPATIAL SCENE
+ This page is intentionally deterministic.
 
-   IMPORTANT:
-   - no utility network is claimed to exist here
-   - no Italgas geometry
-   - no excavation guidance
-   - road coordinates are map/routing data, not survey GNSS
-   - pipeline is synthetic
-   - MongoDB writes: NONE
-   ========================================================= */
+ NO OSRM.
+ NO dynamically downloaded route.
+ NO network lines.
+ NO MongoDB writes.
 
-const SAN_BENIGNO_REFERENCE={
+ All pipeline vertices below are explicit WGS84 DEMO points.
+ They do NOT represent a real gas network.
+ ============================================================
+*/
+
+const ORIGIN={
  lng:7.786100,
  lat:45.228000
 };
 
-
 /*
- Public geographic references used only
- to build the demonstration road route.
+ Exact synthetic DEMO vertices around San Benigno Canavese.
+ They are geographic coordinates used to demonstrate the UI.
 */
 
-const DEMO_ROUTE_ENDPOINTS={
+const NETWORK=[
+ {
+  id:'GAS-DEMO-SB-001',
+  type:'main',
+  color:0x00cfff,
+  radius:2.75,
+  points:[
+   [7.78491,45.22756],
+   [7.78518,45.22763],
+   [7.78547,45.22772],
+   [7.78575,45.22783],
+   [7.78603,45.22794],
+   [7.78631,45.22803],
+   [7.78660,45.22809],
+   [7.78690,45.22811],
+   [7.78720,45.22807],
+   [7.78748,45.22798]
+  ]
+ },
+ {
+  id:'GAS-DEMO-SB-002',
+  type:'branch',
+  color:0x12e39e,
+  radius:1.65,
+  points:[
+   [7.78603,45.22794],
+   [7.78610,45.22815],
+   [7.78617,45.22836],
+   [7.78624,45.22857]
+  ]
+ },
+ {
+  id:'GAS-DEMO-SB-003',
+  type:'branch',
+  color:0x00a9ff,
+  radius:1.45,
+  points:[
+   [7.78547,45.22772],
+   [7.78531,45.22752],
+   [7.78515,45.22734]
+  ]
+ }
+];
 
- south:[
-  7.786278,
-  45.223750
- ],
-
- north:[
-  7.786100,
-  45.228000
- ]
-};
-
-
-let DEMO_PIPELINES=[];
-
-let ROUTE_SOURCE=
- 'LOADING';
-
-
-const T={
-
+const S={
  scene:null,
  camera:null,
  renderer:null,
-
  root:null,
-
- mercator:null,
+ originMercator:null,
  scale:null,
-
  pipelines:[],
- flowObjects:[],
-
- animationsStarted:false
+ particles:[],
+ active:true,
+ initialized:false
 };
 
+function failScene(error){
+ console.error(error);
 
-/* =========================================================
-   ROAD GEOMETRY
-   ========================================================= */
+ const box=document.getElementById('mapError');
+ const text=document.getElementById('mapErrorText');
 
-async function loadRoadGeometry(){
-
- const a=
-  DEMO_ROUTE_ENDPOINTS.south;
-
- const b=
-  DEMO_ROUTE_ENDPOINTS.north;
-
-
- const url=
-  'https://router.project-osrm.org/route/v1/driving/'+
-  a[0]+','+a[1]+';'+
-  b[0]+','+b[1]+
-  '?overview=full&geometries=geojson';
-
-
- /*
-  Mantiene circa TARGET metri attorno alla parte
-  centrale del percorso.
-
-  Questo serve soltanto alla composizione visiva:
-  non modifica né crea infrastrutture reali.
- */
-
- function cropByDistance(
-  coordinates,
-  TARGET=245
- ){
-
-  if(
-   !Array.isArray(coordinates) ||
-   coordinates.length<3
-  ){
-   return coordinates;
-  }
-
-
-  const cum=[0];
-
-
-  for(
-   let i=1;
-   i<coordinates.length;
-   i++
-  ){
-
-   cum[i]=
-    cum[i-1]+
-    geoDistance(
-     coordinates[i-1],
-     coordinates[i]
-    );
-  }
-
-
-  const total=
-   cum[cum.length-1];
-
-
-  if(total<=TARGET){
-   return coordinates;
-  }
-
-
-  const center=
-   total*.52;
-
-
-  const start=
-   Math.max(
-    0,
-    center-
-    TARGET*.5
-   );
-
-
-  const end=
-   Math.min(
-    total,
-    center+
-    TARGET*.5
-   );
-
-
-  let i0=0;
-  let i1=coordinates.length-1;
-
-
-  while(
-   i0<cum.length-1 &&
-   cum[i0]<start
-  ){
-   i0++;
-  }
-
-
-  while(
-   i1>0 &&
-   cum[i1]>end
-  ){
-   i1--;
-  }
-
-
-  i0=
-   Math.max(
-    0,
-    i0-1
-   );
-
-
-  i1=
-   Math.min(
-    coordinates.length-1,
-    i1+1
-   );
-
-
-  let result=
-   coordinates.slice(
-    i0,
-    i1+1
-   );
-
-
-  /*
-   Limitiamo la densità soltanto per la GPU.
-   Manteniamo sempre primo e ultimo punto.
-  */
-
-  if(result.length>38){
-
-   const step=
-    Math.ceil(
-     result.length/36
-    );
-
-
-   result=
-    result.filter(
-     (_,index)=>
-      index===0 ||
-      index===result.length-1 ||
-      index%step===0
-    );
-  }
-
-
-  return result;
+ if(box){
+  box.style.display='grid';
  }
 
-
- try{
-
-  const response=
-   await fetch(
-    url,
-    {
-     mode:'cors'
-    }
-   );
-
-
-  if(!response.ok){
-
-   throw new Error(
-    'OSRM '+response.status
-   );
-  }
-
-
-  const data=
-   await response.json();
-
-
-  const raw=
-   data
-    ?.routes
-    ?.[0]
-    ?.geometry
-    ?.coordinates;
-
-
-  if(
-   !Array.isArray(raw) ||
-   raw.length<4
-  ){
-
-   throw new Error(
-    'Road geometry unavailable'
-   );
-  }
-
-
-  ROUTE_SOURCE=
-   'PUBLIC ROAD GEOMETRY · DEMO';
-
-
-  return cropByDistance(
-   raw,
-   245
-  );
-
-
- }catch(error){
-
-  console.warn(
-   'Road route fallback:',
-   error
-  );
-
-
-  ROUTE_SOURCE=
-   'DEMO FALLBACK GEOMETRY';
-
-
-  return [
-
-   [7.785620,45.226920],
-   [7.785730,45.227030],
-   [7.785845,45.227150],
-   [7.785960,45.227275],
-   [7.786075,45.227400],
-   [7.786180,45.227525],
-   [7.786270,45.227650],
-   [7.786340,45.227775],
-   [7.786390,45.227900]
-  ];
+ if(text){
+  text.textContent=
+   String(error && error.message ? error.message : error);
  }
+
+ document.getElementById('engineState').textContent='ERROR';
+ document.getElementById('lower3dState').textContent='ERROR';
 }
 
-
-
-/* =========================================================
-   SHORT SYNTHETIC T BRANCH
-
-   Derived mathematically from the main DEMO route.
-   Not a real street utility branch.
-   ========================================================= */
-
-function createDemoBranch(points){
-
- if(points.length<5){
-  return [];
- }
-
-
- const index=
-  Math.floor(
-   points.length*.58
-  );
-
-
- const p=
-  points[index];
-
-
- const before=
-  points[
-   Math.max(
-    0,
-    index-2
-   )
-  ];
-
-
- const after=
-  points[
-   Math.min(
-    points.length-1,
-    index+2
-   )
-  ];
-
-
- const latRad=
-  p[1]*
-  Math.PI/
-  180;
-
-
- const east=
-  (
-   after[0]-
-   before[0]
-  )*
-  111320*
-  Math.cos(latRad);
-
-
- const north=
-  (
-   after[1]-
-   before[1]
-  )*
-  110540;
-
-
- const length=
-  Math.max(
-   .001,
-   Math.hypot(
-    east,
-    north
-   )
-  );
-
-
- /*
-  Perpendicular vector in metres.
- */
-
- const pe=
-  -north/length;
-
- const pn=
-  east/length;
-
-
- const result=[];
-
-
- for(
-  const distance
-  of [0,9,18,28]
- ){
-
-  const lng=
-   p[0]+
-   (
-    pe*distance
-   )/
-   (
-    111320*
-    Math.cos(latRad)
-   );
-
-
-  const lat=
-   p[1]+
-   (
-    pn*distance
-   )/
-   110540;
-
-
-  result.push([
-   lng,
-   lat
-  ]);
- }
-
-
- return result;
-}
-
-
-/* =========================================================
-   MAP
-   ========================================================= */
-
-const map=
- new maplibregl.Map({
-
-  container:'map',
-
-  style:{
-
-   version:8,
-
-   sources:{
-
-    satellite:{
-
-     type:'raster',
-
-     tiles:[
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-     ],
-
-     tileSize:256,
-
-     maxzoom:18
-    }
-   },
-
-   layers:[
-
-    {
-     id:'satellite',
-
-     type:'raster',
-
-     source:'satellite',
-
-     paint:{
-
-      'raster-saturation':-.08,
-
-      'raster-contrast':.13,
-
-      'raster-brightness-min':.035,
-
-      'raster-brightness-max':.87
-     }
-    }
-
-   ]
-  },
-
-  center:[
-   SAN_BENIGNO_REFERENCE.lng,
-   SAN_BENIGNO_REFERENCE.lat
-  ],
-
-  zoom:17,
-
-  pitch:59,
-
-  bearing:-24,
-
-  maxZoom:20,
-
-  antialias:true
+window.addEventListener('error',event=>{
+ console.error('MASTER runtime:',event.error || event.message);
 });
 
+/* MAP */
+const map=new maplibregl.Map({
+ container:'map',
+
+ style:{
+  version:8,
+  sources:{
+   satellite:{
+    type:'raster',
+    tiles:[
+     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    ],
+    tileSize:256,
+    maxzoom:18
+   }
+  },
+  layers:[
+   {
+    id:'satellite',
+    type:'raster',
+    source:'satellite',
+    paint:{
+     'raster-saturation':-.08,
+     'raster-contrast':.13,
+     'raster-brightness-min':.04,
+     'raster-brightness-max':.86
+    }
+   }
+  ]
+ },
+
+ center:[7.78618,45.22794],
+ zoom:18.15,
+ pitch:63,
+ bearing:-30,
+ antialias:true,
+ maxZoom:20
+});
 
 map.addControl(
  new maplibregl.NavigationControl(),
  'bottom-right'
 );
 
-
-/* =========================================================
-   COORDINATE TRANSFORM
-   ========================================================= */
-
-function localPoint(
- lng,
- lat,
- z=0
-){
-
- const lat0=
-  SAN_BENIGNO_REFERENCE.lat*
-  Math.PI/
-  180;
-
+/* METRIC LOCAL COORDINATES */
+function localPoint(lng,lat,z=0){
+ const lat0=ORIGIN.lat*Math.PI/180;
 
  const east=
-  (
-   lng-
-   SAN_BENIGNO_REFERENCE.lng
-  )*
+  (lng-ORIGIN.lng)*
   111320*
   Math.cos(lat0);
 
-
  const north=
-  (
-   lat-
-   SAN_BENIGNO_REFERENCE.lat
-  )*
+  (lat-ORIGIN.lat)*
   110540;
-
 
  return new THREE.Vector3(
   east,
@@ -2666,2016 +1375,902 @@ function localPoint(
  );
 }
 
-
-/* =========================================================
-   MATERIALS
-   ========================================================= */
-
-function materialOuter(){
-
- return new THREE.MeshPhysicalMaterial({
-
-  color:0x14252e,
-
-  roughness:.13,
-
-  metalness:.82,
-
-  transparent:true,
-
-  opacity:.74,
-
-  depthWrite:false,
-
-  clearcoat:1,
-
-  clearcoatRoughness:.07,
-
-  side:THREE.DoubleSide
- });
-}
-
-
-function materialDark(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0x101a20,
-
-  roughness:.20,
-
-  metalness:.91
- });
-}
-
-
-function materialSteel(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0xb8cbd3,
-
-  roughness:.14,
-
-  metalness:.96
- });
-}
-
-
-function materialCyan(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0x00cfff,
-
-  roughness:.08,
-
-  metalness:.35,
-
-  emissive:
-   new THREE.Color(
-    0x00baff
-   ),
-
-  emissiveIntensity:1.65
- });
-}
-
-
-function materialOrange(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0xff9c13,
-
-  roughness:.15,
-
-  metalness:.72,
-
-  emissive:
-   new THREE.Color(
-    0xff6a00
-   ),
-
-  emissiveIntensity:.42
- });
-}
-
-
-function materialRed(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0xff3f55,
-
-  roughness:.12,
-
-  metalness:.65,
-
-  emissive:
-   new THREE.Color(
-    0xff112c
-   ),
-
-  emissiveIntensity:.78
- });
-}
-
-
-/* =========================================================
-   GEOMETRY
-   ========================================================= */
-
-function makeCurve(
- points,
- radius
-){
-
- return new THREE.CatmullRomCurve3(
-
-  points.map(
-   point=>
-    localPoint(
-     point[0],
-     point[1],
-
-     /*
-      Bottom of visual cylinder approximately
-      touches the ground plane.
-     */
-
-     radius+.10
-    )
-  ),
-
-  false,
-
-  'centripetal',
-
-  .12
- );
-}
-
-
-function orientAlong(
- object,
- curve,
- t
-){
-
- const position=
-  curve.getPointAt(t);
-
-
- const tangent=
-  curve
-   .getTangentAt(t)
-   .normalize();
-
-
- object.position.copy(
-  position
- );
-
-
- object.quaternion
-  .setFromUnitVectors(
-
-   new THREE.Vector3(
-    0,
-    0,
-    1
-   ),
-
-   tangent
-  );
-}
-
-
-/* =========================================================
-   EXCAVATION / GROUND CONTACT
-   ========================================================= */
-
-function addTrench(
- root,
- points,
- width=5.6
-){
-
- for(
-  let i=1;
-  i<points.length;
-  i++
- ){
-
-  const a=
-   localPoint(
-    points[i-1][0],
-    points[i-1][1],
-    .02
-   );
-
-
-  const b=
-   localPoint(
-    points[i][0],
-    points[i][1],
-    .02
-   );
-
-
-  const dx=
-   b.x-a.x;
-
-  const dy=
-   b.y-a.y;
-
-
-  const length=
-   Math.hypot(
-    dx,
-    dy
-   );
-
-
-  if(length<.2){
-   continue;
-  }
-
-
-  /*
-   Excavation floor.
-  */
-
-  const floor=
-   new THREE.Mesh(
-
-    new THREE.BoxGeometry(
-     length,
-     width,
-     .12
-    ),
-
-    new THREE.MeshStandardMaterial({
-
-     color:0x282019,
-
-     roughness:.98,
-
-     metalness:0
-    })
-   );
-
-
-  floor.position.set(
-
-   (a.x+b.x)/2,
-
-   (a.y+b.y)/2,
-
-   .02
-  );
-
-
-  floor.rotation.z=
-   Math.atan2(
-    dy,
-    dx
-   );
-
-
-  root.add(
-   floor
-  );
-
-
-  /*
-   Dark edge strips make the trench sit
-   visually inside the satellite terrain.
-  */
-
-  for(
-   const side
-   of [-1,1]
-  ){
-
-   const edge=
-    new THREE.Mesh(
-
-     new THREE.BoxGeometry(
-      length,
-      .30,
-      .22
-     ),
-
-     new THREE.MeshStandardMaterial({
-
-      color:0x15110e,
-
-      roughness:1
-     })
-    );
-
-
-   const angle=
-    Math.atan2(
-     dy,
-     dx
-    );
-
-
-   const offset=
-    width*.47;
-
-
-   edge.position.set(
-
-    (a.x+b.x)/2-
-    Math.sin(angle)*
-    offset*
-    side,
-
-    (a.y+b.y)/2+
-    Math.cos(angle)*
-    offset*
-    side,
-
-    .07
-   );
-
-
-   edge.rotation.z=
-    angle;
-
-
-   root.add(edge);
-  }
- }
-}
-
-
-/* =========================================================
-   COLLAR / FLANGE
-   ========================================================= */
-
-function addRing(
- root,
- curve,
- t,
- radius,
- type='collar'
-){
-
- const major=
-  type==='flange';
-
-
- const ring=
-  new THREE.Mesh(
-
-   new THREE.TorusGeometry(
-
-    radius*
-    (
-     major
-      ? 1.34
-      : 1.17
-    ),
-
-    radius*
-    (
-     major
-      ? .18
-      : .095
-    ),
-
-    14,
-
-    major
-     ? 48
-     : 36
-   ),
-
-   major
-    ? materialSteel()
-    : materialDark()
-  );
-
-
- orientAlong(
-  ring,
-  curve,
-  t
- );
-
-
- root.add(ring);
-
-
- if(major){
-
-  for(
-   const dt
-   of [-.009,.009]
-  ){
-
-   const secondary=
-    new THREE.Mesh(
-
-     new THREE.TorusGeometry(
-
-      radius*1.24,
-
-      radius*.065,
-
-      12,
-
-      42
-     ),
-
-     materialDark()
-    );
-
-
-   orientAlong(
-
-    secondary,
-
-    curve,
-
-    Math.max(
-     .01,
-     Math.min(
-      .99,
-      t+dt
-     )
-    )
-   );
-
-
-   root.add(
-    secondary
-   );
-  }
- }
-}
-
-
-/* =========================================================
-   PIPE
-   ========================================================= */
-
-
-function createPipe(
- root,
- spec,
- radiusArg
-){
-
- const radius=
-  Number(
-   radiusArg ??
-   spec.radius ??
-   2.40
-  );
-
-
- const curve=
-  (
-   typeof makeCurve === 'function'
-   && makeCurve.length >= 2
-  )
-   ? makeCurve(
-      spec.points,
-      radius
-     )
-   : buildCurve(
-      spec.points,
-      radius
-     );
-
-
- /*
-  ==========================================================
-  TRUE HERO PIPE
-
-  Scala grafica DEMO.
-  NON rappresenta il diametro fisico della condotta.
-  ==========================================================
- */
-
-
- /*
-  Corpo PE100 / industriale semitrasparente.
-
-  Deve far leggere contemporaneamente:
-  - volume esterno
-  - profondità
-  - core cyan interno
- */
-
- const shell=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    320,
-    radius,
-    36,
-    false
-   ),
-
-   new THREE.MeshPhysicalMaterial({
-
-    color:0x18343f,
-
-    roughness:.12,
-
-    metalness:.72,
-
-    transparent:true,
-
-    opacity:.54,
-
-    depthWrite:false,
-
-    side:
-     THREE.DoubleSide,
-
-    clearcoat:1,
-
-    clearcoatRoughness:.06
-   })
-  );
-
-
- shell.renderOrder=3;
-
- root.add(shell);
-
-
- /*
-  Bordo esterno metallico leggero:
-  dà definizione cilindrica senza coprire il core.
- */
-
- const outerSkin=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    320,
-    radius*1.035,
-    30,
-    false
-   ),
-
-   new THREE.MeshStandardMaterial({
-
-    color:0x263b45,
-
-    roughness:.18,
-
-    metalness:.91,
-
-    transparent:true,
-
-    opacity:.25,
-
-    depthWrite:false
-   })
-  );
-
-
- outerSkin.renderOrder=2;
-
- root.add(outerSkin);
-
-
- /*
-  CORE CYAN INTERNO
- */
-
- const core=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    320,
-    radius*.27,
-    20,
-    false
-   ),
-
-   cyanMaterial()
-  );
-
-
- core.renderOrder=1;
-
- root.add(core);
-
-
- /*
-  Glow attorno al core.
- */
-
- const coreGlow=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    300,
-    radius*.48,
-    18,
-    false
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0x00cfff,
-
-    transparent:true,
-
-    opacity:.18,
-
-    depthWrite:false,
-
-    blending:
-     THREE.AdditiveBlending
-   })
-  );
-
-
- root.add(coreGlow);
-
-
- /*
-  Riflesso superiore.
-
-  Segue la stessa geometria GPS.
- */
-
- const highlightPoints=
-  spec.points.map(
-   point=>
-    localPoint(
-     point[0],
-     point[1],
-     radius*1.88
-    )
-  );
-
-
- const highlightCurve=
-  new THREE.CatmullRomCurve3(
-   highlightPoints,
-   false,
-   'centripetal',
-   .12
-  );
-
-
- const highlight=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    highlightCurve,
-    280,
-    radius*.055,
-    9,
-    false
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0xdaf8ff,
-
-    transparent:true,
-
-    opacity:.78,
-
-    depthWrite:false
-   })
-  );
-
-
- root.add(highlight);
-
-
- /*
-  COLLARI + FLANGE
- */
-
- const joints=[
-  .04,
-  .11,
-  .19,
-  .28,
-  .38,
-  .48,
-  .58,
-  .68,
-  .78,
-  .88,
-  .96
- ];
-
-
- joints.forEach(
-  (t,index)=>{
-
-   const major=
-    (
-     index===2 ||
-     index===5 ||
-     index===8
-    );
-
-
-   if(
-    typeof addRing ===
-    'function'
-   ){
-
-    addRing(
-     root,
-     curve,
-     t,
-     radius,
-     major
-      ? 'flange'
-      : 'collar'
-    );
-
-   }else{
-
-    const ring=
-     new THREE.Mesh(
-
-      new THREE.TorusGeometry(
-
-       radius*
-       (
-        major
-         ? 1.40
-         : 1.18
-       ),
-
-       radius*
-       (
-        major
-         ? .22
-         : .11
-       ),
-
-       14,
-
-       major
-        ? 48
-        : 36
-      ),
-
-      major
-       ? collarMaterial()
-       : darkMaterial()
-     );
-
-
-    orientAlong(
-     ring,
-     curve,
-     t
-    );
-
-
-    root.add(ring);
-   }
-  }
- );
-
-
- const pipeline={
-  id:spec.id,
-  curve,
-  radius,
-  points:spec.points
- };
-
-
- T.pipelines.push(
-  pipeline
- );
-
-
- return pipeline;
-}
-
-
-
-/* =========================================================
-   VALVE
-   ========================================================= */
-
-function addValve(
- root,
- pipeline,
- t
-){
-
- const {
-  curve,
-  radius
- }=pipeline;
-
-
- const p=
-  curve.getPointAt(t);
-
-
- /*
-  Valve body.
- */
-
- const body=
-  new THREE.Mesh(
-
-   new THREE.SphereGeometry(
-    radius*1.38,
-    30,
-    24
-   ),
-
-   materialDark()
-  );
-
-
- body.position.copy(p);
-
-
- body.scale.set(
-  1.18,
-  1.18,
-  .80
- );
-
-
- root.add(body);
-
-
- addRing(
-  root,
-  curve,
-  Math.max(.01,t-.018),
-  radius,
-  'flange'
- );
-
-
- addRing(
-  root,
-  curve,
-  Math.min(.99,t+.018),
-  radius,
-  'flange'
- );
-
-
- /*
-  Vertical valve stem.
- */
-
- const stemHeight=
-  radius*2.55;
-
-
- const stem=
-  new THREE.Mesh(
-
-   new THREE.CylinderGeometry(
-    radius*.13,
-    radius*.17,
-    stemHeight,
-    22
-   ),
-
-   materialSteel()
-  );
-
-
- stem.rotation.x=
-  Math.PI/2;
-
-
- stem.position.set(
-  p.x,
-  p.y,
-  p.z+
-  radius*.78+
-  stemHeight*.5
- );
-
-
- root.add(stem);
-
-
- /*
-  Horizontal valve wheel.
- */
-
- const wheel=
-  new THREE.Mesh(
-
-   new THREE.TorusGeometry(
-    radius*.76,
-    radius*.105,
-    14,
-    44
-   ),
-
-   materialCyan()
-  );
-
-
- wheel.position.set(
-  p.x,
-  p.y,
-  p.z+
-  radius*.78+
-  stemHeight
- );
-
-
- root.add(wheel);
-
-
- /*
-  Wheel hub.
- */
-
- const hub=
-  new THREE.Mesh(
-
-   new THREE.CylinderGeometry(
-    radius*.14,
-    radius*.14,
-    radius*.25,
-    18
-   ),
-
-   materialSteel()
-  );
-
-
- hub.position.copy(
-  wheel.position
- );
-
-
- root.add(hub);
-}
-
-
-/* =========================================================
-   T JUNCTION
-   ========================================================= */
-
-function addJunction(
- root,
- pipeline,
- t
-){
-
- const p=
-  pipeline.curve
-   .getPointAt(t);
-
-
- const joint=
-  new THREE.Mesh(
-
-   new THREE.SphereGeometry(
-    pipeline.radius*1.27,
-    28,
-    22
-   ),
-
-   materialDark()
-  );
-
-
- joint.position.copy(p);
-
-
- root.add(joint);
-
-
- addRing(
-  root,
-  pipeline.curve,
-  Math.max(.01,t-.015),
-  pipeline.radius,
-  'flange'
- );
-
-
- addRing(
-  root,
-  pipeline.curve,
-  Math.min(.99,t+.015),
-  pipeline.radius,
-  'flange'
- );
-}
-
-
-/* =========================================================
-   ANOMALY DEMO
-   ========================================================= */
-
-function addAnomaly(
- root,
- pipeline,
- t
-){
-
- const ring=
-  new THREE.Mesh(
-
-   new THREE.TorusGeometry(
-    pipeline.radius*1.30,
-    pipeline.radius*.15,
-    14,
-    44
-   ),
-
-   materialRed()
-  );
-
-
- orientAlong(
-  ring,
-  pipeline.curve,
-  t
- );
-
-
- root.add(ring);
-}
-
-
-/* =========================================================
-   FLOW PARTICLES
-   ========================================================= */
-
-function addFlow(
- root,
- pipeline,
- count
-){
-
- for(
-  let i=0;
-  i<count;
-  i++
- ){
-
-  const mesh=
-   new THREE.Mesh(
-
-    new THREE.SphereGeometry(
-     pipeline.radius*.10,
-     10,
-     8
-    ),
-
-    materialCyan()
-   );
-
-
-  root.add(mesh);
-
-
-  T.flowObjects.push({
-
-   mesh,
-
-   curve:
-    pipeline.curve,
-
-   offset:
-    i/count
-  });
- }
-}
-
-
-/* =========================================================
-   BUILD FINAL SCENE
-   ========================================================= */
-
-function buildScene(){
-
- const root=
-  new THREE.Group();
-
-
- for(
-  const spec
-  of DEMO_PIPELINES
- ){
-
-  addTrench(
-   root,
-   spec.points,
-
-   spec.id==='GAS-DEMO-SB-001'
-    ? 5.2
-    : 3.8
-  );
-
-
-  createPipe(
-   root,
-   spec
-  );
- }
-
-
- const main=
-  T.pipelines.find(
-   item=>
-    item.id===
-    'GAS-DEMO-SB-001'
-  );
-
-
- const branch=
-  T.pipelines.find(
-   item=>
-    item.id===
-    'GAS-DEMO-SB-002'
-  );
-
-
- if(main){
-
-  addValve(
-   root,
-   main,
-   .24
-  );
-
-
-  addJunction(
-   root,
-   main,
-   .58
-  );
-
-
-  addValve(
-   root,
-   main,
-   .79
-  );
-
-
-  addAnomaly(
-   root,
-   main,
-   .69
-  );
-
-
-  addFlow(
-   root,
-   main,
-   22
-  );
- }
-
-
- if(branch){
-
-  addValve(
-   root,
-   branch,
-   .64
-  );
-
-
-  addFlow(
-   root,
-   branch,
-   7
-  );
- }
-
-
- return root;
-}
-
-
-/* =========================================================
-   LIGHTS
-   ========================================================= */
-
-function addLights(){
-
- T.scene.add(
-
-  new THREE.HemisphereLight(
-   0xd9f6ff,
-   0x03080b,
-   3.0
-  )
- );
-
-
- const sun=
-  new THREE.DirectionalLight(
-   0xffffff,
-   4.6
-  );
-
-
- sun.position.set(
-  -130,
-  -160,
-  270
- );
-
-
- T.scene.add(sun);
-
-
- const cyan=
-  new THREE.DirectionalLight(
-   0x11d8ff,
-   1.7
-  );
-
-
- cyan.position.set(
-  130,
-  80,
-  100
- );
-
-
- T.scene.add(cyan);
-}
-
-
-/* =========================================================
-   CUSTOM 3D LAYER
-   ========================================================= */
-
-const final3DLayer={
-
- id:'nma-final-reference-3d',
-
- type:'custom',
-
- renderingMode:'3d',
-
-
- onAdd(mapInstance,gl){
-
-  T.camera=
-   new THREE.Camera();
-
-
-  T.scene=
-   new THREE.Scene();
-
-
-  addLights();
-
-
-  T.root=
-   buildScene();
-
-
-  T.scene.add(
-   T.root
-  );
-
-
-  T.mercator=
-   maplibregl
-    .MercatorCoordinate
-    .fromLngLat(
-
-     {
-      lng:
-       SAN_BENIGNO_REFERENCE.lng,
-
-      lat:
-       SAN_BENIGNO_REFERENCE.lat
-     },
-
-     0
-    );
-
-
-  T.scale=
-   T.mercator
-    .meterInMercatorCoordinateUnits();
-
-
-  T.renderer=
-   new THREE.WebGLRenderer({
-
-    canvas:
-     mapInstance.getCanvas(),
-
-    context:gl,
-
-    antialias:true
-   });
-
-
-  T.renderer.autoClear=false;
-
-
-  if(
-   'outputColorSpace'
-   in T.renderer
-  ){
-
-   T.renderer.outputColorSpace=
-    THREE.SRGBColorSpace;
-  }
-
-
-  updateInterface();
-
-
-  addLabels();
- },
-
-
- render(gl,matrix){
-
-  const now=
-   performance.now()/
-   1000;
-
-
-  for(
-   const particle
-   of T.flowObjects
-  ){
-
-   const t=
-    (
-     particle.offset+
-     now*.065
-    )%1;
-
-
-   const position=
-    particle.curve
-     .getPointAt(t);
-
-
-   particle.mesh
-    .position
-    .copy(position);
-  }
-
-
-  const model=
-   new THREE.Matrix4()
-    .makeTranslation(
-     T.mercator.x,
-     T.mercator.y,
-     T.mercator.z
-    );
-
-
- /*
-  Local north-positive coordinates
-  -> Web Mercator negative Y.
- */
-
- model.scale(
-
-  new THREE.Vector3(
-   T.scale,
-   -T.scale,
-   T.scale
-  )
- );
-
-
- T.camera.projectionMatrix=
-
-  new THREE.Matrix4()
-   .fromArray(matrix)
-   .multiply(model);
-
-
- T.renderer.resetState();
-
-
- T.renderer.render(
-  T.scene,
-  T.camera
- );
-
-
- map.triggerRepaint();
- }
-
-};
-
-
-/* =========================================================
-   DISTANCE
-   ========================================================= */
-
-function geoDistance(a,b){
-
- const lat=
-  (
-   a[1]+b[1]
-  )*.5*
-  Math.PI/
-  180;
-
-
- const east=
-  (
-   b[0]-a[0]
-  )*
+function distance(a,b){
+ const lat=((a[1]+b[1])/2)*Math.PI/180;
+
+ const dx=
+  (b[0]-a[0])*
   111320*
   Math.cos(lat);
 
-
- const north=
-  (
-   b[1]-a[1]
-  )*
+ const dy=
+  (b[1]-a[1])*
   110540;
 
-
- return Math.hypot(
-  east,
-  north
- );
+ return Math.hypot(dx,dy);
 }
 
-
-function routeLength(){
-
+function totalLength(){
  let total=0;
 
-
- for(
-  const pipe
-  of DEMO_PIPELINES
- ){
-
-  for(
-   let i=1;
-   i<pipe.points.length;
-   i++
-  ){
-
-   total+=
-    geoDistance(
-     pipe.points[i-1],
-     pipe.points[i]
-    );
+ for(const network of NETWORK){
+  for(let i=1;i<network.points.length;i++){
+   total+=distance(
+    network.points[i-1],
+    network.points[i]
+   );
   }
  }
-
 
  return total;
 }
 
-
-/* =========================================================
-   UI
-   ========================================================= */
-
-function updateInterface(){
-
- /*
-  Header metrics.
- */
-
- const metrics=
-  document.querySelectorAll(
-   '.mapMetrics .metric strong'
-  );
-
-
- if(metrics[0]){
-
-  metrics[0].textContent=
-   DEMO_PIPELINES.length;
- }
-
-
- if(metrics[1]){
-
-  metrics[1].textContent=
-   DEMO_PIPELINES
-    .reduce(
-     (
-      total,
-      pipeline
-     )=>
-      total+
-      pipeline.points.length,
-     0
-    );
- }
-
-
- if(metrics[2]){
-
-  metrics[2].textContent=
-   Math.round(
-    routeLength()
-   )+
-   ' m';
- }
-
-
- /*
-  Replace old header description.
- */
-
- const card=
-  document.querySelector(
-   '.mapCard'
-  );
-
-
- if(card){
-
-  card.innerHTML=
-   '<strong>'+
-    'San Benigno Network DEMO'+
-   '</strong>'+
-   '<span>'+
-    'Road-anchored visual Digital Twin'+
-   '</span>'+
-   '<span class="demoBadge">'+
-    '● '+ROUTE_SOURCE+
-   '</span>';
- }
-
-
- /*
-  Main asset.
- */
-
- const asset=
-  document.querySelector(
-   '.assetId'
-  );
-
-
- if(asset){
-
-  asset.textContent=
-   'GAS-DEMO-SB-001';
- }
-
-
- /*
-  GPS table.
- */
-
- const rows=
-  document.getElementById(
-   'gpsRows'
-  );
-
-
- if(rows){
-
-  const all=
-   DEMO_PIPELINES
-    .flatMap(
-     (
-      pipe,
-      pipeIndex
-     )=>
-      pipe.points.map(
-       (
-        point,
-        pointIndex
-       )=>({
-
-        pipe:
-         pipeIndex+1,
-
-        point:
-         pointIndex+1,
-
-        lng:
-         point[0],
-
-        lat:
-         point[1]
-       })
-      )
-    );
-
-
-  rows.innerHTML=
-   all
-    .slice(
-     0,
-     24
-    )
-    .map(
-     item=>
-
-      '<div class="gpsRow">'+
-
-       '<b>'+
-        'P'+
-        item.pipe+
-        '.'+
-        item.point+
-       '</b>'+
-
-       '<span>'+
-        Number(
-         item.lat
-        ).toFixed(6)+
-        ' N'+
-       '</span>'+
-
-       '<span>'+
-        Number(
-         item.lng
-        ).toFixed(6)+
-        ' E'+
-       '</span>'+
-
-      '</div>'
-    )
-    .join('');
- }
-
-
- /*
-  Watermark.
- */
-
- const watermark=
-  document.querySelector(
-   '.demoWatermark'
-  );
-
-
- if(watermark){
-
-  watermark.textContent=
-   'SIMULATED PIPE ON PUBLIC ROAD GEOMETRY · NOT REAL GAS INFRASTRUCTURE';
- }
-
-
- /*
-  GPS status.
- */
-
- const gpsBox=
-  document.querySelector(
-   '.gpsBox'
-  );
-
-
- if(gpsBox){
-
-  gpsBox.innerHTML=
-   'SAN BENIGNO CANAVESE<br>'+
-   'ROAD GEOMETRY DEMO<br>'+
-   '<span style="color:var(--orange)">'+
-   ROUTE_SOURCE+
-   '</span>';
- }
+/* MATERIALS */
+function steel(){
+ return new THREE.MeshStandardMaterial({
+  color:0xa9bcc4,
+  roughness:.14,
+  metalness:.97
+ });
 }
 
-
-/* =========================================================
-   LABELS
-   ========================================================= */
-
-function markerElement(
- title,
- subtitle,
- type=''
-){
-
- const element=
-  document.createElement(
-   'div'
-  );
-
-
- element.className=
-  'assetLabel'+
-  (
-   type==='orange'
-    ? ' orange'
-    : ''
-  );
-
-
- element.innerHTML=
-  '<b>'+
-   title+
-  '</b>'+
-  subtitle;
-
-
- return element;
+function darkSteel(){
+ return new THREE.MeshStandardMaterial({
+  color:0x121d22,
+  roughness:.18,
+  metalness:.91
+ });
 }
 
+function shellMaterial(){
+ return new THREE.MeshPhysicalMaterial({
+  color:0x173440,
+  roughness:.10,
+  metalness:.67,
+  transparent:true,
+  opacity:.54,
+  depthWrite:false,
+  side:THREE.DoubleSide,
+  clearcoat:1,
+  clearcoatRoughness:.05
+ });
+}
 
-function pointAtFraction(
- points,
- fraction
-){
+function glowMaterial(color,opacity=.16){
+ return new THREE.MeshBasicMaterial({
+  color,
+  transparent:true,
+  opacity,
+  depthWrite:false,
+  blending:THREE.AdditiveBlending
+ });
+}
 
- const index=
-  Math.max(
-   0,
-   Math.min(
-    points.length-1,
-    Math.round(
-     (
-      points.length-1
-     )*
-     fraction
-    )
+function emissive(color,power=1.45){
+ return new THREE.MeshStandardMaterial({
+  color,
+  roughness:.07,
+  metalness:.32,
+  emissive:new THREE.Color(color),
+  emissiveIntensity:power
+ });
+}
+
+function redMaterial(){
+ return new THREE.MeshStandardMaterial({
+  color:0xff394f,
+  roughness:.12,
+  metalness:.60,
+  emissive:new THREE.Color(0xff1029),
+  emissiveIntensity:.90
+ });
+}
+
+/* CURVE */
+function curveFor(spec){
+ return new THREE.CatmullRomCurve3(
+  spec.points.map(p=>
+   localPoint(
+    p[0],
+    p[1],
+    spec.radius*.66
    )
+  ),
+  false,
+  'centripetal',
+  .13
+ );
+}
+
+function orient(object,curve,t){
+ const p=curve.getPointAt(t);
+ const tangent=curve.getTangentAt(t).normalize();
+
+ object.position.copy(p);
+
+ object.quaternion.setFromUnitVectors(
+  new THREE.Vector3(0,0,1),
+  tangent
+ );
+}
+
+/* TRENCH */
+function trench(root,points,width){
+ for(let i=1;i<points.length;i++){
+  const a=localPoint(points[i-1][0],points[i-1][1],.02);
+  const b=localPoint(points[i][0],points[i][1],.02);
+
+  const dx=b.x-a.x;
+  const dy=b.y-a.y;
+  const len=Math.hypot(dx,dy);
+
+  if(len<.2) continue;
+
+  const angle=Math.atan2(dy,dx);
+
+  const floor=new THREE.Mesh(
+   new THREE.BoxGeometry(len,width,.10),
+   new THREE.MeshStandardMaterial({
+    color:0x231c17,
+    roughness:1
+   })
   );
 
+  floor.position.set(
+   (a.x+b.x)/2,
+   (a.y+b.y)/2,
+   .03
+  );
 
- return points[index];
-}
+  floor.rotation.z=angle;
+  root.add(floor);
 
-
-function addLabels(){
-
- const main=
-  DEMO_PIPELINES[0];
-
-
- if(!main){
-  return;
- }
-
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'GAS-DEMO-SB-001',
-    'PE100 · TRUE 3D'
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  pointAtFraction(
-   main.points,
-   .47
-  )
- )
- .addTo(map);
-
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'VALVE VG-DEMO-01',
-    'Visual component'
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  pointAtFraction(
-   main.points,
-   .24
-  )
- )
- .addTo(map);
-
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'WORK ORDER DEMO',
-    'Synthetic anomaly',
-    'orange'
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  pointAtFraction(
-   main.points,
-   .69
-  )
- )
- .addTo(map);
-}
-
-
-/* =========================================================
-   FIT CAMERA
-   ========================================================= */
-
-
-function fitDemoCamera(){
-
- const points=
-  DEMO_PIPELINES
-   .flatMap(
-    item=>
-     item.points
+  for(const side of [-1,1]){
+   const bank=new THREE.Mesh(
+    new THREE.BoxGeometry(len,.45,.38),
+    new THREE.MeshStandardMaterial({
+     color:0x4a3729,
+     roughness:1
+    })
    );
 
+   bank.position.set(
+    (a.x+b.x)/2-Math.sin(angle)*(width*.48)*side,
+    (a.y+b.y)/2+Math.cos(angle)*(width*.48)*side,
+    .18
+   );
 
- if(!points.length){
-  return;
+   bank.rotation.z=angle;
+   root.add(bank);
+  }
+ }
+}
+
+/* PIPE BODY */
+function buildPipe(root,spec){
+ const curve=curveFor(spec);
+ const r=spec.radius;
+ const color=spec.color;
+
+ /*
+  Transparent industrial outer body.
+ */
+ const shell=new THREE.Mesh(
+  new THREE.TubeGeometry(
+   curve,
+   260,
+   r,
+   34,
+   false
+  ),
+  shellMaterial()
+ );
+
+ shell.renderOrder=3;
+ root.add(shell);
+
+ /*
+  Metallic underside / silhouette.
+ */
+ const silhouette=new THREE.Mesh(
+  new THREE.TubeGeometry(
+   curve,
+   260,
+   r*.92,
+   28,
+   false
+  ),
+  new THREE.MeshStandardMaterial({
+   color:0x1b2a31,
+   roughness:.17,
+   metalness:.89,
+   transparent:true,
+   opacity:.37,
+   depthWrite:false
+  })
+ );
+
+ silhouette.renderOrder=2;
+ root.add(silhouette);
+
+ /*
+  Bright inner flow tube.
+ */
+ const core=new THREE.Mesh(
+  new THREE.TubeGeometry(
+   curve,
+   260,
+   r*.25,
+   18,
+   false
+  ),
+  emissive(color,1.65)
+ );
+
+ core.renderOrder=1;
+ root.add(core);
+
+ /*
+  Internal atmospheric glow.
+ */
+ root.add(
+  new THREE.Mesh(
+   new THREE.TubeGeometry(
+    curve,
+    240,
+    r*.46,
+    18,
+    false
+   ),
+   glowMaterial(color,.16)
+  )
+ );
+
+ /*
+  Top reflection.
+ */
+ const highlightCurve=
+  new THREE.CatmullRomCurve3(
+   spec.points.map(p=>
+    localPoint(
+     p[0],
+     p[1],
+     r*1.50
+    )
+   ),
+   false,
+   'centripetal',
+   .13
+  );
+
+ root.add(
+  new THREE.Mesh(
+   new THREE.TubeGeometry(
+    highlightCurve,
+    220,
+    r*.055,
+    9,
+    false
+   ),
+   new THREE.MeshBasicMaterial({
+    color:0xe1f9ff,
+    transparent:true,
+    opacity:.72,
+    depthWrite:false
+   })
+  )
+ );
+
+ /*
+  Collars / flanges.
+ */
+ const positions=[
+  .04,.12,.21,.31,.41,.52,.63,.74,.84,.94
+ ];
+
+ positions.forEach((t,index)=>{
+  const major=[2,5,8].includes(index);
+
+  const ring=new THREE.Mesh(
+   new THREE.TorusGeometry(
+    r*(major?1.36:1.17),
+    r*(major?.20:.10),
+    14,
+    major?48:36
+   ),
+   major ? steel() : darkSteel()
+  );
+
+  orient(ring,curve,t);
+  root.add(ring);
+
+  if(major){
+   [-.012,.012].forEach(delta=>{
+    const secondary=new THREE.Mesh(
+     new THREE.TorusGeometry(
+      r*1.25,
+      r*.07,
+      12,
+      42
+     ),
+     darkSteel()
+    );
+
+    orient(
+     secondary,
+     curve,
+     Math.max(.01,Math.min(.99,t+delta))
+    );
+
+    root.add(secondary);
+   });
+  }
+ });
+
+ const pipeline={
+  id:spec.id,
+  spec,
+  curve,
+  radius:r,
+  color
+ };
+
+ S.pipelines.push(pipeline);
+
+ return pipeline;
+}
+
+/* VALVE */
+function valve(root,pipeline,t){
+ const r=pipeline.radius;
+ const p=pipeline.curve.getPointAt(t);
+
+ const body=new THREE.Mesh(
+  new THREE.SphereGeometry(
+   r*1.32,
+   30,
+   22
+  ),
+  darkSteel()
+ );
+
+ body.position.copy(p);
+ body.scale.set(1.15,1.15,.78);
+ root.add(body);
+
+ [-.018,.018].forEach(delta=>{
+  const flange=new THREE.Mesh(
+   new THREE.TorusGeometry(
+    r*1.35,
+    r*.20,
+    14,
+    48
+   ),
+   steel()
+  );
+
+  orient(
+   flange,
+   pipeline.curve,
+   Math.max(.01,Math.min(.99,t+delta))
+  );
+
+  root.add(flange);
+ });
+
+ const stemHeight=r*2.6;
+
+ const stem=new THREE.Mesh(
+  new THREE.CylinderGeometry(
+   r*.15,
+   r*.18,
+   stemHeight,
+   20
+  ),
+  steel()
+ );
+
+ stem.rotation.x=Math.PI/2;
+
+ stem.position.set(
+  p.x,
+  p.y,
+  p.z+r*.70+stemHeight*.5
+ );
+
+ root.add(stem);
+
+ const wheel=new THREE.Mesh(
+  new THREE.TorusGeometry(
+   r*.82,
+   r*.12,
+   14,
+   44
+  ),
+  emissive(pipeline.color,1.25)
+ );
+
+ wheel.position.set(
+  p.x,
+  p.y,
+  p.z+r*.70+stemHeight
+ );
+
+ root.add(wheel);
+}
+
+/* RISER */
+function riser(root,pipeline,t){
+ const r=pipeline.radius;
+ const p=pipeline.curve.getPointAt(t);
+
+ const height=r*4.1;
+
+ const tube=new THREE.Mesh(
+  new THREE.CylinderGeometry(
+   r*.54,
+   r*.54,
+   height,
+   26
+  ),
+  shellMaterial()
+ );
+
+ tube.rotation.x=Math.PI/2;
+
+ tube.position.set(
+  p.x,
+  p.y,
+  p.z+height*.5
+ );
+
+ root.add(tube);
+
+ const inner=new THREE.Mesh(
+  new THREE.CylinderGeometry(
+   r*.15,
+   r*.15,
+   height*.95,
+   18
+  ),
+  emissive(pipeline.color,1.4)
+ );
+
+ inner.rotation.x=Math.PI/2;
+
+ inner.position.copy(tube.position);
+ root.add(inner);
+
+ const topRing=new THREE.Mesh(
+  new THREE.TorusGeometry(
+   r*.67,
+   r*.11,
+   14,
+   42
+  ),
+  steel()
+ );
+
+ topRing.position.set(
+  p.x,
+  p.y,
+  p.z+height
+ );
+
+ root.add(topRing);
+}
+
+/* JUNCTION */
+function junction(root,pipeline,t){
+ const r=pipeline.radius;
+ const p=pipeline.curve.getPointAt(t);
+
+ const joint=new THREE.Mesh(
+  new THREE.SphereGeometry(
+   r*1.25,
+   28,
+   22
+  ),
+  darkSteel()
+ );
+
+ joint.position.copy(p);
+ root.add(joint);
+}
+
+/* ANOMALY */
+function anomaly(root,pipeline,t){
+ const r=pipeline.radius;
+
+ const ring=new THREE.Mesh(
+  new THREE.TorusGeometry(
+   r*1.34,
+   r*.19,
+   14,
+   46
+  ),
+  redMaterial()
+ );
+
+ orient(ring,pipeline.curve,t);
+ root.add(ring);
+}
+
+/* FLOW PARTICLES */
+function particles(root,pipeline,count){
+ for(let i=0;i<count;i++){
+  const ball=new THREE.Mesh(
+   new THREE.SphereGeometry(
+    pipeline.radius*.10,
+    10,
+    8
+   ),
+   emissive(pipeline.color,2.1)
+  );
+
+  root.add(ball);
+
+  S.particles.push({
+   mesh:ball,
+   curve:pipeline.curve,
+   offset:i/count
+  });
+ }
+}
+
+/* BUILD SCENE */
+function buildScene(){
+ const root=new THREE.Group();
+
+ for(const spec of NETWORK){
+  trench(
+   root,
+   spec.points,
+   spec.type==='main' ? 8.5 : 5.2
+  );
+
+  buildPipe(root,spec);
  }
 
+ const main=S.pipelines.find(p=>p.id==='GAS-DEMO-SB-001');
+ const branch=S.pipelines.find(p=>p.id==='GAS-DEMO-SB-002');
 
- const bounds=
-  points.reduce(
+ if(main){
+  valve(root,main,.22);
+  junction(root,main,.47);
+  anomaly(root,main,.60);
+  riser(root,main,.76);
+  valve(root,main,.87);
+  particles(root,main,24);
+ }
 
-   (
-    box,
-    coordinate
-   )=>
-    box.extend(
-     coordinate
-    ),
+ if(branch){
+  valve(root,branch,.63);
+  particles(root,branch,8);
+ }
 
-   new maplibregl.LngLatBounds(
-    points[0],
-    points[0]
+ return root;
+}
+
+/* LIGHTS */
+function lighting(){
+ S.scene.add(
+  new THREE.HemisphereLight(
+   0xdaf7ff,
+   0x02080c,
+   3.2
+  )
+ );
+
+ const key=new THREE.DirectionalLight(
+  0xffffff,
+  5.2
+ );
+
+ key.position.set(-140,-170,280);
+ S.scene.add(key);
+
+ const rim=new THREE.DirectionalLight(
+  0x00cfff,
+  2.6
+ );
+
+ rim.position.set(160,110,120);
+ S.scene.add(rim);
+
+ const warm=new THREE.DirectionalLight(
+  0xffba66,
+  .85
+ );
+
+ warm.position.set(-90,100,75);
+ S.scene.add(warm);
+}
+
+/* THREE / MAPLIBRE CUSTOM LAYER */
+const pipeLayer={
+ id:'nma-clean-true3d-pipes',
+ type:'custom',
+ renderingMode:'3d',
+
+ onAdd(mapInstance,gl){
+  try{
+   if(typeof THREE==='undefined'){
+    throw new Error('Three.js non disponibile');
+   }
+
+   S.camera=new THREE.Camera();
+   S.scene=new THREE.Scene();
+
+   lighting();
+
+   S.root=buildScene();
+   S.scene.add(S.root);
+
+   S.originMercator=
+    maplibregl.MercatorCoordinate.fromLngLat(
+     {
+      lng:ORIGIN.lng,
+      lat:ORIGIN.lat
+     },
+     0
+    );
+
+   S.scale=
+    S.originMercator
+     .meterInMercatorCoordinateUnits();
+
+   S.renderer=new THREE.WebGLRenderer({
+    canvas:mapInstance.getCanvas(),
+    context:gl,
+    antialias:true,
+    alpha:true
+   });
+
+   S.renderer.autoClear=false;
+
+   if('outputColorSpace' in S.renderer){
+    S.renderer.outputColorSpace=THREE.SRGBColorSpace;
+   }
+
+   S.initialized=true;
+
+   document.getElementById('engineState').textContent='TRUE 3D';
+   document.getElementById('lower3dState').textContent='ONLINE';
+
+   populateGPS();
+   addLabels();
+
+  }catch(error){
+   failScene(error);
+   throw error;
+  }
+ },
+
+ render(gl,matrix){
+  if(!S.active || !S.initialized) return;
+
+  const time=performance.now()/1000;
+
+  for(const particle of S.particles){
+   const t=(particle.offset+time*.07)%1;
+   const p=particle.curve.getPointAt(t);
+   particle.mesh.position.copy(p);
+  }
+
+  const model=
+   new THREE.Matrix4()
+    .makeTranslation(
+     S.originMercator.x,
+     S.originMercator.y,
+     S.originMercator.z
+    );
+
+  model.scale(
+   new THREE.Vector3(
+    S.scale,
+    -S.scale,
+    S.scale
    )
   );
 
+  S.camera.projectionMatrix=
+   new THREE.Matrix4()
+    .fromArray(matrix)
+    .multiply(model);
 
+  S.renderer.resetState();
+
+  S.renderer.render(
+   S.scene,
+   S.camera
+  );
+
+  map.triggerRepaint();
+ }
+};
+
+/* UI DATA */
+function populateGPS(){
+ const all=NETWORK.flatMap(
+  (network,ni)=>
+   network.points.map(
+    (point,pi)=>({
+     id:`P${ni+1}.${pi+1}`,
+     lng:point[0],
+     lat:point[1]
+    })
+   )
+ );
+
+ document.getElementById('gpsCount').textContent=all.length;
+
+ document.getElementById('routeLength').textContent=
+  Math.round(totalLength())+' m';
+
+ document.getElementById('gpsRows').innerHTML=
+  all.map(p=>
+   `<div class="gpsRow">
+    <b>${p.id}</b>
+    <span>${p.lat.toFixed(6)} N</span>
+    <span>${p.lng.toFixed(6)} E</span>
+   </div>`
+  ).join('');
+}
+
+function labelElement(title,subtitle,type=''){
+ const el=document.createElement('div');
+ el.className='assetLabel '+type;
+ el.innerHTML=`<b>${title}</b>${subtitle}`;
+ return el;
+}
+
+function addLabels(){
+ new maplibregl.Marker({
+  element:labelElement(
+   'GAS-DEMO-SB-001',
+   'PE100 · TRUE 3D'
+  ),
+  anchor:'bottom'
+ })
+ .setLngLat(NETWORK[0].points[5])
+ .addTo(map);
+
+ new maplibregl.Marker({
+  element:labelElement(
+   'VALVOLA VG-DEMO-01',
+   '3D component'
+  ),
+  anchor:'bottom'
+ })
+ .setLngLat(NETWORK[0].points[2])
+ .addTo(map);
+
+ new maplibregl.Marker({
+  element:labelElement(
+   'ANOMALIA DEMO',
+   'Synthetic work area',
+   'red'
+  ),
+  anchor:'bottom'
+ })
+ .setLngLat(NETWORK[0].points[6])
+ .addTo(map);
+
+ new maplibregl.Marker({
+  element:labelElement(
+   'DIRAMAZIONE',
+   'Synthetic branch',
+   'orange'
+  ),
+  anchor:'bottom'
+ })
+ .setLngLat(NETWORK[1].points[2])
+ .addTo(map);
+}
+
+/* CAMERA */
+function networkBounds(){
+ const points=NETWORK.flatMap(x=>x.points);
+
+ return points.reduce(
+  (bounds,p)=>bounds.extend(p),
+  new maplibregl.LngLatBounds(
+   points[0],
+   points[0]
+  )
+ );
+}
+
+function heroView(){
  map.fitBounds(
-
-  bounds,
-
+  networkBounds(),
   {
    padding:{
-    top:70,
-    right:70,
-    bottom:65,
-    left:70
+    top:105,
+    right:125,
+    bottom:90,
+    left:110
    },
-
-   maxZoom:18.60,
-
-   pitch:66,
-
-   bearing:-27,
-
-   duration:1100
+   maxZoom:18.55,
+   pitch:63,
+   bearing:-30,
+   duration:900
   }
  );
 }
 
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-map.on(
- 'load',
- async()=>{
-
-  const road=
-   await loadRoadGeometry();
-
-
-  const branch=
-   createDemoBranch(
-    road
-   );
-
-
-  /*
-   IMPORTANT:
-
-   radius = visual presentation scale,
-   NOT real pipe diameter.
-  */
-
-  DEMO_PIPELINES=[
-
-   {
-    id:
-     'GAS-DEMO-SB-001',
-
-    radius:2.40,
-
-    points:
-     road
-   },
-
-   {
-    id:
-     'GAS-DEMO-SB-002',
-
-    radius:1.40,
-
-    points:
-     branch
-   }
-
-  ];
-
-
-  map.addLayer(
-   final3DLayer
-  );
-
-
-  fitDemoCamera();
+map.on('load',()=>{
+ try{
+  map.addLayer(pipeLayer);
+  heroView();
+ }catch(error){
+  failScene(error);
  }
-);
+});
 
+/* CONTROLS */
+document.getElementById('view2d').addEventListener('click',()=>{
+ document.getElementById('view2d').classList.add('active');
+ document.getElementById('view3d').classList.remove('active');
 
-/* =========================================================
-   READ-ONLY HEALTH
-   ========================================================= */
+ map.easeTo({
+  pitch:0,
+  bearing:0,
+  duration:650
+ });
+});
 
+document.getElementById('view3d').addEventListener('click',()=>{
+ document.getElementById('view3d').classList.add('active');
+ document.getElementById('view2d').classList.remove('active');
+
+ heroView();
+});
+
+document.getElementById('focusPipe').addEventListener('click',()=>{
+ map.easeTo({
+  center:NETWORK[0].points[5],
+  zoom:18.72,
+  pitch:67,
+  bearing:-31,
+  duration:750
+ });
+});
+
+document.getElementById('gasToggle').addEventListener('click',function(){
+ this.classList.toggle('active');
+
+ S.active=this.classList.contains('active');
+
+ if(S.root){
+  S.root.visible=S.active;
+ }
+
+ map.triggerRepaint();
+});
+
+document.querySelectorAll('.menuBtn').forEach(button=>{
+ if(
+  button.tagName==='BUTTON' &&
+  button.id!=='gasToggle'
+ ){
+  button.addEventListener('click',()=>{
+   button.classList.toggle('active');
+  });
+ }
+});
+
+/* READ ONLY */
 fetch(
  '/api/health',
  {
-  credentials:
-   'same-origin'
+  credentials:'same-origin'
  }
-)
-.catch(
- ()=>null
-);
-
-
-/* =========================================================
-   LEFT UI TOGGLES
-   ========================================================= */
-
-document
- .querySelectorAll(
-  '.layerBtn'
- )
- .forEach(
-  button=>{
-
-   if(
-    button.tagName===
-    'BUTTON'
-   ){
-
-    button.addEventListener(
-     'click',
-     ()=>{
-
-      button
-       .classList
-       .toggle(
-        'active'
-       );
-     }
-    );
-   }
-  }
- );
+).catch(()=>null);
 
 </script>
 
-<!-- NMA SAN BENIGNO GROUND TWIN v1 -->
-
-
-<!-- NMA FINAL REFERENCE ENGINE v1 -->
-<!-- NMA HERO PIPE FINAL VISUAL v1 -->
+<!-- NMA CLEAN REFERENCE MASTER v1 -->
 </body>
 </html>
