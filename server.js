@@ -326,7 +326,8 @@ app.get('/api/health', async (req, res) => {
             resilience_v1: true,
             master_foundation_v1: true,
             network_memory_v1: true,
-            spatial_vision_v1: true
+            spatial_vision_v1: true,
+            master_control_room_v1: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -4085,6 +4086,1403 @@ app.get(
         res.sendFile(
             __dirname+
             '/spatial_twin_v1.html'
+        );
+    }
+);
+
+
+
+// ============================================================
+// NMA BUILD OS — MASTER CONTROL ROOM v1
+//
+// Vista direzionale unificata.
+// Search infrastrutturale.
+// Timeline asset.
+// Readiness senza percentuali inventate.
+//
+// SOLO LETTURA.
+// ============================================================
+
+
+// ============================================================
+// MASTER CONTROL SUMMARY
+// ============================================================
+
+app.get(
+    '/api/master-control',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const [
+                totale,
+                validati,
+                registrati,
+                correzioni,
+                anomalie,
+                evidenze,
+                audit,
+                manutenzioniAperte,
+                manutenzioniChiuse,
+                asbuilt,
+                progetti,
+                spatial,
+                metriAgg,
+                cantieri,
+                recenti
+            ]=
+                await Promise.all([
+
+                    InterventoCampo
+                        .countDocuments(),
+
+                    InterventoCampo
+                        .countDocuments({
+                            stato:'validato'
+                        }),
+
+                    InterventoCampo
+                        .countDocuments({
+                            stato:'registrato'
+                        }),
+
+                    InterventoCampo
+                        .countDocuments({
+                            stato:'da_correggere'
+                        }),
+
+                    InterventoCampo
+                        .countDocuments({
+                            'anomalia.presente':
+                                true
+                        }),
+
+                    Evidenza
+                        .countDocuments(),
+
+                    AuditLog
+                        .countDocuments(),
+
+                    ManutenzioneRete
+                        .countDocuments({
+                            stato:{
+                                $ne:'chiusa'
+                            }
+                        }),
+
+                    ManutenzioneRete
+                        .countDocuments({
+                            stato:'chiusa'
+                        }),
+
+                    TrattoRete
+                        .countDocuments(),
+
+                    ProgettoRiferimento
+                        .countDocuments(),
+
+                    SpatialAnchor
+                        .countDocuments(),
+
+                    InterventoCampo
+                        .aggregate([
+                            {
+                                $group:{
+                                    _id:null,
+
+                                    metri:{
+                                        $sum:
+                                            '$tubazione.metri'
+                                    },
+
+                                    raccordi:{
+                                        $sum:
+                                            '$raccordi'
+                                    }
+                                }
+                            }
+                        ]),
+
+                    InterventoCampo
+                        .distinct(
+                            'id_cantiere'
+                        ),
+
+                    InterventoCampo
+                        .find()
+                        .sort({
+                            aggiornato_il:-1
+                        })
+                        .limit(12)
+                        .select({
+                            _id:0,
+                            id_intervento:1,
+                            id_cantiere:1,
+                            operatore:1,
+                            squadra:1,
+                            stato:1,
+                            'tubazione.materiale':1,
+                            'tubazione.diametro_mm':1,
+                            'tubazione.metri':1,
+                            'anomalia.presente':1,
+                            aggiornato_il:1,
+                            creato_il:1
+                        })
+                        .lean()
+                ]);
+
+
+            const metri=
+                metriAgg[0] ||
+                {
+                    metri:0,
+                    raccordi:0
+                };
+
+
+            const mongoOk=
+                mongoose
+                    .connection
+                    .readyState ===
+                1;
+
+
+            return res.json({
+
+                ok:true,
+
+                status:
+                    mongoOk
+                        ? 'OPERATIONAL'
+                        : 'DEGRADED',
+
+                kpi:{
+
+                    interventi:
+                        totale,
+
+                    registrati,
+
+                    validati,
+
+                    da_correggere:
+                        correzioni,
+
+                    metri_misurati:
+                        Number(
+                            metri.metri ||
+                            0
+                        ),
+
+                    raccordi:
+                        Number(
+                            metri.raccordi ||
+                            0
+                        ),
+
+                    anomalie,
+
+                    evidenze,
+
+                    eventi_audit:
+                        audit,
+
+                    manutenzioni_aperte:
+                        manutenzioniAperte,
+
+                    manutenzioni_chiuse:
+                        manutenzioniChiuse,
+
+                    asbuilt,
+
+                    progetti,
+
+                    spatial_anchors:
+                        spatial,
+
+                    cantieri:
+                        cantieri
+                            .filter(Boolean)
+                            .length
+                },
+
+
+                readiness:[
+
+                    {
+                        id:
+                            'database',
+
+                        area:
+                            'Database operativo',
+
+                        stato:
+                            mongoOk
+                                ? 'OPERATIVO'
+                                : 'DEGRADATO',
+
+                        livello:
+                            mongoOk
+                                ? 'ready'
+                                : 'attention',
+
+                        nota:
+                            mongoOk
+                                ? 'MongoDB connesso'
+                                : 'Connessione MongoDB da verificare'
+                    },
+
+                    {
+                        id:
+                            'campo',
+
+                        area:
+                            'Campo / Offline / Sync',
+
+                        stato:
+                            'DISPONIBILE',
+
+                        livello:
+                            'ready',
+
+                        nota:
+                            'Modulo software presente'
+                    },
+
+                    {
+                        id:
+                            'workflow',
+
+                        area:
+                            'Supervisione / Quality',
+
+                        stato:
+                            'DISPONIBILE',
+
+                        livello:
+                            'ready',
+
+                        nota:
+                            'Workflow e Quality Gate disponibili'
+                    },
+
+                    {
+                        id:
+                            'memory',
+
+                        area:
+                            'Audit / Passaporto / Asset Memory',
+
+                        stato:
+                            'DISPONIBILE',
+
+                        livello:
+                            'ready',
+
+                        nota:
+                            'Memoria infrastrutturale disponibile'
+                    },
+
+                    {
+                        id:
+                            'digital_twin',
+
+                        area:
+                            'Digital Twin / Spatial',
+
+                        stato:
+                            'DISPONIBILE',
+
+                        livello:
+                            'ready',
+
+                        nota:
+                            'As-Built, progetto e Spatial Twin disponibili'
+                    },
+
+                    {
+                        id:
+                            'network',
+
+                        area:
+                            'Network Memory',
+
+                        stato:
+                            'DISPONIBILE',
+
+                        livello:
+                            'ready',
+
+                        nota:
+                            'Anomalie e manutenzioni collegate alla rete'
+                    },
+
+                    {
+                        id:
+                            'telemetry',
+
+                        area:
+                            'Telemetria IoT',
+
+                        stato:
+                            'NON COLLEGATA',
+
+                        livello:
+                            'external',
+
+                        nota:
+                            'Nessun sensore/Gateway reale collegato'
+                    },
+
+                    {
+                        id:
+                            'gnss',
+
+                        area:
+                            'GNSS / RTK',
+
+                        stato:
+                            'DA VALIDARE SUL CAMPO',
+
+                        livello:
+                            'field',
+
+                        nota:
+                            'Richiede hardware e prova reale'
+                    },
+
+                    {
+                        id:
+                            'pilot',
+
+                        area:
+                            'Pilot reale',
+
+                        stato:
+                            'DA ESEGUIRE',
+
+                        livello:
+                            'field',
+
+                        nota:
+                            'Richiede intervento reale autorizzato'
+                    }
+                ],
+
+
+                ultimi_interventi:
+                    recenti,
+
+
+                generato_il:
+                    new Date()
+                        .toISOString()
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Master Control:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore Master Control Room'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// INFRASTRUCTURE SEARCH
+// ============================================================
+
+app.get(
+    '/api/infrastructure-search',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const query=
+                String(
+                    req.query.q ||
+                    ''
+                )
+                .trim()
+                .slice(
+                    0,
+                    120
+                );
+
+
+            const cantiere=
+                String(
+                    req.query.cantiere ||
+                    ''
+                )
+                .trim()
+                .slice(
+                    0,
+                    120
+                );
+
+
+            const filtro={};
+
+
+            if(cantiere){
+
+                filtro.id_cantiere=
+                    cantiere;
+            }
+
+
+            if(query){
+
+                const escaped=
+                    query.replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        '\\$&'
+                    );
+
+
+                const rx=
+                    new RegExp(
+                        escaped,
+                        'i'
+                    );
+
+
+                filtro.$or=[
+
+                    {
+                        id_intervento:rx
+                    },
+
+                    {
+                        id_cantiere:rx
+                    },
+
+                    {
+                        operatore:rx
+                    },
+
+                    {
+                        squadra:rx
+                    },
+
+                    {
+                        'tubazione.materiale':
+                            rx
+                    },
+
+                    {
+                        'anomalia.descrizione':
+                            rx
+                    },
+
+                    {
+                        note:rx
+                    }
+                ];
+            }
+
+
+            const interventi=
+                await InterventoCampo
+                    .find(filtro)
+                    .sort({
+                        aggiornato_il:-1
+                    })
+                    .limit(80)
+                    .lean();
+
+
+            const ids=
+                interventi
+                    .map(
+                        x=>
+                            String(
+                                x.id_intervento ||
+                                ''
+                            )
+                    )
+                    .filter(Boolean);
+
+
+            const [
+                manutenzioni,
+                tratti,
+                progetti,
+                anchors,
+                evidenceAgg,
+                auditAgg
+            ]=
+                await Promise.all([
+
+                    ids.length
+                        ? ManutenzioneRete
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? TrattoRete
+                            .find({
+                                id_tratto:{
+                                    $in:
+                                        ids.map(
+                                            id=>
+                                                'ASB-'+id
+                                        )
+                                }
+                            })
+                            .select({
+                                _id:0,
+                                id_tratto:1
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? ProgettoRiferimento
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .select({
+                                _id:0,
+                                id_intervento:1
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? SpatialAnchor
+                            .find({
+                                id_intervento:{
+                                    $in:ids
+                                }
+                            })
+                            .lean()
+                        : [],
+
+                    ids.length
+                        ? Evidenza.aggregate([
+                            {
+                                $match:{
+                                    id_intervento:{
+                                        $in:ids
+                                    }
+                                }
+                            },
+                            {
+                                $group:{
+                                    _id:
+                                        '$id_intervento',
+
+                                    totale:{
+                                        $sum:1
+                                    }
+                                }
+                            }
+                        ])
+                        : [],
+
+                    ids.length
+                        ? AuditLog.aggregate([
+                            {
+                                $match:{
+                                    id_intervento:{
+                                        $in:ids
+                                    }
+                                }
+                            },
+                            {
+                                $group:{
+                                    _id:
+                                        '$id_intervento',
+
+                                    totale:{
+                                        $sum:1
+                                    }
+                                }
+                            }
+                        ])
+                        : []
+                ]);
+
+
+            const maintenanceMap=
+                new Map();
+
+            for(const m of manutenzioni){
+
+                const id=
+                    String(
+                        m.id_intervento ||
+                        ''
+                    );
+
+                if(
+                    !maintenanceMap
+                        .has(id)
+                ){
+                    maintenanceMap
+                        .set(id,[]);
+                }
+
+                maintenanceMap
+                    .get(id)
+                    .push(m);
+            }
+
+
+            const asbuiltSet=
+                new Set(
+                    tratti.map(
+                        x=>
+                            String(
+                                x.id_tratto ||
+                                ''
+                            )
+                            .replace(
+                                /^ASB-/,
+                                ''
+                            )
+                    )
+                );
+
+
+            const projectSet=
+                new Set(
+                    progetti.map(
+                        x=>
+                            String(
+                                x.id_intervento ||
+                                ''
+                            )
+                    )
+                );
+
+
+            const anchorMap=
+                new Map();
+
+            for(const a of anchors){
+
+                const id=
+                    String(
+                        a.id_intervento ||
+                        ''
+                    );
+
+                anchorMap.set(
+                    id,
+                    Number(
+                        anchorMap.get(id) ||
+                        0
+                    )+1
+                );
+            }
+
+
+            const evidenceMap=
+                new Map(
+                    evidenceAgg.map(
+                        x=>[
+                            String(x._id),
+                            Number(
+                                x.totale ||
+                                0
+                            )
+                        ]
+                    )
+                );
+
+
+            const auditMap=
+                new Map(
+                    auditAgg.map(
+                        x=>[
+                            String(x._id),
+                            Number(
+                                x.totale ||
+                                0
+                            )
+                        ]
+                    )
+                );
+
+
+            const risultati=
+                interventi.map(
+                    intervento=>{
+
+                        const id=
+                            String(
+                                intervento
+                                    .id_intervento ||
+                                ''
+                            );
+
+
+                        const manutenzioniAsset=
+                            maintenanceMap
+                                .get(id) ||
+                            [];
+
+
+                        return {
+
+                            id_intervento:id,
+
+                            id_cantiere:
+                                String(
+                                    intervento
+                                        .id_cantiere ||
+                                    ''
+                                ),
+
+                            operatore:
+                                String(
+                                    intervento
+                                        .operatore ||
+                                    ''
+                                ),
+
+                            squadra:
+                                String(
+                                    intervento
+                                        .squadra ||
+                                    ''
+                                ),
+
+                            stato:
+                                String(
+                                    intervento
+                                        .stato ||
+                                    ''
+                                ),
+
+                            materiale:
+                                String(
+                                    intervento
+                                        .tubazione
+                                        ?.materiale ||
+                                    ''
+                                ),
+
+                            diametro_mm:
+                                Number(
+                                    intervento
+                                        .tubazione
+                                        ?.diametro_mm ||
+                                    0
+                                ),
+
+                            metri:
+                                Number(
+                                    intervento
+                                        .tubazione
+                                        ?.metri ||
+                                    0
+                                ),
+
+                            anomalia:
+                                intervento
+                                    .anomalia
+                                    ?.presente ===
+                                true,
+
+                            anomalia_descrizione:
+                                String(
+                                    intervento
+                                        .anomalia
+                                        ?.descrizione ||
+                                    ''
+                                ),
+
+                            asbuilt:
+                                asbuiltSet
+                                    .has(id),
+
+                            progetto:
+                                projectSet
+                                    .has(id),
+
+                            evidenze:
+                                Number(
+                                    evidenceMap
+                                        .get(id) ||
+                                    0
+                                ),
+
+                            audit:
+                                Number(
+                                    auditMap
+                                        .get(id) ||
+                                    0
+                                ),
+
+                            spatial_anchors:
+                                Number(
+                                    anchorMap
+                                        .get(id) ||
+                                    0
+                                ),
+
+                            manutenzioni:
+                                manutenzioniAsset
+                                    .length,
+
+                            manutenzioni_aperte:
+                                manutenzioniAsset
+                                    .filter(
+                                        x=>
+                                            x.stato !==
+                                            'chiusa'
+                                    )
+                                    .length,
+
+                            aggiornato_il:
+                                intervento
+                                    .aggiornato_il ||
+                                intervento
+                                    .creato_il ||
+                                null
+                        };
+                    }
+                );
+
+
+            return res.json({
+
+                ok:true,
+
+                query,
+
+                cantiere,
+
+                totale:
+                    risultati.length,
+
+                risultati
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Infrastructure Search:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore ricerca infrastruttura'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// ASSET TIMELINE
+// ============================================================
+
+app.get(
+    '/api/asset-timeline/:id',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    async (req,res)=>{
+
+        try{
+
+            const id=
+                String(
+                    req.params.id ||
+                    ''
+                )
+                .trim()
+                .slice(
+                    0,
+                    180
+                );
+
+
+            const intervento=
+                await InterventoCampo
+                    .findOne({
+                        id_intervento:id
+                    })
+                    .lean();
+
+
+            if(!intervento){
+
+                return res.status(404).json({
+                    ok:false,
+                    error:
+                        'Intervento non trovato'
+                });
+            }
+
+
+            const [
+                audit,
+                evidenze,
+                manutenzioni,
+                anchors,
+                asbuilt,
+                progetto
+            ]=
+                await Promise.all([
+
+                    AuditLog
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            data_ora:1
+                        })
+                        .lean(),
+
+                    Evidenza
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            creato_il:1
+                        })
+                        .lean(),
+
+                    ManutenzioneRete
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            creata_il:1
+                        })
+                        .lean(),
+
+                    SpatialAnchor
+                        .find({
+                            id_intervento:id
+                        })
+                        .sort({
+                            created_at:1
+                        })
+                        .lean(),
+
+                    TrattoRete
+                        .findOne({
+                            id_tratto:
+                                'ASB-'+id
+                        })
+                        .lean(),
+
+                    ProgettoRiferimento
+                        .findOne({
+                            id_intervento:id
+                        })
+                        .lean()
+                ]);
+
+
+            const eventi=[];
+
+
+            function addEvent(
+                tipo,
+                titolo,
+                data,
+                dettagli='',
+                stato=''
+            ){
+
+                if(!data){
+                    return;
+                }
+
+
+                const date=
+                    new Date(data);
+
+
+                if(
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                ){
+                    return;
+                }
+
+
+                eventi.push({
+
+                    tipo,
+
+                    titolo,
+
+                    data_ora:
+                        date.toISOString(),
+
+                    dettagli:
+                        String(
+                            dettagli ||
+                            ''
+                        ),
+
+                    stato:
+                        String(
+                            stato ||
+                            ''
+                        )
+                });
+            }
+
+
+            addEvent(
+                'intervento',
+                'Intervento creato',
+                intervento.creato_il,
+                String(
+                    intervento.operatore ||
+                    ''
+                )+
+                (
+                    intervento.squadra
+                        ? ' · '+
+                            intervento.squadra
+                        : ''
+                ),
+                intervento.stato
+            );
+
+
+            for(const evento of audit){
+
+                addEvent(
+                    'audit',
+                    String(
+                        evento.evento ||
+                        'Evento Audit'
+                    ),
+                    evento.data_ora,
+                    evento.note,
+                    evento.stato
+                );
+            }
+
+
+            for(const evidenza of evidenze){
+
+                addEvent(
+                    'evidenza',
+                    'Evidenza acquisita',
+                    evidenza.creato_il,
+                    String(
+                        evidenza.nome_file ||
+                        ''
+                    ),
+                    evidenza.tipo
+                );
+            }
+
+
+            for(const anchor of anchors){
+
+                addEvent(
+                    'spatial',
+                    'Posizione spaziale registrata',
+                    anchor.created_at,
+                    String(
+                        anchor.label ||
+                        anchor.entity_id ||
+                        ''
+                    ),
+                    anchor.entity_type
+                );
+
+
+                if(
+                    anchor.updated_at &&
+                    anchor.created_at &&
+                    new Date(
+                        anchor.updated_at
+                    ).getTime() >
+                    new Date(
+                        anchor.created_at
+                    ).getTime()+1000
+                ){
+
+                    addEvent(
+                        'spatial',
+                        'Posizione spaziale aggiornata',
+                        anchor.updated_at,
+                        String(
+                            anchor.label ||
+                            anchor.entity_id ||
+                            ''
+                        ),
+                        anchor.entity_type
+                    );
+                }
+            }
+
+
+            for(const manutenzione of manutenzioni){
+
+                addEvent(
+                    'maintenance',
+                    'Manutenzione aperta',
+                    manutenzione.creata_il,
+                    manutenzione.descrizione,
+                    manutenzione.priorita
+                );
+
+
+                if(
+                    manutenzione.chiusa_il
+                ){
+
+                    addEvent(
+                        'maintenance',
+                        'Manutenzione chiusa',
+                        manutenzione.chiusa_il,
+                        manutenzione.note,
+                        'chiusa'
+                    );
+                }
+            }
+
+
+            if(asbuilt){
+
+                addEvent(
+                    'asbuilt',
+                    'As-Built disponibile',
+                    asbuilt
+                        .ultimo_aggiornamento,
+                    String(
+                        asbuilt
+                            .sorgente_gps ||
+                        ''
+                    ),
+                    String(
+                        asbuilt
+                            .qualita_gps ||
+                        ''
+                    )
+                );
+            }
+
+
+            if(progetto){
+
+                addEvent(
+                    'project',
+                    'Progetto di riferimento disponibile',
+                    progetto.aggiornato_il,
+                    String(
+                        progetto.fonte ||
+                        ''
+                    ),
+                    ''
+                );
+            }
+
+
+            eventi.sort(
+                (a,b)=>
+                    new Date(
+                        b.data_ora
+                    )
+                    -
+                    new Date(
+                        a.data_ora
+                    )
+            );
+
+
+            return res.json({
+
+                ok:true,
+
+                asset:{
+
+                    id_intervento:id,
+
+                    id_cantiere:
+                        String(
+                            intervento
+                                .id_cantiere ||
+                            ''
+                        ),
+
+                    stato:
+                        String(
+                            intervento
+                                .stato ||
+                            ''
+                        ),
+
+                    operatore:
+                        String(
+                            intervento
+                                .operatore ||
+                            ''
+                        ),
+
+                    squadra:
+                        String(
+                            intervento
+                                .squadra ||
+                            ''
+                        ),
+
+                    materiale:
+                        String(
+                            intervento
+                                .tubazione
+                                ?.materiale ||
+                            ''
+                        ),
+
+                    diametro_mm:
+                        Number(
+                            intervento
+                                .tubazione
+                                ?.diametro_mm ||
+                            0
+                        ),
+
+                    metri:
+                        Number(
+                            intervento
+                                .tubazione
+                                ?.metri ||
+                            0
+                        ),
+
+                    anomalia:
+                        intervento
+                            .anomalia ||
+                        {
+                            presente:false,
+                            descrizione:''
+                        },
+
+                    asbuilt:
+                        Boolean(asbuilt),
+
+                    progetto:
+                        Boolean(progetto),
+
+                    evidenze:
+                        evidenze.length,
+
+                    manutenzioni:
+                        manutenzioni.length,
+
+                    spatial_anchors:
+                        anchors.length,
+
+                    eventi_audit:
+                        audit.length
+                },
+
+                eventi,
+
+                links:{
+
+                    passaporto:
+                        '/passaporto/'+
+                        encodeURIComponent(id),
+
+                    confronto:
+                        '/confronto/'+
+                        encodeURIComponent(id),
+
+                    audit:
+                        '/audit?intervento='+
+                        encodeURIComponent(id),
+
+                    spatial:
+                        '/spatial-twin',
+
+                    network:
+                        '/network-memory'
+                }
+            });
+
+        }catch(error){
+
+            console.error(
+                'Errore Asset Timeline:',
+                error
+            );
+
+            return res.status(500).json({
+                ok:false,
+                error:
+                    'Errore timeline asset'
+            });
+        }
+    }
+);
+
+
+// ============================================================
+// MASTER CONTROL UI
+// ============================================================
+
+app.get(
+    '/master-control',
+
+    requireAuth,
+
+    requireRole(
+        'supervisore',
+        'admin'
+    ),
+
+    (req,res)=>{
+
+        res.sendFile(
+            __dirname+
+            '/master_control_v1.html'
         );
     }
 );

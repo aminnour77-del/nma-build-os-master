@@ -1,0 +1,2176 @@
+<!doctype html>
+
+<html lang="it">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>
+NMA BUILD OS — Master Control Room
+</title>
+
+<style>
+
+:root{
+    --bg:#031017;
+    --panel:#071d26;
+    --panel2:#0a2631;
+    --line:#174b5d;
+
+    --cyan:#27c9ef;
+    --green:#20e39a;
+    --orange:#ff9e1b;
+    --red:#ff5b66;
+    --violet:#c178ff;
+
+    --text:#edf9fc;
+    --muted:#89a7b2;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+
+    background:var(--bg);
+    color:var(--text);
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body{
+    min-height:100dvh;
+
+    padding-bottom:
+        env(safe-area-inset-bottom);
+}
+
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+header{
+    position:sticky;
+    top:0;
+
+    z-index:200;
+
+    background:
+        rgba(2,14,20,.96);
+
+    backdrop-filter:
+        blur(17px);
+
+    border-bottom:
+        1px solid var(--line);
+
+    padding:
+        calc(
+            12px +
+            env(safe-area-inset-top)
+        )
+        max(
+            14px,
+            env(safe-area-inset-right)
+        )
+        12px
+        max(
+            14px,
+            env(safe-area-inset-left)
+        );
+}
+
+.top{
+    max-width:1550px;
+    margin:auto;
+
+    display:flex;
+
+    justify-content:space-between;
+    align-items:center;
+
+    gap:12px;
+}
+
+.brand{
+    font-weight:950;
+    letter-spacing:.08em;
+}
+
+.brand small{
+    display:block;
+
+    color:var(--cyan);
+
+    margin-top:4px;
+
+    font-size:9px;
+
+    letter-spacing:.15em;
+}
+
+.nav{
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:6px;
+}
+
+.nav a{
+    text-decoration:none;
+
+    color:white;
+
+    background:#0b2c38;
+
+    border:
+        1px solid #23596d;
+
+    border-radius:10px;
+
+    padding:9px 10px;
+
+    font-weight:900;
+
+    font-size:10px;
+}
+
+
+/* ==========================================================
+   MAIN
+   ========================================================== */
+
+main{
+    max-width:1550px;
+    margin:auto;
+
+    padding:
+        15px
+        max(
+            15px,
+            env(safe-area-inset-right)
+        )
+        30px
+        max(
+            15px,
+            env(safe-area-inset-left)
+        );
+}
+
+.hero{
+    display:flex;
+
+    justify-content:space-between;
+    align-items:flex-end;
+
+    gap:14px;
+
+    margin-bottom:13px;
+}
+
+.eyebrow{
+    color:var(--cyan);
+
+    font-size:10px;
+
+    font-weight:950;
+
+    letter-spacing:.15em;
+}
+
+h1{
+    margin:5px 0;
+
+    font-size:
+        clamp(
+            28px,
+            5vw,
+            50px
+        );
+
+    line-height:1.03;
+}
+
+.hero p{
+    margin:0;
+
+    color:var(--muted);
+
+    line-height:1.5;
+
+    max-width:850px;
+}
+
+.status{
+    border:
+        1px solid var(--line);
+
+    border-radius:999px;
+
+    padding:9px 12px;
+
+    font-weight:900;
+
+    font-size:10px;
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+.kpis{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            8,
+            minmax(
+                120px,
+                1fr
+            )
+        );
+
+    gap:8px;
+
+    overflow:auto;
+
+    margin-bottom:13px;
+}
+
+.kpi{
+    min-width:120px;
+
+    background:#061820;
+
+    border:
+        1px solid #174859;
+
+    border-radius:14px;
+
+    padding:12px;
+}
+
+.kpi small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:9px;
+
+    letter-spacing:.08em;
+}
+
+.kpi b{
+    display:block;
+
+    margin-top:5px;
+
+    font-size:22px;
+}
+
+.green{
+    color:var(--green);
+}
+
+.orange{
+    color:var(--orange);
+}
+
+.red{
+    color:var(--red);
+}
+
+.cyan{
+    color:var(--cyan);
+}
+
+.violet{
+    color:var(--violet);
+}
+
+
+/* ==========================================================
+   CARDS
+   ========================================================== */
+
+.card{
+    background:
+        linear-gradient(
+            145deg,
+            #09222c,
+            #06171e
+        );
+
+    border:
+        1px solid var(--line);
+
+    border-radius:18px;
+
+    padding:15px;
+}
+
+.card h2{
+    margin:0 0 12px;
+
+    color:var(--cyan);
+
+    font-size:14px;
+
+    letter-spacing:.08em;
+}
+
+
+/* ==========================================================
+   READINESS
+   ========================================================== */
+
+.readiness{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(
+                180px,
+                1fr
+            )
+        );
+
+    gap:8px;
+}
+
+.readyItem{
+    border:
+        1px solid #194759;
+
+    border-radius:12px;
+
+    background:#061820;
+
+    padding:11px;
+}
+
+.readyItem small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:10px;
+}
+
+.readyItem strong{
+    display:block;
+
+    margin:5px 0;
+
+    font-size:12px;
+}
+
+.readyItem p{
+    margin:0;
+
+    color:#9fb8c1;
+
+    font-size:10px;
+
+    line-height:1.4;
+}
+
+.ready{
+    border-color:#116c4b;
+}
+
+.field{
+    border-color:#76520d;
+}
+
+.external{
+    border-color:#62447c;
+}
+
+.attention{
+    border-color:#81323b;
+}
+
+
+/* ==========================================================
+   SEARCH / TIMELINE
+   ========================================================== */
+
+.workspace{
+    display:grid;
+
+    grid-template-columns:
+        minmax(320px,.72fr)
+        minmax(0,1.28fr);
+
+    gap:12px;
+
+    margin-top:13px;
+}
+
+.searchbar{
+    display:grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    gap:7px;
+
+    margin-bottom:9px;
+}
+
+input,
+select{
+    width:100%;
+
+    min-height:45px;
+
+    background:#061820;
+
+    border:
+        1px solid #275a6d;
+
+    color:white;
+
+    border-radius:11px;
+
+    padding:9px 11px;
+
+    font-size:16px;
+}
+
+button{
+    border:0;
+
+    border-radius:11px;
+
+    padding:10px 14px;
+
+    font-weight:900;
+
+    cursor:pointer;
+}
+
+.searchButton{
+    background:var(--cyan);
+
+    color:#04171d;
+}
+
+.results{
+    display:grid;
+
+    gap:7px;
+
+    max-height:720px;
+
+    overflow:auto;
+}
+
+.result{
+    background:#061820;
+
+    border:
+        1px solid #184655;
+
+    border-radius:12px;
+
+    padding:11px;
+
+    cursor:pointer;
+}
+
+.result:hover{
+    border-color:var(--cyan);
+}
+
+.resultHead{
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:10px;
+}
+
+.result strong{
+    word-break:break-word;
+}
+
+.muted{
+    color:var(--muted);
+
+    font-size:10px;
+
+    line-height:1.45;
+
+    margin-top:4px;
+}
+
+.tags{
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:5px;
+
+    margin-top:8px;
+}
+
+.tag{
+    display:inline-block;
+
+    padding:4px 7px;
+
+    border-radius:999px;
+
+    background:#113441;
+
+    font-size:9px;
+
+    font-weight:850;
+}
+
+.tag.good{
+    background:#073a28;
+    color:var(--green);
+}
+
+.tag.warn{
+    background:#49300b;
+    color:#ffc15e;
+}
+
+.tag.bad{
+    background:#431920;
+    color:#ff8a91;
+}
+
+
+/* ==========================================================
+   ASSET DETAIL
+   ========================================================== */
+
+.assetHeader{
+    display:grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    gap:12px;
+
+    align-items:start;
+
+    margin-bottom:12px;
+}
+
+.assetTitle{
+    font-size:20px;
+
+    font-weight:950;
+
+    word-break:break-word;
+}
+
+.assetMeta{
+    color:var(--muted);
+
+    font-size:11px;
+
+    margin-top:4px;
+}
+
+.assetLinks{
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:5px;
+
+    justify-content:flex-end;
+}
+
+.assetLinks a{
+    text-decoration:none;
+
+    color:white;
+
+    background:#0c3441;
+
+    border:
+        1px solid #23596d;
+
+    padding:7px 9px;
+
+    border-radius:9px;
+
+    font-size:9px;
+
+    font-weight:900;
+}
+
+.assetGrid{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            1fr
+        );
+
+    gap:7px;
+
+    margin-bottom:13px;
+}
+
+.assetField{
+    background:#061820;
+
+    border:
+        1px solid #184657;
+
+    border-radius:11px;
+
+    padding:9px;
+}
+
+.assetField small{
+    display:block;
+
+    color:var(--muted);
+
+    font-size:8px;
+
+    letter-spacing:.07em;
+}
+
+.assetField b{
+    display:block;
+
+    margin-top:5px;
+
+    font-size:12px;
+
+    word-break:break-word;
+}
+
+
+/* ==========================================================
+   TIMELINE
+   ========================================================== */
+
+.timeline{
+    position:relative;
+
+    display:grid;
+
+    gap:8px;
+
+    max-height:600px;
+
+    overflow:auto;
+
+    padding-left:17px;
+}
+
+.timeline:before{
+    content:"";
+
+    position:absolute;
+
+    left:5px;
+    top:8px;
+    bottom:8px;
+
+    width:2px;
+
+    background:#17495a;
+}
+
+.timelineItem{
+    position:relative;
+
+    background:#061820;
+
+    border:
+        1px solid #174654;
+
+    border-radius:12px;
+
+    padding:10px 11px;
+}
+
+.timelineItem:before{
+    content:"";
+
+    position:absolute;
+
+    left:-17px;
+    top:16px;
+
+    width:9px;
+    height:9px;
+
+    border-radius:50%;
+
+    background:var(--cyan);
+
+    box-shadow:
+        0 0 0 3px var(--bg);
+}
+
+.timelineItem[data-type="maintenance"]:before{
+    background:var(--orange);
+}
+
+.timelineItem[data-type="evidenza"]:before{
+    background:var(--violet);
+}
+
+.timelineItem[data-type="asbuilt"]:before{
+    background:var(--green);
+}
+
+.timelineItem[data-type="spatial"]:before{
+    background:#ffd166;
+}
+
+.timelineDate{
+    color:var(--muted);
+
+    font-size:9px;
+}
+
+.timelineTitle{
+    font-size:12px;
+
+    font-weight:900;
+
+    margin-top:3px;
+}
+
+.timelineText{
+    color:#a9c1ca;
+
+    font-size:10px;
+
+    line-height:1.4;
+
+    margin-top:4px;
+}
+
+
+/* ==========================================================
+   QUICK MODULES
+   ========================================================== */
+
+.modules{
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            5,
+            1fr
+        );
+
+    gap:8px;
+
+    margin-top:13px;
+}
+
+.module{
+    text-decoration:none;
+
+    color:white;
+
+    background:#071d26;
+
+    border:
+        1px solid #19495a;
+
+    border-radius:13px;
+
+    padding:13px;
+
+    font-size:10px;
+
+    font-weight:900;
+
+    text-align:center;
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media(max-width:1000px){
+
+    .workspace{
+        grid-template-columns:1fr;
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(
+                    120px,
+                    1fr
+                )
+            );
+    }
+
+    .readiness{
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+
+    .modules{
+        grid-template-columns:
+            repeat(
+                3,
+                1fr
+            );
+    }
+}
+
+
+@media(max-width:600px){
+
+    main{
+        padding:
+            9px
+            max(
+                9px,
+                env(safe-area-inset-right)
+            )
+            calc(
+                20px +
+                env(safe-area-inset-bottom)
+            )
+            max(
+                9px,
+                env(safe-area-inset-left)
+            );
+    }
+
+    .top{
+        align-items:flex-start;
+    }
+
+    .nav{
+        flex-direction:column;
+    }
+
+    .hero{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .kpis{
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    120px,
+                    1fr
+                )
+            );
+    }
+
+    .readiness{
+        grid-template-columns:1fr;
+    }
+
+    .assetGrid{
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+
+    .assetHeader{
+        grid-template-columns:1fr;
+    }
+
+    .assetLinks{
+        justify-content:flex-start;
+    }
+
+    .modules{
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<header>
+
+<div class="top">
+
+    <div class="brand">
+
+        NMA BUILD OS
+
+        <small>
+            MASTER CONTROL ROOM
+        </small>
+
+    </div>
+
+    <nav class="nav">
+
+        <a href="/master">
+            DIGITAL TWIN
+        </a>
+
+        <a href="/network-memory">
+            NETWORK
+        </a>
+
+        <a href="/spatial-twin">
+            SPATIAL
+        </a>
+
+    </nav>
+
+</div>
+
+</header>
+
+
+<main>
+
+<section class="hero">
+
+    <div>
+
+        <div class="eyebrow">
+            INFRASTRUCTURE INTELLIGENCE
+        </div>
+
+        <h1>
+            Master Control Room
+        </h1>
+
+        <p>
+            Un'unica vista collega produzione,
+            workflow, anomalie, manutenzione,
+            As-Built, progetto, evidenze,
+            Audit e memoria dell'infrastruttura.
+        </p>
+
+    </div>
+
+    <div
+      id="status"
+      class="status">
+        ● CHECK
+    </div>
+
+</section>
+
+
+<section class="kpis">
+
+    <div class="kpi">
+        <small>INTERVENTI</small>
+        <b id="kInterventi">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>VALIDATI</small>
+        <b
+          id="kValidati"
+          class="green">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>DA CORREGGERE</small>
+        <b
+          id="kCorrezioni"
+          class="orange">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>METRI MISURATI</small>
+        <b id="kMetri">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>ANOMALIE</small>
+        <b
+          id="kAnomalie"
+          class="red">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>MANUTENZIONI APERTE</small>
+        <b
+          id="kMaintenance"
+          class="orange">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>AS-BUILT</small>
+        <b
+          id="kAsbuilt"
+          class="cyan">—</b>
+    </div>
+
+    <div class="kpi">
+        <small>SPATIAL POINTS</small>
+        <b
+          id="kSpatial"
+          class="violet">—</b>
+    </div>
+
+</section>
+
+
+<section class="card">
+
+    <h2>
+        SYSTEM / PILOT READINESS
+    </h2>
+
+    <div
+      id="readiness"
+      class="readiness">
+    </div>
+
+</section>
+
+
+<section class="workspace">
+
+    <section class="card">
+
+        <h2>
+            CERCA INFRASTRUTTURA
+        </h2>
+
+        <div class="searchbar">
+
+            <input
+              id="search"
+              type="search"
+              placeholder="ID, cantiere, operatore, squadra, materiale, anomalia..."
+            >
+
+            <button
+              class="searchButton"
+              onclick="runSearch()">
+                CERCA
+            </button>
+
+        </div>
+
+        <select
+          id="site"
+          onchange="runSearch()">
+
+            <option value="">
+                Tutti i cantieri
+            </option>
+
+        </select>
+
+        <div
+          id="resultCount"
+          class="muted"
+          style="margin:9px 0">
+            —
+        </div>
+
+        <div
+          id="results"
+          class="results">
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h2>
+            ASSET TIMELINE
+        </h2>
+
+        <div
+          id="assetDetail">
+
+            <div class="muted">
+                Seleziona un intervento dalla ricerca.
+            </div>
+
+        </div>
+
+    </section>
+
+</section>
+
+
+<section class="modules">
+
+    <a
+      class="module"
+      href="/cantiere">
+        CAMPO
+    </a>
+
+    <a
+      class="module"
+      href="/supervisore">
+        SUPERVISORE
+    </a>
+
+    <a
+      class="module"
+      href="/quality">
+        QUALITY GATE
+    </a>
+
+    <a
+      class="module"
+      href="/workflow">
+        WORKFLOW
+    </a>
+
+    <a
+      class="module"
+      href="/direzione">
+        CONTROL ROOM v2
+    </a>
+
+    <a
+      class="module"
+      href="/sal-v2">
+        SAL
+    </a>
+
+    <a
+      class="module"
+      href="/audit">
+        AUDIT
+    </a>
+
+    <a
+      class="module"
+      href="/asset-memory">
+        ASSET MEMORY
+    </a>
+
+    <a
+      class="module"
+      href="/network-memory">
+        NETWORK MEMORY
+    </a>
+
+    <a
+      class="module"
+      href="/spatial-twin">
+        SPATIAL TWIN
+    </a>
+
+</section>
+
+</main>
+
+
+<script>
+
+let master=null;
+
+
+/* ==========================================================
+   API
+   ========================================================== */
+
+async function api(
+    url,
+    options={}
+){
+
+    const response=
+        await fetch(
+            url,
+            {
+                credentials:
+                    'same-origin',
+
+                ...options
+            }
+        );
+
+
+    if(response.status===401){
+
+        location.href='/';
+
+        throw new Error(
+            'Sessione scaduta'
+        );
+    }
+
+
+    const text=
+        await response.text();
+
+    let data={};
+
+
+    try{
+
+        data=
+            text
+                ? JSON.parse(text)
+                : {};
+
+    }catch{
+
+        data={};
+    }
+
+
+    if(!response.ok){
+
+        throw new Error(
+            data.error ||
+            (
+                'HTTP '+
+                response.status
+            )
+        );
+    }
+
+
+    return data;
+}
+
+
+/* ==========================================================
+   LOAD
+   ========================================================== */
+
+async function loadMaster(){
+
+    try{
+
+        master=
+            await api(
+                '/api/master-control'
+            );
+
+
+        renderKpis();
+        renderReadiness();
+
+
+        document
+            .getElementById(
+                'status'
+            )
+            .textContent=
+                master.status ===
+                'OPERATIONAL'
+                    ? '● OPERATIONAL'
+                    : '● DEGRADED';
+
+
+    }catch(error){
+
+        console.error(error);
+
+        document
+            .getElementById(
+                'status'
+            )
+            .textContent=
+                '● DEGRADED';
+    }
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+function renderKpis(){
+
+    const k=
+        master?.kpi ||
+        {};
+
+
+    setText(
+        'kInterventi',
+        k.interventi
+    );
+
+
+    setText(
+        'kValidati',
+        k.validati
+    );
+
+
+    setText(
+        'kCorrezioni',
+        k.da_correggere
+    );
+
+
+    setText(
+        'kMetri',
+        Number(
+            k.metri_misurati ||
+            0
+        )
+        .toLocaleString(
+            'it-IT',
+            {
+                maximumFractionDigits:2
+            }
+        )+
+        ' m'
+    );
+
+
+    setText(
+        'kAnomalie',
+        k.anomalie
+    );
+
+
+    setText(
+        'kMaintenance',
+        k.manutenzioni_aperte
+    );
+
+
+    setText(
+        'kAsbuilt',
+        k.asbuilt
+    );
+
+
+    setText(
+        'kSpatial',
+        k.spatial_anchors
+    );
+}
+
+
+/* ==========================================================
+   READINESS
+   ========================================================== */
+
+function renderReadiness(){
+
+    const box=
+        document
+            .getElementById(
+                'readiness'
+            );
+
+
+    box.innerHTML='';
+
+
+    for(
+        const item
+        of master?.readiness || []
+    ){
+
+        const el=
+            document
+                .createElement(
+                    'div'
+                );
+
+
+        el.className=
+            'readyItem '+
+            (
+                item.livello ||
+                ''
+            );
+
+
+        el.innerHTML=
+
+            '<small>'+
+            esc(
+                item.area
+            )+
+            '</small>'+
+
+            '<strong>'+
+            esc(
+                item.stato
+            )+
+            '</strong>'+
+
+            '<p>'+
+            esc(
+                item.nota
+            )+
+            '</p>';
+
+
+        box.appendChild(el);
+    }
+}
+
+
+/* ==========================================================
+   SEARCH
+   ========================================================== */
+
+async function runSearch(){
+
+    const q=
+        document
+            .getElementById(
+                'search'
+            )
+            .value
+            .trim();
+
+
+    const cantiere=
+        document
+            .getElementById(
+                'site'
+            )
+            .value;
+
+
+    const params=
+        new URLSearchParams();
+
+
+    if(q){
+        params.set(
+            'q',
+            q
+        );
+    }
+
+
+    if(cantiere){
+
+        params.set(
+            'cantiere',
+            cantiere
+        );
+    }
+
+
+    try{
+
+        const data=
+            await api(
+                '/api/infrastructure-search?'+
+                params.toString()
+            );
+
+
+        renderResults(data);
+
+
+    }catch(error){
+
+        document
+            .getElementById(
+                'results'
+            )
+            .innerHTML=
+
+                '<div class="muted">'+
+                esc(
+                    error.message
+                )+
+                '</div>';
+    }
+}
+
+
+/* ==========================================================
+   RESULTS
+   ========================================================== */
+
+function renderResults(data){
+
+    const list=
+        document
+            .getElementById(
+                'results'
+            );
+
+
+    list.innerHTML='';
+
+
+    const items=
+        data?.risultati ||
+        [];
+
+
+    document
+        .getElementById(
+            'resultCount'
+        )
+        .textContent=
+            items.length+
+            ' risultati';
+
+
+    if(!items.length){
+
+        list.innerHTML=
+            '<div class="muted">'+
+            'Nessun intervento trovato.'+
+            '</div>';
+
+        return;
+    }
+
+
+    for(const item of items){
+
+        const row=
+            document
+                .createElement(
+                    'div'
+                );
+
+
+        row.className=
+            'result';
+
+
+        const tags=[];
+
+
+        tags.push(
+
+            '<span class="tag">'+
+            esc(
+                item.stato ||
+                '—'
+            )+
+            '</span>'
+        );
+
+
+        if(item.asbuilt){
+
+            tags.push(
+                '<span class="tag good">'+
+                'AS-BUILT'+
+                '</span>'
+            );
+        }
+
+
+        if(item.progetto){
+
+            tags.push(
+                '<span class="tag good">'+
+                'PROGETTO'+
+                '</span>'
+            );
+        }
+
+
+        if(item.anomalia){
+
+            tags.push(
+                '<span class="tag bad">'+
+                'ANOMALIA'+
+                '</span>'
+            );
+        }
+
+
+        if(
+            Number(
+                item.manutenzioni_aperte ||
+                0
+            ) > 0
+        ){
+
+            tags.push(
+                '<span class="tag warn">'+
+                'MANUTENZIONE'+
+                '</span>'
+            );
+        }
+
+
+        row.innerHTML=
+
+            '<div class="resultHead">'+
+
+                '<div>'+
+
+                    '<strong>'+
+                    esc(
+                        item.id_intervento
+                    )+
+                    '</strong>'+
+
+                    '<div class="muted">'+
+                    esc(
+                        item.id_cantiere
+                    )+
+                    '</div>'+
+
+                '</div>'+
+
+                '<div class="muted">'+
+
+                    Number(
+                        item.metri ||
+                        0
+                    )
+                    .toLocaleString(
+                        'it-IT',
+                        {
+                            maximumFractionDigits:2
+                        }
+                    )+
+                    ' m'+
+
+                '</div>'+
+
+            '</div>'+
+
+            '<div class="muted">'+
+
+                esc(
+                    item.materiale ||
+                    '—'
+                )+
+
+                (
+                    item.diametro_mm
+                        ? ' · Ø '+
+                            esc(
+                                item.diametro_mm
+                            )+
+                            ' mm'
+                        : ''
+                )+
+
+                ' · Evidenze '+
+                Number(
+                    item.evidenze ||
+                    0
+                )+
+
+                ' · Audit '+
+                Number(
+                    item.audit ||
+                    0
+                )+
+
+                ' · Spatial '+
+                Number(
+                    item.spatial_anchors ||
+                    0
+                )+
+
+            '</div>'+
+
+            '<div class="tags">'+
+            tags.join('')+
+            '</div>';
+
+
+        row.onclick=
+            ()=>
+                loadTimeline(
+                    item.id_intervento
+                );
+
+
+        list.appendChild(row);
+    }
+}
+
+
+/* ==========================================================
+   TIMELINE
+   ========================================================== */
+
+async function loadTimeline(id){
+
+    const box=
+        document
+            .getElementById(
+                'assetDetail'
+            );
+
+
+    box.innerHTML=
+        '<div class="muted">'+
+        'Caricamento memoria asset...'+
+        '</div>';
+
+
+    try{
+
+        const data=
+            await api(
+                '/api/asset-timeline/'+
+                encodeURIComponent(id)
+            );
+
+
+        const a=
+            data.asset ||
+            {};
+
+
+        const anomaly=
+            a.anomalia
+                ?.presente ===
+            true;
+
+
+        let html=
+
+            '<div class="assetHeader">'+
+
+                '<div>'+
+
+                    '<div class="assetTitle">'+
+                    esc(
+                        a.id_intervento
+                    )+
+                    '</div>'+
+
+                    '<div class="assetMeta">'+
+                    esc(
+                        a.id_cantiere
+                    )+
+                    ' · '+
+                    esc(
+                        a.stato
+                    )+
+                    '</div>'+
+
+                '</div>'+
+
+                '<div class="assetLinks">'+
+
+                    '<a href="'+
+                    esc(
+                        data.links
+                            .passaporto
+                    )+
+                    '">'+
+                    'PASSAPORTO'+
+                    '</a>'+
+
+                    '<a href="'+
+                    esc(
+                        data.links
+                            .confronto
+                    )+
+                    '">'+
+                    'PROGETTO ↔ AS-BUILT'+
+                    '</a>'+
+
+                    '<a href="'+
+                    esc(
+                        data.links
+                            .audit
+                    )+
+                    '">'+
+                    'AUDIT'+
+                    '</a>'+
+
+                '</div>'+
+
+            '</div>'+
+
+            '<div class="assetGrid">'+
+
+                field(
+                    'OPERATORE',
+                    a.operatore ||
+                    '—'
+                )+
+
+                field(
+                    'SQUADRA',
+                    a.squadra ||
+                    '—'
+                )+
+
+                field(
+                    'MATERIALE',
+                    a.materiale ||
+                    '—'
+                )+
+
+                field(
+                    'DIAMETRO',
+                    a.diametro_mm
+                        ? a.diametro_mm+
+                            ' mm'
+                        : '—'
+                )+
+
+                field(
+                    'METRI',
+                    Number(
+                        a.metri ||
+                        0
+                    )
+                    .toLocaleString(
+                        'it-IT',
+                        {
+                            maximumFractionDigits:2
+                        }
+                    )+
+                    ' m'
+                )+
+
+                field(
+                    'EVIDENZE',
+                    a.evidenze
+                )+
+
+                field(
+                    'SPATIAL',
+                    a.spatial_anchors
+                )+
+
+                field(
+                    'MANUTENZIONI',
+                    a.manutenzioni
+                )+
+
+            '</div>';
+
+
+        if(anomaly){
+
+            html+=
+
+                '<div class="result" '+
+                'style="margin-bottom:12px;border-color:#7a3038">'+
+
+                    '<strong class="red">'+
+                    'ANOMALIA REGISTRATA'+
+                    '</strong>'+
+
+                    '<div class="muted">'+
+                    esc(
+                        a.anomalia
+                            .descrizione ||
+                        ''
+                    )+
+                    '</div>'+
+
+                '</div>';
+        }
+
+
+        html+=
+            '<div class="timeline">';
+
+
+        for(
+            const event
+            of data.eventi || []
+        ){
+
+            html+=
+
+                '<div '+
+                'class="timelineItem" '+
+                'data-type="'+
+                esc(
+                    event.tipo
+                )+
+                '">'+
+
+                    '<div class="timelineDate">'+
+                    esc(
+                        formatDate(
+                            event.data_ora
+                        )
+                    )+
+                    '</div>'+
+
+                    '<div class="timelineTitle">'+
+                    esc(
+                        event.titolo
+                    )+
+                    '</div>'+
+
+                    (
+                        event.dettagli
+                            ?
+                            '<div class="timelineText">'+
+                            esc(
+                                event.dettagli
+                            )+
+                            '</div>'
+                            :
+                            ''
+                    )+
+
+                    (
+                        event.stato
+                            ?
+                            '<div class="tags">'+
+                            '<span class="tag">'+
+                            esc(
+                                event.stato
+                            )+
+                            '</span>'+
+                            '</div>'
+                            :
+                            ''
+                    )+
+
+                '</div>';
+        }
+
+
+        html+='</div>';
+
+
+        box.innerHTML=
+            html;
+
+
+    }catch(error){
+
+        box.innerHTML=
+            '<div class="muted">'+
+            esc(
+                error.message
+            )+
+            '</div>';
+    }
+}
+
+
+/* ==========================================================
+   SITES
+   ========================================================== */
+
+async function loadSites(){
+
+    try{
+
+        const sites=
+            await api(
+                '/api/cantieri'
+            );
+
+
+        const select=
+            document
+                .getElementById(
+                    'site'
+                );
+
+
+        for(const site of sites){
+
+            const option=
+                document
+                    .createElement(
+                        'option'
+                    );
+
+            option.value=site;
+            option.textContent=site;
+
+            select.appendChild(option);
+        }
+
+
+    }catch(error){
+
+        console.error(error);
+    }
+}
+
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
+
+function field(
+    label,
+    value
+){
+
+    return (
+
+        '<div class="assetField">'+
+
+            '<small>'+
+            esc(label)+
+            '</small>'+
+
+            '<b>'+
+            esc(
+                String(
+                    value ??
+                    '—'
+                )
+            )+
+            '</b>'+
+
+        '</div>'
+    );
+}
+
+
+function setText(
+    id,
+    value
+){
+
+    document
+        .getElementById(id)
+        .textContent=
+            value ?? '—';
+}
+
+
+function formatDate(value){
+
+    if(!value){
+        return '—';
+    }
+
+
+    const d=
+        new Date(value);
+
+
+    if(
+        Number.isNaN(
+            d.getTime()
+        )
+    ){
+        return String(value);
+    }
+
+
+    return d.toLocaleString(
+        'it-IT'
+    );
+}
+
+
+function esc(value){
+
+    return String(
+        value ?? ''
+    )
+    .replaceAll(
+        '&',
+        '&amp;'
+    )
+    .replaceAll(
+        '<',
+        '&lt;'
+    )
+    .replaceAll(
+        '>',
+        '&gt;'
+    )
+    .replaceAll(
+        '"',
+        '&quot;'
+    )
+    .replaceAll(
+        "'",
+        '&#039;'
+    );
+}
+
+
+/* ==========================================================
+   START
+   ========================================================== */
+
+document
+    .getElementById(
+        'search'
+    )
+    .addEventListener(
+        'keydown',
+        event=>{
+
+            if(
+                event.key ===
+                'Enter'
+            ){
+                runSearch();
+            }
+        }
+    );
+
+
+Promise.all([
+    loadMaster(),
+    loadSites()
+])
+.then(
+    runSearch
+);
+
+
+setInterval(
+    loadMaster,
+    30000
+);
+
+</script>
+
+</body>
+
+</html>
