@@ -2093,25 +2093,17 @@ input{
 <script>
 
 /* =========================================================
-   NMA BUILD OS — SAN BENIGNO GROUND TWIN v1
+   NMA BUILD OS — FINAL REFERENCE ENGINE v1
+
+   DEMO GEOSPATIAL SCENE
 
    IMPORTANT:
-   The municipal base coordinate is geographic context.
-
-   PIPELINE coordinates below are SYNTHETIC DEMO points.
-
-   They do NOT represent:
-   - Italgas data
-   - surveyed utilities
-   - underground infrastructure
-   - excavation guidance
-
-   MongoDB writes: NONE.
-   ========================================================= */
-
-
-/* =========================================================
-   OFFICIAL MUNICIPAL REFERENCE
+   - no utility network is claimed to exist here
+   - no Italgas geometry
+   - no excavation guidance
+   - road coordinates are map/routing data, not survey GNSS
+   - pipeline is synthetic
+   - MongoDB writes: NONE
    ========================================================= */
 
 const SAN_BENIGNO_REFERENCE={
@@ -2120,56 +2112,301 @@ const SAN_BENIGNO_REFERENCE={
 };
 
 
-/* =========================================================
-   EXACT DEMO GPS POINTS
+/*
+ Public geographic references used only
+ to build the demonstration road route.
+*/
 
-   Exact numeric placement for the visual simulation.
-   Not surveyed utility coordinates.
+const DEMO_ROUTE_ENDPOINTS={
+
+ south:[
+  7.786278,
+  45.223750
+ ],
+
+ north:[
+  7.786100,
+  45.228000
+ ]
+};
+
+
+let DEMO_PIPELINES=[];
+
+let ROUTE_SOURCE=
+ 'LOADING';
+
+
+const T={
+
+ scene:null,
+ camera:null,
+ renderer:null,
+
+ root:null,
+
+ mercator:null,
+ scale:null,
+
+ pipelines:[],
+ flowObjects:[],
+
+ animationsStarted:false
+};
+
+
+/* =========================================================
+   ROAD GEOMETRY
    ========================================================= */
 
-const DEMO_PIPELINES=[
+async function loadRoadGeometry(){
 
- {
-  id:'GAS-DEMO-SB-001',
+ const a=
+  DEMO_ROUTE_ENDPOINTS.south;
 
-  points:[
+ const b=
+  DEMO_ROUTE_ENDPOINTS.north;
 
-   [7.784930,45.227790],
-   [7.785210,45.227855],
-   [7.785520,45.227935],
-   [7.785840,45.228035],
-   [7.786150,45.228115],
-   [7.786470,45.228160],
-   [7.786800,45.228155],
-   [7.787115,45.228095],
-   [7.787410,45.227990]
-  ]
- },
 
- {
-  id:'GAS-DEMO-SB-002',
+ const url=
+  'https://router.project-osrm.org/route/v1/driving/'+
+  a[0]+','+a[1]+';'+
+  b[0]+','+b[1]+
+  '?overview=full&geometries=geojson';
 
-  points:[
 
-   [7.786150,45.228115],
-   [7.786210,45.228335],
-   [7.786285,45.228555],
-   [7.786365,45.228765]
-  ]
- },
+ try{
 
- {
-  id:'GAS-DEMO-SB-003',
+  const response=
+   await fetch(
+    url,
+    {
+     mode:'cors'
+    }
+   );
 
-  points:[
 
-   [7.785520,45.227935],
-   [7.785385,45.227720],
-   [7.785255,45.227515]
-  ]
+  if(!response.ok){
+
+   throw new Error(
+    'OSRM '+response.status
+   );
+  }
+
+
+  const data=
+   await response.json();
+
+
+  const raw=
+   data
+    ?.routes
+    ?.[0]
+    ?.geometry
+    ?.coordinates;
+
+
+  if(
+   !Array.isArray(raw) ||
+   raw.length<8
+  ){
+
+   throw new Error(
+    'Road geometry unavailable'
+   );
+  }
+
+
+  ROUTE_SOURCE=
+   'PUBLIC ROAD GEOMETRY · DEMO';
+
+
+  /*
+   Simplify only visually.
+   First and final coordinate are always preserved.
+  */
+
+  const stride=
+   Math.max(
+    1,
+    Math.floor(
+     raw.length/34
+    )
+   );
+
+
+  const points=
+   raw.filter(
+    (_,index)=>
+     index===0 ||
+     index===raw.length-1 ||
+     index%stride===0
+   );
+
+
+  return points;
+
+
+ }catch(error){
+
+  console.warn(
+   'Road route fallback:',
+   error
+  );
+
+
+  ROUTE_SOURCE=
+   'DEMO FALLBACK GEOMETRY';
+
+
+  /*
+   Fallback coordinates are synthetic.
+   They exist only so the demo remains usable.
+  */
+
+  return [
+
+   [7.786278,45.223750],
+   [7.786254,45.224050],
+   [7.786225,45.224360],
+   [7.786194,45.224690],
+   [7.786164,45.225020],
+   [7.786145,45.225350],
+   [7.786137,45.225700],
+   [7.786129,45.226050],
+   [7.786120,45.226400],
+   [7.786112,45.226750],
+   [7.786105,45.227080],
+   [7.786101,45.227400],
+   [7.786100,45.227700],
+   [7.786100,45.228000]
+  ];
+ }
+}
+
+
+/* =========================================================
+   SHORT SYNTHETIC T BRANCH
+
+   Derived mathematically from the main DEMO route.
+   Not a real street utility branch.
+   ========================================================= */
+
+function createDemoBranch(points){
+
+ if(points.length<5){
+  return [];
  }
 
-];
+
+ const index=
+  Math.floor(
+   points.length*.58
+  );
+
+
+ const p=
+  points[index];
+
+
+ const before=
+  points[
+   Math.max(
+    0,
+    index-2
+   )
+  ];
+
+
+ const after=
+  points[
+   Math.min(
+    points.length-1,
+    index+2
+   )
+  ];
+
+
+ const latRad=
+  p[1]*
+  Math.PI/
+  180;
+
+
+ const east=
+  (
+   after[0]-
+   before[0]
+  )*
+  111320*
+  Math.cos(latRad);
+
+
+ const north=
+  (
+   after[1]-
+   before[1]
+  )*
+  110540;
+
+
+ const length=
+  Math.max(
+   .001,
+   Math.hypot(
+    east,
+    north
+   )
+  );
+
+
+ /*
+  Perpendicular vector in metres.
+ */
+
+ const pe=
+  -north/length;
+
+ const pn=
+  east/length;
+
+
+ const result=[];
+
+
+ for(
+  const distance
+  of [0,9,18,28]
+ ){
+
+  const lng=
+   p[0]+
+   (
+    pe*distance
+   )/
+   (
+    111320*
+    Math.cos(latRad)
+   );
+
+
+  const lat=
+   p[1]+
+   (
+    pn*distance
+   )/
+   110540;
+
+
+  result.push([
+   lng,
+   lat
+  ]);
+ }
+
+
+ return result;
+}
 
 
 /* =========================================================
@@ -2212,13 +2449,13 @@ const map=
 
      paint:{
 
-      'raster-saturation':-.05,
+      'raster-saturation':-.08,
 
-      'raster-contrast':.10,
+      'raster-contrast':.13,
 
-      'raster-brightness-min':.05,
+      'raster-brightness-min':.035,
 
-      'raster-brightness-max':.90
+      'raster-brightness-max':.87
      }
     }
 
@@ -2230,16 +2467,16 @@ const map=
    SAN_BENIGNO_REFERENCE.lat
   ],
 
-  zoom:18.15,
+  zoom:17,
 
-  pitch:62,
+  pitch:59,
 
-  bearing:-30,
+  bearing:-24,
 
-  antialias:true,
+  maxZoom:20,
 
-  maxZoom:20
- });
+  antialias:true
+});
 
 
 map.addControl(
@@ -2249,34 +2486,7 @@ map.addControl(
 
 
 /* =========================================================
-   THREE STATE
-   ========================================================= */
-
-const T={
-
- scene:null,
- camera:null,
- renderer:null,
-
- root:null,
-
- mercator:null,
- scale:null,
-
- flowObjects:[],
-
- pipelines:[]
-};
-
-
-/* =========================================================
-   LOCAL METRIC COORDINATES
-
-   x = east
-   y = north
-   z = altitude above flat map plane
-
-   Matrix later flips Y for Web Mercator.
+   COORDINATE TRANSFORM
    ========================================================= */
 
 function localPoint(
@@ -2286,8 +2496,8 @@ function localPoint(
 ){
 
  const lat0=
-  SAN_BENIGNO_REFERENCE.lat *
-  Math.PI /
+  SAN_BENIGNO_REFERENCE.lat*
+  Math.PI/
   180;
 
 
@@ -2295,8 +2505,8 @@ function localPoint(
   (
    lng-
    SAN_BENIGNO_REFERENCE.lng
-  ) *
-  111320 *
+  )*
+  111320*
   Math.cos(lat0);
 
 
@@ -2304,7 +2514,7 @@ function localPoint(
   (
    lat-
    SAN_BENIGNO_REFERENCE.lat
-  ) *
+  )*
   110540;
 
 
@@ -2320,121 +2530,140 @@ function localPoint(
    MATERIALS
    ========================================================= */
 
-function steelMaterial(){
-
- return new THREE.MeshStandardMaterial({
-
-  color:0x26363e,
-
-  roughness:.20,
-
-  metalness:.92,
-
-  emissive:
-   new THREE.Color(
-    0x06141b
-   ),
-
-  emissiveIntensity:.18
- });
-}
-
-
-function shellMaterial(){
+function materialOuter(){
 
  return new THREE.MeshPhysicalMaterial({
 
-  color:0x15252d,
+  color:0x14252e,
 
-  roughness:.14,
+  roughness:.13,
 
-  metalness:.86,
+  metalness:.82,
 
-  transparent:false,
+  transparent:true,
+
+  opacity:.74,
+
+  depthWrite:false,
 
   clearcoat:1,
 
-  clearcoatRoughness:.08,
+  clearcoatRoughness:.07,
 
-  emissive:
-   new THREE.Color(
-    0x03131a
-   ),
-
-  emissiveIntensity:.12
+  side:THREE.DoubleSide
  });
 }
 
 
-function cyanMaterial(){
+function materialDark(){
 
  return new THREE.MeshStandardMaterial({
 
-  color:0x00bfff,
+  color:0x101a20,
 
-  roughness:.08,
+  roughness:.20,
 
-  metalness:.42,
-
-  emissive:
-   new THREE.Color(
-    0x00bfff
-   ),
-
-  emissiveIntensity:1.4
+  metalness:.91
  });
 }
 
 
-function collarMaterial(){
+function materialSteel(){
 
  return new THREE.MeshStandardMaterial({
 
-  color:0xc2d3d9,
+  color:0xb8cbd3,
 
-  roughness:.16,
+  roughness:.14,
 
   metalness:.96
  });
 }
 
 
-function darkMaterial(){
+function materialCyan(){
 
  return new THREE.MeshStandardMaterial({
 
-  color:0x111b20,
+  color:0x00cfff,
 
-  roughness:.25,
+  roughness:.08,
 
-  metalness:.90
+  metalness:.35,
+
+  emissive:
+   new THREE.Color(
+    0x00baff
+   ),
+
+  emissiveIntensity:1.65
+ });
+}
+
+
+function materialOrange(){
+
+ return new THREE.MeshStandardMaterial({
+
+  color:0xff9c13,
+
+  roughness:.15,
+
+  metalness:.72,
+
+  emissive:
+   new THREE.Color(
+    0xff6a00
+   ),
+
+  emissiveIntensity:.42
+ });
+}
+
+
+function materialRed(){
+
+ return new THREE.MeshStandardMaterial({
+
+  color:0xff3f55,
+
+  roughness:.12,
+
+  metalness:.65,
+
+  emissive:
+   new THREE.Color(
+    0xff112c
+   ),
+
+  emissiveIntensity:.78
  });
 }
 
 
 /* =========================================================
-   CURVE
+   GEOMETRY
    ========================================================= */
 
-function buildCurve(points,radius){
+function makeCurve(
+ points,
+ radius
+){
 
  return new THREE.CatmullRomCurve3(
 
   points.map(
-   p=>
+   point=>
     localPoint(
-     p[0],
-     p[1],
+     point[0],
+     point[1],
 
      /*
-      Ground anchoring:
-      center altitude = radius.
-
-      Bottom of cylinder ≈ z 0,
-      therefore the mesh visually rests
-      on the map plane instead of floating.
+      Bottom of visual cylinder approximately
+      touches the ground plane.
      */
-     radius
+
+     radius+.10
     )
   ),
 
@@ -2442,234 +2671,10 @@ function buildCurve(points,radius){
 
   'centripetal',
 
-  .15
+  .12
  );
 }
 
-
-/* =========================================================
-   TUBE
-   ========================================================= */
-
-function createPipe(
- root,
- spec,
- radius
-){
-
- const curve=
-  buildCurve(
-   spec.points,
-   radius
-  );
-
-
- /*
-  Dark external body.
- */
-
- const body=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    curve,
-    260,
-    radius,
-    32,
-    false
-   ),
-
-   shellMaterial()
-  );
-
-
- root.add(body);
-
-
- /*
-  HERO SHELL DETAIL.
-
-  Il tubo esterno resta pienamente leggibile.
-  La luce cyan viene resa SOPRA la superficie,
-  non nascosta dentro una mesh opaca.
- */
-
- const lightPoints=
-  spec.points.map(
-   point=>
-    localPoint(
-     point[0],
-     point[1],
-
-     radius*1.78
-    )
-  );
-
-
- const lightCurve=
-  new THREE.CatmullRomCurve3(
-   lightPoints,
-   false,
-   'centripetal',
-   .15
-  );
-
-
- const surfaceLight=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    lightCurve,
-    260,
-    radius*.115,
-    14,
-    false
-   ),
-
-   cyanMaterial()
-  );
-
-
- root.add(surfaceLight);
-
-
- const surfaceGlow=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    lightCurve,
-    260,
-    radius*.24,
-    12,
-    false
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0x00c8ff,
-
-    transparent:true,
-
-    opacity:.17,
-
-    depthWrite:false,
-
-    blending:
-     THREE.AdditiveBlending
-   })
-  );
-
-
- root.add(surfaceGlow);
-
-
- /*
-  Riflesso metallico superiore.
-
-  Non è un secondo tubo:
-  è un highlight grafico della superficie.
- */
-
- const shinePoints=
-  spec.points.map(
-   point=>
-    localPoint(
-     point[0],
-     point[1],
-
-     radius*1.62
-    )
-  );
-
-
- const shineCurve=
-  new THREE.CatmullRomCurve3(
-   shinePoints,
-   false,
-   'centripetal',
-   .15
-  );
-
-
- const shine=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    shineCurve,
-    260,
-    radius*.055,
-    10,
-    false
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0xc9f4ff,
-
-    transparent:true,
-
-    opacity:.72
-   })
-  );
-
-
- root.add(shine);
-
-
- /*
-  Collars.
- */
-
- const collars=[
-  .04,
-  .12,
-  .21,
-  .31,
-  .42,
-  .54,
-  .66,
-  .77,
-  .88,
-  .96
- ];
-
-
- for(
-  let i=0;
-  i<collars.length;
-  i++
- ){
-
-  createCollar(
-   root,
-   curve,
-   collars[i],
-   radius,
-   i===2 ||
-   i===5 ||
-   i===8
-  );
- }
-
-
- T.pipelines.push({
-  id:spec.id,
-  curve,
-  radius
- });
-
-
- return {
-  id:spec.id,
-  curve,
-  radius
- };
-}
-
-
-/* =========================================================
-   ORIENTATION
-   ========================================================= */
 
 function orientAlong(
  object,
@@ -2677,7 +2682,7 @@ function orientAlong(
  t
 ){
 
- const pos=
+ const position=
   curve.getPointAt(t);
 
 
@@ -2687,7 +2692,9 @@ function orientAlong(
    .normalize();
 
 
- object.position.copy(pos);
+ object.position.copy(
+  position
+ );
 
 
  object.quaternion
@@ -2705,16 +2712,182 @@ function orientAlong(
 
 
 /* =========================================================
-   COLLARS
+   EXCAVATION / GROUND CONTACT
    ========================================================= */
 
-function createCollar(
+function addTrench(
+ root,
+ points,
+ width=5.6
+){
+
+ for(
+  let i=1;
+  i<points.length;
+  i++
+ ){
+
+  const a=
+   localPoint(
+    points[i-1][0],
+    points[i-1][1],
+    .02
+   );
+
+
+  const b=
+   localPoint(
+    points[i][0],
+    points[i][1],
+    .02
+   );
+
+
+  const dx=
+   b.x-a.x;
+
+  const dy=
+   b.y-a.y;
+
+
+  const length=
+   Math.hypot(
+    dx,
+    dy
+   );
+
+
+  if(length<.2){
+   continue;
+  }
+
+
+  /*
+   Excavation floor.
+  */
+
+  const floor=
+   new THREE.Mesh(
+
+    new THREE.BoxGeometry(
+     length,
+     width,
+     .12
+    ),
+
+    new THREE.MeshStandardMaterial({
+
+     color:0x282019,
+
+     roughness:.98,
+
+     metalness:0
+    })
+   );
+
+
+  floor.position.set(
+
+   (a.x+b.x)/2,
+
+   (a.y+b.y)/2,
+
+   .02
+  );
+
+
+  floor.rotation.z=
+   Math.atan2(
+    dy,
+    dx
+   );
+
+
+  root.add(
+   floor
+  );
+
+
+  /*
+   Dark edge strips make the trench sit
+   visually inside the satellite terrain.
+  */
+
+  for(
+   const side
+   of [-1,1]
+  ){
+
+   const edge=
+    new THREE.Mesh(
+
+     new THREE.BoxGeometry(
+      length,
+      .30,
+      .22
+     ),
+
+     new THREE.MeshStandardMaterial({
+
+      color:0x15110e,
+
+      roughness:1
+     })
+    );
+
+
+   const angle=
+    Math.atan2(
+     dy,
+     dx
+    );
+
+
+   const offset=
+    width*.47;
+
+
+   edge.position.set(
+
+    (a.x+b.x)/2-
+    Math.sin(angle)*
+    offset*
+    side,
+
+    (a.y+b.y)/2+
+    Math.cos(angle)*
+    offset*
+    side,
+
+    .07
+   );
+
+
+   edge.rotation.z=
+    angle;
+
+
+   root.add(edge);
+  }
+ }
+}
+
+
+/* =========================================================
+   COLLAR / FLANGE
+   ========================================================= */
+
+function addRing(
  root,
  curve,
  t,
  radius,
- major
+ type='collar'
 ){
+
+ const major=
+  type==='flange';
+
 
  const ring=
   new THREE.Mesh(
@@ -2725,24 +2898,26 @@ function createCollar(
     (
      major
       ? 1.34
-      : 1.20
+      : 1.17
     ),
 
     radius*
     (
      major
-      ? .22
-      : .13
+      ? .18
+      : .095
     ),
 
     14,
 
-    42
+    major
+     ? 48
+     : 36
    ),
 
    major
-    ? collarMaterial()
-    : darkMaterial()
+    ? materialSteel()
+    : materialDark()
   );
 
 
@@ -2760,7 +2935,7 @@ function createCollar(
 
   for(
    const dt
-   of [-.014,.014]
+   of [-.009,.009]
   ){
 
    const secondary=
@@ -2768,22 +2943,25 @@ function createCollar(
 
      new THREE.TorusGeometry(
 
-      radius*1.18,
+      radius*1.24,
 
-      radius*.07,
+      radius*.065,
 
       12,
 
-      36
+      42
      ),
 
-     collarMaterial()
+     materialDark()
     );
 
 
    orientAlong(
+
     secondary,
+
     curve,
+
     Math.max(
      .01,
      Math.min(
@@ -2803,13 +2981,240 @@ function createCollar(
 
 
 /* =========================================================
-   VALVE
-
-   Body stays on pipe.
-   Stem rises vertically from ground.
+   PIPE
    ========================================================= */
 
-function createValve(
+function createPipe(
+ root,
+ spec
+){
+
+ const radius=
+  spec.radius;
+
+
+ const curve=
+  makeCurve(
+   spec.points,
+   radius
+  );
+
+
+ /*
+  Lower dark structural body.
+ */
+
+ const structural=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    curve,
+    360,
+    radius*.95,
+    30,
+    false
+   ),
+
+   materialDark()
+  );
+
+
+ root.add(
+  structural
+ );
+
+
+ /*
+  Transparent PE / glass-like outer shell,
+  so the cyan internal flow remains visible.
+ */
+
+ const shell=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    curve,
+    360,
+    radius,
+    36,
+    false
+   ),
+
+   materialOuter()
+  );
+
+
+ root.add(shell);
+
+
+ /*
+  Internal cyan core.
+ */
+
+ const core=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    curve,
+    360,
+    radius*.32,
+    18,
+    false
+   ),
+
+   materialCyan()
+  );
+
+
+ root.add(core);
+
+
+ /*
+  Cyan halo inside the pipe.
+ */
+
+ const halo=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    curve,
+    320,
+    radius*.43,
+    16,
+    false
+   ),
+
+   new THREE.MeshBasicMaterial({
+
+    color:0x00cfff,
+
+    transparent:true,
+
+    opacity:.11,
+
+    depthWrite:false,
+
+    blending:
+     THREE.AdditiveBlending
+   })
+  );
+
+
+ root.add(halo);
+
+
+ /*
+  Upper reflection.
+ */
+
+ const shinePoints=
+  spec.points.map(
+   point=>
+    localPoint(
+     point[0],
+     point[1],
+     radius*1.88
+    )
+  );
+
+
+ const shineCurve=
+  new THREE.CatmullRomCurve3(
+   shinePoints,
+   false,
+   'centripetal',
+   .12
+  );
+
+
+ const shine=
+  new THREE.Mesh(
+
+   new THREE.TubeGeometry(
+    shineCurve,
+    320,
+    radius*.055,
+    9,
+    false
+   ),
+
+   new THREE.MeshBasicMaterial({
+
+    color:0xd8f8ff,
+
+    transparent:true,
+
+    opacity:.68
+   })
+  );
+
+
+ root.add(shine);
+
+
+ /*
+  Repeated collars + stronger flanges.
+ */
+
+ const joints=[
+  .05,
+  .13,
+  .22,
+  .31,
+  .40,
+  .49,
+  .58,
+  .67,
+  .76,
+  .85,
+  .94
+ ];
+
+
+ joints.forEach(
+  (t,index)=>{
+
+   addRing(
+
+    root,
+    curve,
+    t,
+    radius,
+
+    (
+     index===2 ||
+     index===5 ||
+     index===8
+    )
+     ? 'flange'
+     : 'collar'
+   );
+  }
+ );
+
+
+ const pipeline={
+  id:spec.id,
+  curve,
+  radius,
+  points:spec.points
+ };
+
+
+ T.pipelines.push(
+  pipeline
+ );
+
+
+ return pipeline;
+}
+
+
+/* =========================================================
+   VALVE
+   ========================================================= */
+
+function addValve(
  root,
  pipeline,
  t
@@ -2825,69 +3230,73 @@ function createValve(
   curve.getPointAt(t);
 
 
+ /*
+  Valve body.
+ */
+
  const body=
   new THREE.Mesh(
 
    new THREE.SphereGeometry(
-    radius*1.62,
-    32,
+    radius*1.38,
+    30,
     24
    ),
 
-   steelMaterial()
+   materialDark()
   );
 
 
  body.position.copy(p);
 
+
  body.scale.set(
-  1.20,
-  1.20,
-  .82
+  1.18,
+  1.18,
+  .80
  );
 
 
  root.add(body);
 
 
+ addRing(
+  root,
+  curve,
+  Math.max(.01,t-.018),
+  radius,
+  'flange'
+ );
+
+
+ addRing(
+  root,
+  curve,
+  Math.min(.99,t+.018),
+  radius,
+  'flange'
+ );
+
+
  /*
-  Flanges around pipeline.
- */
-
- for(
-  const dt
-  of [-.018,.018]
- ){
-
-  createCollar(
-   root,
-   curve,
-   t+dt,
-   radius,
-   true
-  );
- }
-
-
- /*
-  Vertical stem.
+  Vertical valve stem.
  */
 
  const stemHeight=
-  radius*2.5;
+  radius*2.55;
 
 
  const stem=
   new THREE.Mesh(
 
    new THREE.CylinderGeometry(
+    radius*.13,
     radius*.17,
-    radius*.20,
     stemHeight,
-    20
+    22
    ),
 
-   collarMaterial()
+   materialSteel()
   );
 
 
@@ -2895,17 +3304,12 @@ function createValve(
   Math.PI/2;
 
 
- /*
-  CylinderGeometry is Y-axis by default.
-  After rotation its axis is Z.
- */
-
  stem.position.set(
   p.x,
   p.y,
   p.z+
-  stemHeight*.50+
-  radius*.72
+  radius*.78+
+  stemHeight*.5
  );
 
 
@@ -2913,20 +3317,20 @@ function createValve(
 
 
  /*
-  Valve wheel.
+  Horizontal valve wheel.
  */
 
  const wheel=
   new THREE.Mesh(
 
    new THREE.TorusGeometry(
-    radius*1.02,
-    radius*.14,
-    16,
-    48
+    radius*.76,
+    radius*.105,
+    14,
+    44
    ),
 
-   cyanMaterial()
+   materialCyan()
   );
 
 
@@ -2934,20 +3338,46 @@ function createValve(
   p.x,
   p.y,
   p.z+
-  stemHeight+
-  radius*.72
+  radius*.78+
+  stemHeight
  );
 
 
  root.add(wheel);
+
+
+ /*
+  Wheel hub.
+ */
+
+ const hub=
+  new THREE.Mesh(
+
+   new THREE.CylinderGeometry(
+    radius*.14,
+    radius*.14,
+    radius*.25,
+    18
+   ),
+
+   materialSteel()
+  );
+
+
+ hub.position.copy(
+  wheel.position
+ );
+
+
+ root.add(hub);
 }
 
 
 /* =========================================================
-   JUNCTION
+   T JUNCTION
    ========================================================= */
 
-function createJunction(
+function addJunction(
  root,
  pipeline,
  t
@@ -2958,111 +3388,76 @@ function createJunction(
    .getPointAt(t);
 
 
- const junction=
+ const joint=
   new THREE.Mesh(
 
    new THREE.SphereGeometry(
-    pipeline.radius*1.35,
+    pipeline.radius*1.27,
     28,
-    20
+    22
    ),
 
-   steelMaterial()
+   materialDark()
   );
 
 
- junction.position.copy(p);
+ joint.position.copy(p);
 
- root.add(junction);
+
+ root.add(joint);
+
+
+ addRing(
+  root,
+  pipeline.curve,
+  Math.max(.01,t-.015),
+  pipeline.radius,
+  'flange'
+ );
+
+
+ addRing(
+  root,
+  pipeline.curve,
+  Math.min(.99,t+.015),
+  pipeline.radius,
+  'flange'
+ );
 }
 
 
 /* =========================================================
-   TRENCH / GROUND CONTACT
-
-   Visual excavation surface only.
-   No underground-network claim.
+   ANOMALY DEMO
    ========================================================= */
 
-function createGroundCradle(
+function addAnomaly(
  root,
- points
+ pipeline,
+ t
 ){
 
- for(
-  let i=1;
-  i<points.length;
-  i++
- ){
+ const ring=
+  new THREE.Mesh(
 
-  const a=
-   localPoint(
-    points[i-1][0],
-    points[i-1][1],
-    .05
-   );
+   new THREE.TorusGeometry(
+    pipeline.radius*1.30,
+    pipeline.radius*.15,
+    14,
+    44
+   ),
 
-
-  const b=
-   localPoint(
-    points[i][0],
-    points[i][1],
-    .05
-   );
-
-
-  const dx=b.x-a.x;
-  const dy=b.y-a.y;
-
-
-  const length=
-   Math.sqrt(
-    dx*dx+
-    dy*dy
-   );
-
-
-  const box=
-   new THREE.Mesh(
-
-    new THREE.BoxGeometry(
-     length,
-     8.0,
-     .14
-    ),
-
-    new THREE.MeshStandardMaterial({
-
-     color:0x1a1511,
-
-     roughness:.98,
-
-     transparent:true,
-
-     opacity:.80
-    })
-   );
-
-
-  box.position.set(
-
-   (a.x+b.x)/2,
-
-   (a.y+b.y)/2,
-
-   .03
+   materialRed()
   );
 
 
-  box.rotation.z=
-   Math.atan2(
-    dy,
-    dx
-   );
+ orientAlong(
+  ring,
+  pipeline.curve,
+  t
+ );
 
 
-  root.add(box);
- }
+ root.add(ring);
 }
 
 
@@ -3070,199 +3465,7 @@ function createGroundCradle(
    FLOW PARTICLES
    ========================================================= */
 
-
-/* =========================================================
-   PIPE SHADOW / GROUND CONTACT
-
-   Ombra grafica sul piano del terreno.
-   Evita la sensazione di tubo fluttuante.
-   ========================================================= */
-
-function createPipeShadow(
- root,
- spec,
- radius
-){
-
- const shadowPoints=
-  spec.points.map(
-   p=>
-    localPoint(
-     p[0],
-     p[1],
-     .10
-    )
-  );
-
-
- const shadowCurve=
-  new THREE.CatmullRomCurve3(
-   shadowPoints,
-   false,
-   'centripetal',
-   .15
-  );
-
-
- const shadow=
-  new THREE.Mesh(
-
-   new THREE.TubeGeometry(
-    shadowCurve,
-    220,
-    radius*1.18,
-    18,
-    false
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0x000000,
-
-    transparent:true,
-
-    opacity:.34,
-
-    depthWrite:false
-   })
-  );
-
-
- shadow.scale.z=.08;
-
-
- root.add(shadow);
-}
-
-
-/* =========================================================
-   FLANGE ASSEMBLY
-   ========================================================= */
-
-function createFlangeAssembly(
- root,
- pipeline,
- t
-){
-
- const {
-  curve,
-  radius
- }=pipeline;
-
-
- for(
-  const dt
-  of [-.022,-.010,.010,.022]
- ){
-
-  const outer=
-   new THREE.Mesh(
-
-    new THREE.TorusGeometry(
-     radius*1.35,
-     radius*.14,
-     16,
-     48
-    ),
-
-    dt<0
-     ? collarMaterial()
-     : darkMaterial()
-   );
-
-
-  orientAlong(
-   outer,
-   curve,
-   Math.max(
-    .01,
-    Math.min(
-     .99,
-     t+dt
-    )
-   )
-  );
-
-
-  root.add(outer);
- }
-}
-
-
-/* =========================================================
-   CYAN GROUND NODE
-   ========================================================= */
-
-function createNode(
- root,
- pipeline,
- t
-){
-
- const p=
-  pipeline.curve
-   .getPointAt(t);
-
-
- const halo=
-  new THREE.Mesh(
-
-   new THREE.SphereGeometry(
-    pipeline.radius*.40,
-    18,
-    14
-   ),
-
-   cyanMaterial()
-  );
-
-
- halo.position.set(
-  p.x,
-  p.y,
-  pipeline.radius*2.1
- );
-
-
- root.add(halo);
-
-
- const glow=
-  new THREE.Mesh(
-
-   new THREE.SphereGeometry(
-    pipeline.radius*.68,
-    18,
-    14
-   ),
-
-   new THREE.MeshBasicMaterial({
-
-    color:0x00cfff,
-
-    transparent:true,
-
-    opacity:.14,
-
-    depthWrite:false,
-
-    blending:
-     THREE.AdditiveBlending
-   })
-  );
-
-
- glow.position.copy(
-  halo.position
- );
-
-
- root.add(glow);
-}
-
-
-function createFlow(
+function addFlow(
  root,
  pipeline,
  count
@@ -3274,27 +3477,28 @@ function createFlow(
   i++
  ){
 
-  const ball=
+  const mesh=
    new THREE.Mesh(
 
     new THREE.SphereGeometry(
-     pipeline.radius*.12,
+     pipeline.radius*.10,
      10,
      8
     ),
 
-    cyanMaterial()
+    materialCyan()
    );
 
 
-  root.add(ball);
+  root.add(mesh);
 
 
   T.flowObjects.push({
 
-   mesh:ball,
+   mesh,
 
-   curve:pipeline.curve,
+   curve:
+    pipeline.curve,
 
    offset:
     i/count
@@ -3304,32 +3508,13 @@ function createFlow(
 
 
 /* =========================================================
-   BUILD NETWORK
+   BUILD FINAL SCENE
    ========================================================= */
 
-function buildNetwork(){
+function buildScene(){
 
  const root=
   new THREE.Group();
-
-
- /*
-  Visual radius is intentionally enlarged
-  so the pipe is readable in a city-scale demo.
-
-  It is NOT the physical pipe diameter.
- */
-
- /*
-  SCALA GRAFICA DEMO.
-
-  Questi raggi NON rappresentano il diametro reale
-  della condotta. Servono esclusivamente alla
-  leggibilità del Digital Twin dimostrativo.
- */
-
- const MAIN_RADIUS=2.75;
- const BRANCH_RADIUS=1.65;
 
 
  for(
@@ -3337,128 +3522,90 @@ function buildNetwork(){
   of DEMO_PIPELINES
  ){
 
-  const visualRadius=
+  addTrench(
+   root,
+   spec.points,
+
    spec.id==='GAS-DEMO-SB-001'
-    ? MAIN_RADIUS
-    : BRANCH_RADIUS;
-
-
-  createGroundCradle(
-   root,
-   spec.points
-  );
-
-
-  createPipeShadow(
-   root,
-   spec,
-   visualRadius
+    ? 5.2
+    : 3.8
   );
 
 
   createPipe(
    root,
-   spec,
-   visualRadius
+   spec
   );
  }
 
 
  const main=
   T.pipelines.find(
-   p=>
-    p.id===
+   item=>
+    item.id===
     'GAS-DEMO-SB-001'
   );
 
 
  const branch=
   T.pipelines.find(
-   p=>
-    p.id===
+   item=>
+    item.id===
     'GAS-DEMO-SB-002'
   );
 
 
  if(main){
 
-  createValve(
+  addValve(
    root,
    main,
-   .25
+   .24
   );
 
 
-  createValve(
+  addJunction(
    root,
    main,
-   .76
+   .58
   );
 
 
-  createJunction(
+  addValve(
    root,
    main,
-   .49
+   .79
   );
 
 
-  createFlangeAssembly(
+  addAnomaly(
    root,
    main,
-   .40
+   .69
   );
 
 
-  createFlangeAssembly(
+  addFlow(
    root,
    main,
-   .61
-  );
-
-
-  createNode(
-   root,
-   main,
-   .16
-  );
-
-
-  createNode(
-   root,
-   main,
-   .56
-  );
-
-
-  createNode(
-   root,
-   main,
-   .91
-  );
-
-
-  createFlow(
-   root,
-   main,
-   18
+   22
   );
  }
 
 
  if(branch){
 
-  createValve(
+  addValve(
    root,
    branch,
-   .60
+   .64
   );
 
 
-  createFlow(
+  addFlow(
    root,
    branch,
-   6
+   7
   );
  }
 
@@ -3468,7 +3615,7 @@ function buildNetwork(){
 
 
 /* =========================================================
-   LIGHTING
+   LIGHTS
    ========================================================= */
 
 function addLights(){
@@ -3476,8 +3623,8 @@ function addLights(){
  T.scene.add(
 
   new THREE.HemisphereLight(
-   0xd4f3ff,
-   0x02080c,
+   0xd9f6ff,
+   0x03080b,
    3.0
   )
  );
@@ -3486,45 +3633,45 @@ function addLights(){
  const sun=
   new THREE.DirectionalLight(
    0xffffff,
-   4.4
+   4.6
   );
 
 
  sun.position.set(
-  -120,
-  -140,
-  260
+  -130,
+  -160,
+  270
  );
 
 
  T.scene.add(sun);
 
 
- const rim=
+ const cyan=
   new THREE.DirectionalLight(
-   0x00cfff,
-   2.0
+   0x11d8ff,
+   1.7
   );
 
 
- rim.position.set(
-  150,
-  100,
-  120
+ cyan.position.set(
+  130,
+  80,
+  100
  );
 
 
- T.scene.add(rim);
+ T.scene.add(cyan);
 }
 
 
 /* =========================================================
-   CUSTOM MAPLIBRE 3D LAYER
+   CUSTOM 3D LAYER
    ========================================================= */
 
-const true3DLayer={
+const final3DLayer={
 
- id:'nma-ground-pipe-3d',
+ id:'nma-final-reference-3d',
 
  type:'custom',
 
@@ -3545,7 +3692,7 @@ const true3DLayer={
 
 
   T.root=
-   buildNetwork();
+   buildScene();
 
 
   T.scene.add(
@@ -3557,6 +3704,7 @@ const true3DLayer={
    maplibregl
     .MercatorCoordinate
     .fromLngLat(
+
      {
       lng:
        SAN_BENIGNO_REFERENCE.lng,
@@ -3599,55 +3747,40 @@ const true3DLayer={
   }
 
 
+  updateInterface();
+
+
   addLabels();
-
-
-  fillGPSInspector();
-
-
-  calculateDemoLength();
  },
 
 
  render(gl,matrix){
 
-  const time=
+  const now=
    performance.now()/
    1000;
 
 
-  /*
-   Animated flow remains inside the 3D pipe.
-  */
-
   for(
-   const f
+   const particle
    of T.flowObjects
   ){
 
    const t=
     (
-     f.offset+
-     time*.055
+     particle.offset+
+     now*.065
     )%1;
 
 
-   const p=
-    f.curve.getPointAt(t);
+   const position=
+    particle.curve
+     .getPointAt(t);
 
 
-   f.mesh.position.set(
-    p.x,
-    p.y,
-    p.z+
-    (
-     f.mesh.geometry
-      ?.parameters
-      ?.radius ||
-     0
-    )+
-    1.65
-   );
+   particle.mesh
+    .position
+    .copy(position);
   }
 
 
@@ -3661,8 +3794,8 @@ const true3DLayer={
 
 
  /*
-  North-positive local Y must become
-  Web-Mercator negative Y.
+  Local north-positive coordinates
+  -> Web Mercator negative Y.
  */
 
  model.scale(
@@ -3698,165 +3831,7 @@ const true3DLayer={
 
 
 /* =========================================================
-   LABELS
-   ========================================================= */
-
-function markerElement(
- title,
- subtitle,
- orange=false
-){
-
- const el=
-  document.createElement(
-   'div'
-  );
-
-
- el.className=
-  'assetLabel'+
-  (
-   orange
-    ? ' orange'
-    : ''
-  );
-
-
- el.innerHTML=
-  '<b>'+
-  title+
-  '</b>'+
-  subtitle;
-
-
- return el;
-}
-
-
-function addLabels(){
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'GAS-DEMO-SB-001',
-    'Ground Twin · simulated'
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  DEMO_PIPELINES[0]
-   .points[4]
- )
- .addTo(map);
-
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'VALVE DEMO',
-    'VG-SB-01'
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  DEMO_PIPELINES[0]
-   .points[2]
- )
- .addTo(map);
-
-
- new maplibregl.Marker({
-
-  element:
-   markerElement(
-    'SIMULATED',
-    'Not real infrastructure',
-    true
-   ),
-
-  anchor:'bottom'
-
- })
- .setLngLat(
-  DEMO_PIPELINES[0]
-   .points[7]
- )
- .addTo(map);
-}
-
-
-/* =========================================================
-   GPS INSPECTOR
-   ========================================================= */
-
-function fillGPSInspector(){
-
- const rows=
-  document.getElementById(
-   'gpsRows'
-  );
-
-
- const all=
-  DEMO_PIPELINES
-   .flatMap(
-    (pipe,pipeIndex)=>
-     pipe.points.map(
-      (point,index)=>({
-       pipe:
-        pipeIndex+1,
-       index:
-        index+1,
-       lng:
-        point[0],
-       lat:
-        point[1]
-      })
-     )
-   );
-
-
- document
-  .getElementById(
-   'vertexCount'
-  )
-  .textContent=
-   all.length;
-
-
- rows.innerHTML=
-  all
-   .map(
-    p=>
-     '<div class="gpsRow">'+
-      '<b>'+
-       'P'+
-       p.pipe+
-       '.'+
-       p.index+
-      '</b>'+
-      '<span>'+
-       p.lat.toFixed(6)+
-       ' N'+
-      '</span>'+
-      '<span>'+
-       p.lng.toFixed(6)+
-       ' E'+
-      '</span>'+
-     '</div>'
-   )
-   .join('');
-}
-
-
-/* =========================================================
-   LENGTH
+   DISTANCE
    ========================================================= */
 
 function geoDistance(a,b){
@@ -3864,11 +3839,12 @@ function geoDistance(a,b){
  const lat=
   (
    a[1]+b[1]
-  )/2*
-  Math.PI/180;
+  )*.5*
+  Math.PI/
+  180;
 
 
- const dx=
+ const east=
   (
    b[0]-a[0]
   )*
@@ -3876,21 +3852,21 @@ function geoDistance(a,b){
   Math.cos(lat);
 
 
- const dy=
+ const north=
   (
    b[1]-a[1]
   )*
   110540;
 
 
- return Math.sqrt(
-  dx*dx+
-  dy*dy
+ return Math.hypot(
+  east,
+  north
  );
 }
 
 
-function calculateDemoLength(){
+function routeLength(){
 
  let total=0;
 
@@ -3915,50 +3891,476 @@ function calculateDemoLength(){
  }
 
 
- document
-  .getElementById(
-   'demoLength'
-  )
-  .textContent=
-   Math.round(total)+
-   ' m';
+ return total;
 }
 
 
 /* =========================================================
-   LOAD
+   UI
+   ========================================================= */
+
+function updateInterface(){
+
+ /*
+  Header metrics.
+ */
+
+ const metrics=
+  document.querySelectorAll(
+   '.mapMetrics .metric strong'
+  );
+
+
+ if(metrics[0]){
+
+  metrics[0].textContent=
+   DEMO_PIPELINES.length;
+ }
+
+
+ if(metrics[1]){
+
+  metrics[1].textContent=
+   DEMO_PIPELINES
+    .reduce(
+     (
+      total,
+      pipeline
+     )=>
+      total+
+      pipeline.points.length,
+     0
+    );
+ }
+
+
+ if(metrics[2]){
+
+  metrics[2].textContent=
+   Math.round(
+    routeLength()
+   )+
+   ' m';
+ }
+
+
+ /*
+  Replace old header description.
+ */
+
+ const card=
+  document.querySelector(
+   '.mapCard'
+  );
+
+
+ if(card){
+
+  card.innerHTML=
+   '<strong>'+
+    'San Benigno Network DEMO'+
+   '</strong>'+
+   '<span>'+
+    'Road-anchored visual Digital Twin'+
+   '</span>'+
+   '<span class="demoBadge">'+
+    '● '+ROUTE_SOURCE+
+   '</span>';
+ }
+
+
+ /*
+  Main asset.
+ */
+
+ const asset=
+  document.querySelector(
+   '.assetId'
+  );
+
+
+ if(asset){
+
+  asset.textContent=
+   'GAS-DEMO-SB-001';
+ }
+
+
+ /*
+  GPS table.
+ */
+
+ const rows=
+  document.getElementById(
+   'gpsRows'
+  );
+
+
+ if(rows){
+
+  const all=
+   DEMO_PIPELINES
+    .flatMap(
+     (
+      pipe,
+      pipeIndex
+     )=>
+      pipe.points.map(
+       (
+        point,
+        pointIndex
+       )=>({
+
+        pipe:
+         pipeIndex+1,
+
+        point:
+         pointIndex+1,
+
+        lng:
+         point[0],
+
+        lat:
+         point[1]
+       })
+      )
+    );
+
+
+  rows.innerHTML=
+   all
+    .slice(
+     0,
+     24
+    )
+    .map(
+     item=>
+
+      '<div class="gpsRow">'+
+
+       '<b>'+
+        'P'+
+        item.pipe+
+        '.'+
+        item.point+
+       '</b>'+
+
+       '<span>'+
+        Number(
+         item.lat
+        ).toFixed(6)+
+        ' N'+
+       '</span>'+
+
+       '<span>'+
+        Number(
+         item.lng
+        ).toFixed(6)+
+        ' E'+
+       '</span>'+
+
+      '</div>'
+    )
+    .join('');
+ }
+
+
+ /*
+  Watermark.
+ */
+
+ const watermark=
+  document.querySelector(
+   '.demoWatermark'
+  );
+
+
+ if(watermark){
+
+  watermark.textContent=
+   'SIMULATED PIPE ON PUBLIC ROAD GEOMETRY · NOT REAL GAS INFRASTRUCTURE';
+ }
+
+
+ /*
+  GPS status.
+ */
+
+ const gpsBox=
+  document.querySelector(
+   '.gpsBox'
+  );
+
+
+ if(gpsBox){
+
+  gpsBox.innerHTML=
+   'SAN BENIGNO CANAVESE<br>'+
+   'ROAD GEOMETRY DEMO<br>'+
+   '<span style="color:var(--orange)">'+
+   ROUTE_SOURCE+
+   '</span>';
+ }
+}
+
+
+/* =========================================================
+   LABELS
+   ========================================================= */
+
+function markerElement(
+ title,
+ subtitle,
+ type=''
+){
+
+ const element=
+  document.createElement(
+   'div'
+  );
+
+
+ element.className=
+  'assetLabel'+
+  (
+   type==='orange'
+    ? ' orange'
+    : ''
+  );
+
+
+ element.innerHTML=
+  '<b>'+
+   title+
+  '</b>'+
+  subtitle;
+
+
+ return element;
+}
+
+
+function pointAtFraction(
+ points,
+ fraction
+){
+
+ const index=
+  Math.max(
+   0,
+   Math.min(
+    points.length-1,
+    Math.round(
+     (
+      points.length-1
+     )*
+     fraction
+    )
+   )
+  );
+
+
+ return points[index];
+}
+
+
+function addLabels(){
+
+ const main=
+  DEMO_PIPELINES[0];
+
+
+ if(!main){
+  return;
+ }
+
+
+ new maplibregl.Marker({
+
+  element:
+   markerElement(
+    'GAS-DEMO-SB-001',
+    'PE100 · TRUE 3D'
+   ),
+
+  anchor:'bottom'
+
+ })
+ .setLngLat(
+  pointAtFraction(
+   main.points,
+   .47
+  )
+ )
+ .addTo(map);
+
+
+ new maplibregl.Marker({
+
+  element:
+   markerElement(
+    'VALVE VG-DEMO-01',
+    'Visual component'
+   ),
+
+  anchor:'bottom'
+
+ })
+ .setLngLat(
+  pointAtFraction(
+   main.points,
+   .24
+  )
+ )
+ .addTo(map);
+
+
+ new maplibregl.Marker({
+
+  element:
+   markerElement(
+    'WORK ORDER DEMO',
+    'Synthetic anomaly',
+    'orange'
+   ),
+
+  anchor:'bottom'
+
+ })
+ .setLngLat(
+  pointAtFraction(
+   main.points,
+   .69
+  )
+ )
+ .addTo(map);
+}
+
+
+/* =========================================================
+   FIT CAMERA
+   ========================================================= */
+
+function fitDemoCamera(){
+
+ const points=
+  DEMO_PIPELINES
+   .flatMap(
+    item=>
+     item.points
+   );
+
+
+ if(!points.length){
+  return;
+ }
+
+
+ const bounds=
+  points.reduce(
+
+   (
+    box,
+    coordinate
+   )=>
+    box.extend(
+     coordinate
+    ),
+
+   new maplibregl
+    .LngLatBounds(
+     points[0],
+     points[0]
+    )
+  );
+
+
+ map.fitBounds(
+
+  bounds,
+
+  {
+   padding:{
+    top:105,
+    right:105,
+    bottom:90,
+    left:100
+   },
+
+   maxZoom:18.15,
+
+   pitch:58,
+
+   bearing:-24,
+
+   duration:1100
+  }
+ );
+}
+
+
+/* =========================================================
+   START
    ========================================================= */
 
 map.on(
  'load',
- ()=>{
+ async()=>{
+
+  const road=
+   await loadRoadGeometry();
+
+
+  const branch=
+   createDemoBranch(
+    road
+   );
+
+
+  /*
+   IMPORTANT:
+
+   radius = visual presentation scale,
+   NOT real pipe diameter.
+  */
+
+  DEMO_PIPELINES=[
+
+   {
+    id:
+     'GAS-DEMO-SB-001',
+
+    radius:.88,
+
+    points:
+     road
+   },
+
+   {
+    id:
+     'GAS-DEMO-SB-002',
+
+    radius:.63,
+
+    points:
+     branch
+   }
+
+  ];
+
 
   map.addLayer(
-   true3DLayer
+   final3DLayer
   );
 
 
-  map.easeTo({
-
-   center:[
-    7.78614,
-    45.22803
-   ],
-
-   zoom:18.15,
-
-   pitch:62,
-
-   bearing:-30,
-
-   duration:900
-  });
+  fitDemoCamera();
  }
 );
 
 
 /* =========================================================
-   READ-ONLY CORE STATUS
+   READ-ONLY HEALTH
    ========================================================= */
 
 fetch(
@@ -3974,14 +4376,8 @@ fetch(
 
 
 /* =========================================================
-   LAYER BUTTONS
+   LEFT UI TOGGLES
    ========================================================= */
-
-document
- .querySelectorAll(
-  '.layerBtn button'
- );
-
 
 document
  .querySelectorAll(
@@ -3991,7 +4387,8 @@ document
   button=>{
 
    if(
-    button.tagName==='BUTTON'
+    button.tagName===
+    'BUTTON'
    ){
 
     button.addEventListener(
@@ -3999,7 +4396,8 @@ document
      ()=>{
 
       button
-       .classList.toggle(
+       .classList
+       .toggle(
         'active'
        );
      }
@@ -4012,6 +4410,7 @@ document
 
 <!-- NMA SAN BENIGNO GROUND TWIN v1 -->
 
-<!-- NMA GROUND TWIN PIPE V2 -->
+
+<!-- NMA FINAL REFERENCE ENGINE v1 -->
 </body>
 </html>
