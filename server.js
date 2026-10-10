@@ -12,6 +12,7 @@ const MongoStore =
     ConnectMongoModule;
 
 const app = express();
+const nmaFramePolicy441 = require('./nma_frame_policy_441');
 
 // ============================================================
 // NMA BUILD OS — SECURITY HEADERS v1
@@ -26,10 +27,21 @@ app.use((req,res,next)=>{
         'nosniff'
     );
 
+    // NMA MASTER SHELL 4.4.2 — frame policy
+    // SAMEORIGIN solo per le viste interne esplicitamente ammesse.
+    // Tutto il resto resta non incorporabile.
+    const nmaFrameHeaders = nmaFramePolicy441.headersForPath(req.path);
+
     res.setHeader(
         'X-Frame-Options',
-        'DENY'
+        nmaFrameHeaders.xFrameOptions
     );
+
+    res.setHeader(
+        'Content-Security-Policy',
+        nmaFrameHeaders.csp
+    );
+
 
     res.setHeader(
         'Referrer-Policy',
@@ -3041,9 +3053,6 @@ app.get(
                 );
 
 
-            const interventoIdSet=
-                new Set(ids);
-
             const asbuiltFeatures=
                 tratti
                     .filter(
@@ -3095,52 +3104,11 @@ app.get(
                                         ''
                                     ),
 
-                                intervento_collegato:
-                                    interventoIdSet.has(
-                                        String(
-                                            tratto
-                                                .id_tratto ||
-                                            ''
-                                        )
-                                        .replace(
-                                            /^ASB-/,
-                                            ''
-                                        )
-                                    ),
-
                                 id_cantiere:
                                     String(
                                         tratto
                                             .id_cantiere ||
                                         ''
-                                    ),
-
-                                descrizione:
-                                    String(
-                                        tratto
-                                            .descrizione ||
-                                        ''
-                                    ),
-
-                                operatore:
-                                    String(
-                                        tratto
-                                            .operatore ||
-                                        ''
-                                    ),
-
-                                lunghezza_misurata_m:
-                                    Number(
-                                        tratto
-                                            .lunghezza_misurata_m ||
-                                        0
-                                    ),
-
-                                lunghezza_gps_m:
-                                    Number(
-                                        tratto
-                                            .lunghezza_gps_m ||
-                                        0
                                     ),
 
                                 sorgente_gps:
@@ -3352,17 +3320,6 @@ app.get(
                     asbuilt:
                         asbuiltFeatures.length,
 
-                    asbuilt_non_collegati:
-                        asbuiltFeatures
-                            .filter(
-                                feature=>
-                                    feature
-                                        .properties
-                                        .intervento_collegato !==
-                                    true
-                            )
-                            .length,
-
                     progetti:
                         projectFeatures.length,
 
@@ -3410,243 +3367,6 @@ app.get(
                 ok:false,
                 error:
                     'Errore Spatial Twin'
-            });
-        }
-    }
-);
-
-
-
-// ============================================================
-// NMA BUILD OS — ASBUILT RECONCILIATION v1
-//
-// Read-only.
-// Un tratto geometrico senza InterventoCampo viene identificato
-// come DA_RICONCILIARE. Nessun dato viene creato o cancellato.
-// ============================================================
-
-app.get(
-    '/api/asbuilt-reconciliation/:id',
-
-    requireAuth,
-
-    requireRole(
-        'supervisore',
-        'admin'
-    ),
-
-    async (req,res)=>{
-
-        try{
-
-            const raw=
-                String(
-                    req.params.id ||
-                    ''
-                )
-                .trim()
-                .slice(
-                    0,
-                    180
-                );
-
-
-            if(!raw){
-
-                return res.status(422).json({
-                    ok:false,
-                    error:
-                        'Identificativo As-Built mancante'
-                });
-            }
-
-
-            const candidati=
-                raw.startsWith('ASB-')
-                    ? [raw]
-                    : [
-                        raw,
-                        'ASB-'+raw
-                    ];
-
-
-            const tratto=
-                await TrattoRete
-                    .findOne({
-                        id_tratto:{
-                            $in:candidati
-                        }
-                    })
-                    .lean();
-
-
-            if(!tratto){
-
-                return res.status(404).json({
-                    ok:false,
-                    error:
-                        'Tratto As-Built non trovato'
-                });
-            }
-
-
-            const riferimento=
-                String(
-                    tratto.id_tratto ||
-                    ''
-                )
-                .replace(
-                    /^ASB-/,
-                    ''
-                );
-
-
-            const intervento=
-                await InterventoCampo
-                    .findOne({
-                        id_intervento:
-                            riferimento
-                    })
-                    .select({
-                        _id:0,
-                        id_intervento:1,
-                        id_cantiere:1,
-                        stato:1
-                    })
-                    .lean();
-
-
-            const collegato=
-                Boolean(intervento);
-
-
-            return res.json({
-
-                ok:true,
-
-                read_only:true,
-
-                stato_riconciliazione:
-                    collegato
-                        ? 'COLLEGATO'
-                        : 'DA_RICONCILIARE',
-
-                intervento_collegato:
-                    collegato,
-
-                asset:{
-
-                    id_tratto:
-                        String(
-                            tratto.id_tratto ||
-                            ''
-                        ),
-
-                    riferimento_intervento:
-                        riferimento,
-
-                    id_intervento:
-                        intervento
-                            ?.id_intervento ||
-                        null,
-
-                    id_cantiere:
-                        String(
-                            tratto.id_cantiere ||
-                            ''
-                        ),
-
-                    stato:
-                        collegato
-                            ? String(
-                                intervento.stato ||
-                                'COLLEGATO'
-                            )
-                            : 'AS-BUILT NON COLLEGATO',
-
-                    operatore:
-                        String(
-                            tratto.operatore ||
-                            ''
-                        ),
-
-                    descrizione:
-                        String(
-                            tratto.descrizione ||
-                            ''
-                        ),
-
-                    pressione:
-                        Number(
-                            tratto.pressione ||
-                            0
-                        ),
-
-                    sorgente_gps:
-                        String(
-                            tratto.sorgente_gps ||
-                            ''
-                        ),
-
-                    qualita_gps:
-                        String(
-                            tratto.qualita_gps ||
-                            ''
-                        ),
-
-                    accuratezza_media_m:
-                        Number(
-                            tratto.accuratezza_media_m ||
-                            0
-                        ),
-
-                    lunghezza_gps_m:
-                        Number(
-                            tratto.lunghezza_gps_m ||
-                            0
-                        ),
-
-                    lunghezza_misurata_m:
-                        Number(
-                            tratto.lunghezza_misurata_m ||
-                            0
-                        ),
-
-                    ultimo_aggiornamento:
-                        tratto
-                            .ultimo_aggiornamento ||
-                        null
-                },
-
-                nota:
-                    collegato
-                        ? 'As-Built collegato a un intervento.'
-                        : 'La geometria esiste nel GIS, ma non '+
-                          'ha un InterventoCampo corrispondente. '+
-                          'Il dato viene preservato e segnalato '+
-                          'per riconciliazione.',
-
-                links:{
-
-                    spatial:
-                        '/spatial-twin',
-
-                    network:
-                        '/network-memory'
-                }
-            });
-
-        }catch(error){
-
-            console.error(
-                'Errore As-Built Reconciliation:',
-                error
-            );
-
-            return res.status(500).json({
-                ok:false,
-                error:
-                    'Errore riconciliazione As-Built'
             });
         }
     }
@@ -10254,115 +9974,6 @@ app.get(
 );
 
 
-
-// ============================================================
-// NMA BUILD OS — MASTER JOB CONFIG API v1
-//
-// Configurazioni visuali MASTER.
-// SOLO LETTURA.
-// Nessuna scrittura MongoDB.
-// ============================================================
-
-app.get(
-    '/api/master-job/:jobId',
-
-    requireAuth,
-
-    requireRole(
-        'supervisore',
-        'admin'
-    ),
-
-    (req,res)=>{
-
-        try{
-
-            const jobId=
-                String(
-                    req.params.jobId || ''
-                )
-                .trim();
-
-            if(
-                !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/
-                    .test(jobId)
-            ){
-                return res.status(400).json({
-                    ok:false,
-                    error:'Job ID non valido'
-                });
-            }
-
-            const fs=
-                require('fs');
-
-            const path=
-                require('path');
-
-            const directory=
-                path.join(
-                    __dirname,
-                    'master_jobs'
-                );
-
-            const file=
-                path.join(
-                    directory,
-                    jobId+'.json'
-                );
-
-            if(
-                !file.startsWith(
-                    directory+
-                    path.sep
-                )
-            ){
-                return res.status(400).json({
-                    ok:false,
-                    error:'Percorso non valido'
-                });
-            }
-
-            if(
-                !fs.existsSync(file)
-            ){
-                return res.status(404).json({
-                    ok:false,
-                    error:'Job MASTER non trovato'
-                });
-            }
-
-            const data=
-                JSON.parse(
-                    fs.readFileSync(
-                        file,
-                        'utf8'
-                    )
-                );
-
-            res.setHeader(
-                'Cache-Control',
-                'no-store'
-            );
-
-            return res.json(data);
-
-        }catch(error){
-
-            console.error(
-                'Errore MASTER JOB:',
-                error
-            );
-
-            return res.status(500).json({
-                ok:false,
-                error:'Errore configurazione MASTER'
-            });
-        }
-    }
-);
-
-
 // ============================================================
 // NMA BUILD OS — MASTER FOUNDATION v1
 // Home unica + Digital Twin + Asset Memory
@@ -11486,4 +11097,32 @@ process.once(
 
 
 const PORT = process.env.PORT || 3000;
+
+// ============================================================
+// NMA-MASTER-FINAL-MODULE-v1
+// Dashboard finale read-only: usa i model già registrati.
+// ============================================================
+require('./nma_master_final')({
+  app,
+  mongoose,
+  requireAuth,
+  requireRole
+});
+
+// NMA-BUILD-MASTER-4.1-FIELD
+require('./nma_field_engine').install({ app, mongoose, requireAuth, requireRole });
+
+// NMA-BUILD-MASTER-4.2-MEMORY
+require('./nma_digital_memory').install({ app, mongoose, requireAuth, requireRole });
+
+// NMA-BUILD-MASTER-4.3-ENTERPRISE
+require('./nma_master_enterprise_43').install({ app, mongoose, requireAuth, requireRole });
+
+// NMA-BUILD-MASTER-4.4-SHELL
+require('./nma_master_shell_44').install({ app, requireAuth, requireRole });
+
+
+
+
+
 server.listen(PORT, () => { console.log('✅ NMA BUILD OS - CONTROL ROOM SATELLITARE 3D ONLINE'); });

@@ -9,3 +9,9 @@ node_modules/
 *.pre-*
 backup-*/
 archivio-*/
+
+.env
+.env.*
+node_modules/
+*.pem
+*.key
