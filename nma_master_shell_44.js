@@ -13,7 +13,7 @@ function install({app, requireAuth, requireRole}) {
     const health=core.registryHealth(files);
     return {
       ok:health.ok,
-      product:'NMA BUILD OS MASTER', version:'4.5.0', shell:'UNIFIED_MASTER_SHELL',
+      product:'NMA BUILD OS MASTER', version:'4.6.0', shell:'UNIFIED_MASTER_SHELL',
       modules:core.REGISTRY.filter(x=>x.embed).map(x=>({...x,available:fs.existsSync(path.join(__dirname,x.file))})),
       health,
       policy:{singleShell:true, standaloneFallback:true, externalNavigationBlocked:true, noPush:true, noDeploy:true}

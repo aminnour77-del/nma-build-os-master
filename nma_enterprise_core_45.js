@@ -1,6 +1,6 @@
 'use strict';
 const crypto=require('crypto');
-const VERSION='4.5.0';
+const VERSION='4.6.0';
 const REQUIRED_FILES=[
   'server.js','package.json','master_control_v1.html','campo_operatore_v1.html',
   'nma_field_engine.js','nma_digital_memory.js','nma_master_enterprise_43.js',

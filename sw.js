@@ -1,5 +1,5 @@
-/* NMA BUILD OS 4.5.0 — Field PWA Service Worker */
-const CACHE='nma-build-field-4.5.0';
+/* NMA BUILD OS 4.6.0 — Field PWA Service Worker */
+const CACHE='nma-build-field-4.6.0';
 const STATIC=['/offline.html','/manifest.webmanifest','/nma_offline_enterprise_45.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('nma-build-field-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

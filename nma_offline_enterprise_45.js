@@ -1,4 +1,4 @@
-/* NMA BUILD OS 4.5.0 — Offline Evidence & PWA */
+/* NMA BUILD OS 4.6.0 — Offline Evidence & PWA */
 (function(){
 'use strict';
 const DB_NAME='nma_build_os_field_45'; const DB_VERSION=1; const STORE='evidences';
@@ -22,7 +22,7 @@ function badge(){let el=document.getElementById('nmaOffline45Badge');if(el)retur
 async function refreshBadge(){const s=await stats().catch(()=>({count:0,bytes:0}));const el=badge();const online=navigator.onLine;el.textContent=(online?'● ONLINE':'● OFFLINE')+' · FILE IN CODA '+s.count;el.style.borderColor=online?'#20e88b':'#ff9d21';el.title='Tocca per sincronizzare le evidenze offline'}
 async function registerServiceWorker(){if(!('serviceWorker'in navigator))return;try{await navigator.serviceWorker.register('/sw.js',{scope:'/'});}catch(e){console.warn('NMA SW:',e.message)}}
 async function onLogout(){try{const reg=await navigator.serviceWorker?.ready;reg?.active?.postMessage({type:'PURGE_FIELD_CACHE'})}catch{}}
-window.NMAOffline45={enqueueEvidence,syncEvidenceQueue,stats,refreshBadge,registerServiceWorker,onLogout,version:'4.5.0'};
+window.NMAOffline45={enqueueEvidence,syncEvidenceQueue,stats,refreshBadge,registerServiceWorker,onLogout,version:'4.6.0'};
 window.addEventListener('online',()=>{refreshBadge();setTimeout(syncEvidenceQueue,300)});window.addEventListener('offline',refreshBadge);
 document.addEventListener('DOMContentLoaded',()=>{registerServiceWorker();refreshBadge();if(navigator.onLine)setTimeout(syncEvidenceQueue,1200)});setInterval(()=>{if(navigator.onLine)syncEvidenceQueue()},30000);
 })();
