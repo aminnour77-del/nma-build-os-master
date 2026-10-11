@@ -298,6 +298,8 @@ body{
 }
 
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#071015">
 </head>
 
 <body>
@@ -834,6 +836,8 @@ body{
 
 </main>
 
+<script src="/nma_offline_enterprise_45.js"></script>
+
 <script>
 let offlineId = crypto.randomUUID();
 let idIntervento =
@@ -858,32 +862,29 @@ function status(msg,type='ok'){
 }
 
 async function caricaCantieri(){
-  try{
-    const r=await fetch('/api/cantieri');
-    const data=await r.json();
-
-    const select=document.getElementById('cantiere');
+  const CACHE_KEY='nma_build_os_cantieri_cache_v45';
+  const select=document.getElementById('cantiere');
+  const render=(lista,offline=false)=>{
     select.innerHTML='';
-
-    const lista=Array.isArray(data) ? data : [];
-
-    if(!lista.length){
-      const o=document.createElement('option');
-      o.value='';
-      o.textContent='Nessun cantiere disponibile';
-      select.appendChild(o);
-      return;
+    const rows=Array.isArray(lista)?lista:[];
+    if(!rows.length){
+      const o=document.createElement('option');o.value='';o.textContent=offline?'Nessun cantiere disponibile offline':'Nessun cantiere disponibile';select.appendChild(o);return;
     }
-
-    lista.forEach(c=>{
-      const o=document.createElement('option');
-      o.value=String(c);
-      o.textContent=String(c);
-      select.appendChild(o);
-    });
-
+    rows.forEach(c=>{const o=document.createElement('option');o.value=String(c);o.textContent=String(c)+(offline?' · CACHE OFFLINE':'');select.appendChild(o)});
+  };
+  try{
+    const r=await fetch('/api/cantieri',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    const lista=Array.isArray(data)?data:[];
+    localStorage.setItem(CACHE_KEY,JSON.stringify({at:new Date().toISOString(),items:lista}));
+    render(lista,false);
   }catch(e){
-    status('Errore caricamento cantieri','err');
+    try{
+      const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}');
+      if(Array.isArray(cached.items)&&cached.items.length){render(cached.items,true);status('Modalità offline: uso ultimo elenco cantieri disponibile','warn');return}
+    }catch{}
+    render([],true);status('Errore caricamento cantieri e nessuna cache offline disponibile','err');
   }
 }
 
@@ -1768,71 +1769,33 @@ function leggiTracciatoAttuale(){
 }
 
 async function caricaEvidenze(interventoId){
-
-  const input=
-    document.getElementById('evidenze');
-
-  const files=
-    Array.from(
-      input?.files || []
-    );
-
-  if(!files.length){
-    return 0;
-  }
-
-  let completati=0;
-
+  const input=document.getElementById('evidenze');
+  const files=Array.from(input?.files || []);
+  if(!files.length){ window.nmaEvidenceSyncSummary={uploaded:0,queued:0}; return 0; }
+  let uploaded=0, queued=0;
   for(const file of files){
-
-    if(file.size > 15*1024*1024){
-      throw new Error(
-        'File troppo grande: '+file.name
-      );
-    }
-
-    const form=
-      new FormData();
-
-    form.append(
-      'file',
-      file,
-      file.name
-    );
-
-    const r=
-      await fetch(
-        '/api/interventi/' +
-        encodeURIComponent(
-          interventoId
-        ) +
-        '/evidenze',
-        {
-          method:'POST',
-          body:form
-        }
-      );
-
-    let data={};
-
+    if(file.size > 15*1024*1024) throw new Error('File troppo grande: '+file.name);
+    const queueFile=async()=>{
+      if(!window.NMAOffline45) throw new Error('Modulo offline non disponibile');
+      await window.NMAOffline45.enqueueEvidence(interventoId,file); queued++;
+    };
+    if(!navigator.onLine){ await queueFile(); continue; }
+    const form=new FormData(); form.append('file',file,file.name);
     try{
-      data=await r.json();
-    }catch{}
-
-    if(!r.ok || !data.ok){
-      throw new Error(
-        data.error ||
-        'Upload evidenza fallito: '+
-        file.name
-      );
+      const r=await fetch('/api/interventi/'+encodeURIComponent(interventoId)+'/evidenze',{method:'POST',body:form});
+      let data={}; try{data=await r.json()}catch{}
+      if(r.ok && data.ok){ uploaded++; continue; }
+      if([408,425,429].includes(r.status)||r.status>=500){ await queueFile(); continue; }
+      throw new Error(data.error || 'Upload evidenza fallito: '+file.name);
+    }catch(e){
+      if(e instanceof TypeError || !navigator.onLine){ await queueFile(); continue; }
+      throw e;
     }
-
-    completati++;
   }
-
   input.value='';
-
-  return completati;
+  window.nmaEvidenceSyncSummary={uploaded,queued};
+  window.NMAOffline45?.refreshBadge?.();
+  return uploaded+queued;
 }
 
 
@@ -2732,14 +2695,12 @@ async function registraIntervento(){
           payload.id_intervento
         );
 
+      const evs=window.nmaEvidenceSyncSummary || {uploaded:nEvidenze,queued:0};
       status(
         '✓ INTERVENTO REGISTRATO E SINCRONIZZATO' +
-        (
-          nEvidenze
-            ? ' — '+nEvidenze+' evidenze caricate'
-            : ''
-        ),
-        'ok'
+        (evs.uploaded ? ' — '+evs.uploaded+' evidenze caricate' : '') +
+        (evs.queued ? ' — '+evs.queued+' evidenze salvate OFFLINE e in coda' : ''),
+        evs.queued ? 'warn' : 'ok'
       );
 
       nmaCancellaBozza(false);
@@ -2763,19 +2724,26 @@ async function registraIntervento(){
 
     accodaOffline(payload);
 
+    let evidenzeOffline=0;
+    try{
+      evidenzeOffline=await caricaEvidenze(payload.id_intervento);
+    }catch(queueError){
+      status('Intervento salvato offline, ma una evidenza non è stata accodata: '+queueError.message,'err');
+      return;
+    }
+
     /*
-     * Da questo momento il payload è già nella
-     * coda offline persistente: la bozza può
-     * essere rimossa senza perdere il lavoro.
+     * Payload + evidenze sono ora persistenti localmente.
+     * Prima verrà sincronizzato l'intervento, poi i file.
      */
     nmaCancellaBozza(false);
 
     nuovoIdentificativo();
-      resetTracciato(false);
+    resetTracciato(false);
 
     status(
-      '✓ INTERVENTO SALVATO OFFLINE — '+
-      'sarà sincronizzato automaticamente',
+      '✓ INTERVENTO SALVATO OFFLINE — sarà sincronizzato automaticamente' +
+      (evidenzeOffline ? ' — '+evidenzeOffline+' evidenze in coda sicura' : ''),
       'warn'
     );
   }
@@ -2783,6 +2751,7 @@ async function registraIntervento(){
 
 async function logout(){
   try{
+    await window.NMAOffline45?.onLogout?.();
     await fetch('/api/logout',{method:'POST'});
   }finally{
     location.href='/';
@@ -2805,7 +2774,7 @@ aggiornaContatoreCoda();
 
 window.addEventListener(
   'online',
-  ()=>sincronizzaCoda(true)
+  async()=>{ await sincronizzaCoda(true); await window.NMAOffline45?.syncEvidenceQueue?.(); }
 );
 
 setInterval(

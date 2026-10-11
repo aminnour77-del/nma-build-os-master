@@ -60,6 +60,7 @@ body.nma-shell-module-open{overflow:hidden}
     <a href="/master-final/module/audit"><i>◎</i>Audit</a>
     <a href="/master-final/module/quality"><i>✓</i>Quality Gate</a>
     <a href="/master-final/module/sal"><i>€</i>SAL</a>
+    <a href="/enterprise-control"><i>◆</i>Enterprise Control</a>
   </nav>
   <div class="side-foot">NMA BUILD OS MASTER<br>Dashboard finale collegata ai moduli operativi esistenti.<br><span id="dbState">Database: verifica…</span></div>
 </aside>
@@ -151,9 +152,10 @@ const registry={
  passport:{title:'Digital Passport',href:'/master-final/module/passaporto',embed:true}, asset:{title:'Asset Memory',href:'/master-final/module/asset',embed:true},
  command:{title:'Command Center',href:'/master-final/module/command',embed:true}, asbuilt:{title:'As-Built',href:'/master-final/module/asbuilt',embed:true},
  correzioni:{title:'Correzioni',href:'/master-final/module/correzioni',embed:true}, campo:{title:'Operatore Campo',href:'/master-final/module/campo',embed:true}, fieldx1:{title:'BUILD FIELD X1',href:'/field-x1',embed:true},
- digitalmemory:{title:'Digital Memory',href:'/digital-memory',embed:true}, master43:{title:'Master Enterprise',href:'/master43',embed:true}
+ digitalmemory:{title:'Digital Memory',href:'/digital-memory',embed:true}, master43:{title:'Master Enterprise',href:'/master43',embed:true},
+ enterprise45:{title:'Enterprise Control',href:'/enterprise-control',embed:true}
 };
-const aliases={'/control-room':'control','/control_room':'control','/audit':'audit','/sal':'sal','/sal-v2':'sal','/direzione':'control','/ufficio':'control','/cantiere':'campo','/workflow':'workflow','/quality':'quality','/asset-memory':'asset','/asset_memory':'asset','/network-memory':'network','/network_memory':'network','/supervisore':'supervisore','/passaporto':'passport','/command-center':'command','/command_center':'command','/confronto-asbuilt':'asbuilt','/correzioni':'correzioni','/master-final/module/spatial':'spatial','/operatore-campo':'campo','/master-final/module/master43':'master43'};
+const aliases={'/control-room':'control','/control_room':'control','/audit':'audit','/sal':'sal','/sal-v2':'sal','/direzione':'control','/ufficio':'control','/cantiere':'campo','/workflow':'workflow','/quality':'quality','/asset-memory':'asset','/asset_memory':'asset','/network-memory':'network','/network_memory':'network','/supervisore':'supervisore','/passaporto':'passport','/command-center':'command','/command_center':'command','/confronto-asbuilt':'asbuilt','/correzioni':'correzioni','/master-final/module/spatial':'spatial','/operatore-campo':'campo','/master-final/module/master43':'master43','/enterprise-control':'enterprise45','/master-final/module/enterprise45':'enterprise45'};
 function keyFor(raw){try{const u=new URL(raw,location.origin);if(u.origin!==location.origin)return null;let p=decodeURIComponent(u.pathname).replace(/\/{2,}/g,'/');if(p==='/'||p==='/master'||p==='/master/')return'dashboard';if(aliases[p])return aliases[p];if(/^\/passaporto\/[^/]+$/i.test(p))return'passport';if(/^\/confronto\/[^/]+$/i.test(p))return'asbuilt';for(const[k,v]of Object.entries(registry))if(v.href===p)return k;const m=p.match(/^\/master-final\/module\/([a-z0-9_-]+)$/i);if(m){const k=m[1].toLowerCase();const mapped=({passaporto:'passport',asset:'asset',network:'network',spatial:'spatial',control:'control',command:'command',asbuilt:'asbuilt',campo:'campo'})[k]||k;return Object.prototype.hasOwnProperty.call(registry,mapped)?mapped:null;}return null}catch(_){return null}}
 function el(tag,id,cls){const x=document.createElement(tag);if(id)x.id=id;if(cls)x.className=cls;return x}
 const stage=el('section','nmaMasterStage');stage.setAttribute('aria-label','Modulo NMA BUILD OS');

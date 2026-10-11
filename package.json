@@ -1,10 +1,13 @@
 {
   "name": "nma-build-os",
-  "version": "1.0.0",
+  "version": "4.5.0",
   "description": "NMA BUILD OS - ERP",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test --test-reporter=tap tests/*.test.js",
+    "test:enterprise": "node --test --test-reporter=tap tests/nma_enterprise_450.test.js tests/nma_offline_450.test.js",
+    "check": "node --check server.js && node --check nma_enterprise_45.js && node --check nma_offline_core_45.js && node --check nma_enterprise_core_45.js"
   },
   "dependencies": {
     "connect-mongo": "^6.0.0",

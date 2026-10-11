@@ -13,6 +13,7 @@ const MongoStore =
 
 const app = express();
 const nmaFramePolicy441 = require('./nma_frame_policy_441');
+const nmaEnterpriseCore45 = require('./nma_enterprise_core_45');
 
 // ============================================================
 // NMA BUILD OS — SECURITY HEADERS v1
@@ -88,6 +89,27 @@ app.use((req,res,next)=>{
 });
 
 
+
+// ============================================================
+// NMA ENTERPRISE 4.5 — REQUEST ID / SAME-ORIGIN API GUARD
+// ============================================================
+app.use((req,res,next)=>{
+    const requestId=nmaEnterpriseCore45.requestId();
+    req.nmaRequestId=requestId;
+    res.setHeader('X-Request-Id',requestId);
+
+    const unsafe=['POST','PUT','PATCH','DELETE'].includes(String(req.method||'').toUpperCase());
+    const isApi=String(req.path||'').startsWith('/api/');
+    const origin=String(req.headers.origin||'');
+    if(unsafe && isApi && origin){
+        const forwarded=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim();
+        const protocol=forwarded || req.protocol || 'http';
+        const allowed=String(process.env.NMA_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean);
+        const ok=nmaEnterpriseCore45.requestOriginAllowed({origin,protocol,host:req.get('host'),allowed});
+        if(!ok) return res.status(403).json({ok:false,code:'ORIGIN_FORBIDDEN',error:'Origine richiesta non autorizzata',requestId});
+    }
+    next();
+});
 
 // --- BLOCCO 1: DATABASE INDUSTRIALE MONGODB (NMA BUILD OS) ---
 const mongoose = require('mongoose');
@@ -340,7 +362,9 @@ app.get('/api/health', async (req, res) => {
             network_memory_v1: true,
             spatial_vision_v1: true,
             master_control_room_v1: true,
-            master_candidate_v1: true
+            master_candidate_v1: true,
+            enterprise_45: true,
+            field_offline_45: true
         },
         mongodb: mongoOk ? 'CONNECTED' : 'DISCONNECTED',
         timestamp: new Date().toISOString()
@@ -11120,6 +11144,9 @@ require('./nma_master_enterprise_43').install({ app, mongoose, requireAuth, requ
 
 // NMA-BUILD-MASTER-4.4-SHELL
 require('./nma_master_shell_44').install({ app, requireAuth, requireRole });
+
+// NMA-BUILD-MASTER-4.5-ENTERPRISE-FIELD-READY
+require('./nma_enterprise_45').install({ app, mongoose, requireAuth, requireRole });
 
 
 

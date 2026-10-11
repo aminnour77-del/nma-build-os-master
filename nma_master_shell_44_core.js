@@ -18,7 +18,8 @@ const REGISTRY = Object.freeze([
   { key:'campo', title:'Operatore Campo', href:'/master-final/module/campo', file:'campo_operatore_v1.html', embed:true },
   { key:'fieldx1', title:'BUILD FIELD X1', href:'/field-x1', file:'field_x1_v1.html', embed:true },
   { key:'digitalmemory', title:'Digital Memory', href:'/digital-memory', file:'digital_memory_v1.html', embed:true },
-  { key:'master43', title:'Master Enterprise', href:'/master43', file:'master_43.html', embed:true }
+  { key:'master43', title:'Master Enterprise', href:'/master43', file:'master_43.html', embed:true },
+  { key:'enterprise45', title:'Enterprise Control', href:'/enterprise-control', file:'enterprise_control_v1.html', embed:true, required:false }
 ]);
 
 const BY_KEY = new Map(REGISTRY.map(x => [x.key, x]));
@@ -28,7 +29,7 @@ const ALIASES = new Map([
   ['/network-memory','network'], ['/network_memory','network'], ['/supervisore','supervisore'],
   ['/passaporto','passport'], ['/command-center','command'], ['/command_center','command'],
   ['/confronto-asbuilt','asbuilt'], ['/correzioni','correzioni'], ['/master-final/module/spatial','spatial'],
-  ['/operatore-campo','campo'], ['/master-final/module/master43','master43']
+  ['/operatore-campo','campo'], ['/master-final/module/master43','master43'], ['/enterprise-control','enterprise45'], ['/master-final/module/enterprise45','enterprise45']
 ]);
 
 function safeUrl(raw, base='http://nma.local') {
@@ -103,7 +104,7 @@ function sanitizeLabel(v, max=80) {
 }
 function registryHealth(existingFiles=[]) {
   const s = new Set(existingFiles);
-  const required = REGISTRY.filter(x=>x.embed).map(x=>x.file);
+  const required = REGISTRY.filter(x=>x.embed && x.required!==false).map(x=>x.file);
   const missing = required.filter(f=>!s.has(f));
   return {ok:missing.length===0, required:required.length, available:required.length-missing.length, missing};
 }

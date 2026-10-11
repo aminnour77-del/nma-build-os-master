@@ -1,0 +1,11 @@
+{
+  "name": "NMA BUILD OS — Field",
+  "short_name": "BUILD OS",
+  "start_url": "/cantiere",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#071015",
+  "theme_color": "#071015",
+  "description": "Terminale campo NMA BUILD OS con coda offline e sincronizzazione evidenze.",
+  "icons": []
+}

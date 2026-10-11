@@ -3,7 +3,7 @@
 const EXACT = new Set([
   '/', '/master', '/master/',
   '/spatial-twin', '/field-x1', '/digital-memory', '/master43',
-  '/supervisore', '/audit', '/workflow', '/quality',
+  '/supervisore', '/audit', '/workflow', '/quality', '/enterprise-control',
   '/asset-memory', '/network-memory', '/command-center',
   '/sal', '/sal-v2', '/direzione', '/cantiere', '/ufficio', '/correzioni'
 ]);
