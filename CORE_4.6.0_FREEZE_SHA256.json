@@ -1,0 +1,18 @@
+{
+  "core": "4.6.0",
+  "ui": "4.7.0",
+  "sha256": {
+    "server.js": "edaa92f9642e384fc985246f7f4b5f682f7c573f69a2782686d8041936e80050",
+    "package.json": "61261e1bcff7014e469ac1822ddf403aac89b17d6e9017a292163064db3eadd5",
+    "package-lock.json": "a1e47768e492629ff97a73ad86984566702e3a11f492d9297c5244af560ccbda",
+    "nma_field_engine.js": "d968bf3e3e22f5a3f14f8b5de82895a77e11b914bffd4740ef72b7de6a58f063",
+    "nma_digital_memory.js": "b7d7444212eca384ec9b0aebba703aaca77c2e05102308e2e9efe246c38b8ff4",
+    "nma_master_shell_44_core.js": "84b6f54ddcec116663584d01e98ad55d71f8727cd0e781cac2875455f54cc444",
+    "nma_frame_policy_441.js": "f1221faf161bd86ffa2b2f024a9d40f65e78df467ed8ac53da93d44bfb21dfa9",
+    "nma_enterprise_core_45.js": "f09094032c3024500b56bf94506f01bdedd02967a6bdb04c7000e928bb80fbff",
+    "nma_enterprise_45.js": "321bdcd2dc46e712c71f48e2974f935d7bbfa6483d940031563d4d7a7060673b",
+    "nma_offline_core_45.js": "f11a7168cdeba68bb5494e7b23d6dff5d2005d613c0294a7d6a508fb3386be0e",
+    "nma_offline_enterprise_45.js": "f53aeed51e64c6ea092a2934f3e69657485d9f9b42726352b3acaccf86a82632",
+    "nma_master_enterprise_43.js": "e3e788ac9044f08085bc9a81e683b9cbce67795bfde4efe46ee97adfb30ad271"
+  }
+}
